@@ -27,7 +27,7 @@ export function AuthPage() {
             <Link to="/" className="mb-6">
               <img
                 alt="Logo"
-                src={toAbsoluteUrl("/media/logos/logo-default.svg")}
+                src={toAbsoluteUrl("/media/logos/logo.png")}
                 className="h-75px"
               />
             </Link>
@@ -35,9 +35,11 @@ export function AuthPage() {
 
             {/* begin::Aside Subtitle */}
             <h3 className="fw-bolder fs-2x text-white lh-lg">
-              Lumora
-              <br />
               Vũ trụ AI giáo dục toàn diện
+              <br />
+              "Ở Lumora, hành trình bắt đầu khi bạn
+              <br />
+              đủ can đảm là chính mình."
             </h3>
             {/* end::Aside Subtitle */}
           </div>

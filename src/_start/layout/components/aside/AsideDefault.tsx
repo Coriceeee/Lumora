@@ -37,8 +37,8 @@ export function AsideDefault() {
                 <Link to="/">
                   <img
                     alt="Logo"
-                    src={toAbsoluteUrl("/media/logos/logo-compact.svg")}
-                    className="mh-50px"
+                    src={toAbsoluteUrl("/media/logos/logo-compact.ico")}
+                  className="mh-50px"
                   />
                 </Link>
               </div>
@@ -211,7 +211,7 @@ export function AsideDefault() {
                       <Link to="/">
                         <img
                           alt="Logo"
-                          src={toAbsoluteUrl("/media/logos/logo-compact.svg")}
+                          src={toAbsoluteUrl("/media/logos/logo-compact.ico")}
                           className="mh-50px"
                         />
                       </Link>

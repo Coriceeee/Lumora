@@ -23,7 +23,7 @@ const EngageWidget5: React.FC<Props> = ({
           <h3 className="text-dark text-center fs-1 fw-bolder pt-15 lh-lg">
             Hồ sơ học tập
             <br />
-            phải được cập nhật thường xuyên và chính xác
+            luôn phải chính xác và được cập nhật
           </h3>
           {/* end::Text */}
           {children}

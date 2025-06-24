@@ -39,7 +39,7 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
               <img
                 alt="logo"
                 className="h-30px"
-                src={toAbsoluteUrl("/media/logos/logo-default.svg")}
+                src={toAbsoluteUrl("/media/logos/logo.png")}
               />
             </Link>
             {/* end::Logo */}

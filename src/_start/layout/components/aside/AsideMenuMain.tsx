@@ -23,9 +23,9 @@ export function AsideMenuMain() {
             </h4>
           </div>
           <AsideMenuItem to="/chat" title="Cập nhật kết quả học tập" />
-          <AsideMenuItem to="/shop/shop-1" title="Hồ sơ học tập" />
-          <AsideMenuItem to="/shop/shop-2" title="Đánh giá năng lực" />
-          <AsideMenuItem to="/shop/shop-2" title="Đề xuất kế hoạch học tập" />
+          <AsideMenuItem to="/shop/shop-1" title="Hồ sơ thành tích học tập" />
+          <AsideMenuItem to="/shop/shop-2" title="Đánh giá trình độ" />
+          <AsideMenuItem to="/shop/shop-2" title="Định hướng kế hoạch học tập" />
 
         </>
 
