@@ -50,6 +50,7 @@ export function AsideMenuMain() {
           <AsideMenuItem to="/profile/overview" title="Nhật kí chũa lành" />
           <AsideMenuItem to="/profile/account" title="Nguyên liệu chăm cây" />
           <AsideMenuItem to="/profile/settings" title="Tạo nguyên liệu" />
+          <AsideMenuItem to="/profile/settings" title="Cây chữa lành" />
         </>
 
         <>
@@ -62,6 +63,18 @@ export function AsideMenuMain() {
           <AsideMenuItem to="/builder" title="Cloud Whisper"  />
           <AsideMenuItem to="/docs/change-log" title="Relaxation" />
           <AsideMenuItem to="/docs/change-log" title="Void Zone" />
+        </>
+         <>
+          <div className="menu-item">
+            <h4 className="menu-content text-muted mb-0 fs-6 fw-bold text-uppercase">
+              Danh mục
+            </h4>
+          </div>
+          <AsideMenuItem to="/danh-muc/loai-diem" title="Loại điểm" />
+          <AsideMenuItem to="/danh-muc/mon-hoc" title="Môn học" classNameMenuTitle="menu-title text-success" icon="far fa-lightbulb text-success px-2"/>
+          <AsideMenuItem to="/danh-muc/ky-nang" title="Kỹ năng"  classNameMenuTitle="menu-title text-danger" icon="fas fa-dolly-flatbed text-danger px-2"/>
+          <AsideMenuItem to="/danh-muc/chung-chi" title="Chứng chỉ" />
+          <AsideMenuItem to="/danh-muc/khao-sat" title="Khảo sát" />
         </>
       </>
     </>

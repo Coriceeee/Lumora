@@ -11,6 +11,8 @@ type Props = {
   hasBullet?: boolean;
   free?: boolean;
   exclusive?: boolean;
+  icon?:string
+  classNameMenuTitle?: string
 };
 
 const AsideMenuItem: React.FC<Props> = ({
@@ -20,6 +22,8 @@ const AsideMenuItem: React.FC<Props> = ({
   hasBullet = false,
   free = false,
   exclusive = false,
+  icon,
+  classNameMenuTitle="menu-title"
 }) => {
   const { pathname } = useLocation();
   return (
@@ -49,7 +53,8 @@ const AsideMenuItem: React.FC<Props> = ({
               <span className="bullet bullet-dot"></span>
             </span>
           )}
-          <span className="menu-title">{title}</span>
+          {icon && (<i className={icon}></i>)}          
+          <span className={classNameMenuTitle}>{title}</span>
           {exclusive && (
             <span className="badge badge-exclusive badge-light-success fw-bold fs-9 px-2 py-1 ms-1">
               Exclusive
