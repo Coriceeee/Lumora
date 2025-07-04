@@ -1,8 +1,8 @@
 {
-  "name": "lumora-project",
+  "name": "lumora",
   "version": "1.0.0",
   "private": true, 
-  "homepage": "https://Coriceeee.github.io/Lumora",
+  "homepage": "https://coriceeee.github.io/lumora",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@manaflair/redux-batch": "^1.0.0",
