@@ -1,8 +1,8 @@
 {
   "name": "lumora-project",
   "version": "1.0.0",
-  "private": true,
-  "homepage": "/",
+  "private": true, 
+  "homepage": "https://Coriceeee.github.io/Lumora",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@manaflair/redux-batch": "^1.0.0",
@@ -50,7 +50,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -82,6 +84,7 @@
     "@types/react-copy-to-clipboard": "^5.0.0",
     "@types/react-dom": "^16.9.8",
     "@types/react-redux": "^7.1.13",
-    "@types/react-router-dom": "^5.1.6"
+    "@types/react-router-dom": "^5.1.6",
+    "gh-pages": "^6.3.0"
   }
 }
