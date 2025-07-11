@@ -1,8 +1,8 @@
 {
   "name": "lumora",
   "version": "1.0.0",
-  "private": true, 
-  "homepage": "https://coriceeee.github.io/lumora",
+  "private": true,
+  "homepage": "/",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@manaflair/redux-batch": "^1.0.0",
@@ -19,6 +19,7 @@
     "bootstrap-icons": "^1.3.0",
     "chart.js": "^2.9.4",
     "clsx": "^1.1.1",
+    "firebase": "^11.10.0",
     "formik": "^2.2.6",
     "line-awesome": "^1.3.0",
     "nouislider": "^14.6.3",
