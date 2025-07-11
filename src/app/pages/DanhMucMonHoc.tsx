@@ -12,6 +12,7 @@ export default function DanhMucLoaiDiem() {
   const [newSubject, setNewSubject] = useState<Subject>({
     code: "",
     name: "",
+    
     description: "",
   });
 
@@ -38,46 +39,110 @@ export default function DanhMucLoaiDiem() {
   }, []);
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Danh mục Môn học</h2>
-      <input
-        placeholder="Mã môn (code)"
-        value={newSubject.code}
-        onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
-        className="border p-2 mr-2"
-      />
-      <input
-        placeholder="Tên môn (name)"
-        value={newSubject.name}
-        onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })}
-        className="border p-2 mr-2"
-      />
-      <input
-        placeholder="Mô tả (description)"
-        value={newSubject.description}
-        onChange={(e) =>
-          setNewSubject({ ...newSubject, description: e.target.value })
-        }
-        className="border p-2 mr-2"
-      />
-      <button onClick={handleAdd} className="bg-blue-500 text-white px-4 py-2">
-        Thêm môn
-      </button>
-
-      <ul className="mt-4">
-        {subjects.map((subject) => (
-          <li key={subject.id} className="border p-2 my-2">
-            <strong>{subject.code}</strong>: {subject.name} –{" "}
-            <em>{subject.description}</em>
-            <button
-              onClick={() => handleDelete(subject.id)}
-              className="ml-4 text-red-500"
-            >
-              Xoá
-            </button>
-          </li>
-        ))}
-      </ul>
+    <div className="card card-custom p-1">
+      <div className="card-header">
+          <h3 className="card-title">Danh Mục Môn Học</h3>
+          <div className="card-toolbar">
+              <button type="button" className="btn btn-bg-primary text-white"
+                data-bs-toggle="modal"
+                data-bs-target="#modal_them_moi"
+              >
+                  Thêm
+              </button>
+          </div>
+      </div>
+      <div className="card-body">
+        <div className="table-responsive ">      
+          <table className="table table-rounded table-striped border gy-7 gs-7">
+            <thead>
+              <tr className="fw-bold fs-6 text-gray-800 border-bottom border-gray-200">
+                  <th className="min-w-200px">Action</th>
+                    <th className="min-w-200px">Code</th>
+                    <th className="min-w-400px">Name</th>
+                    <th className="min-w-100px">Description</th>                            
+                </tr>
+            </thead>
+            <tbody>
+              {subjects.map((subject) => (
+                <tr key={subject.id} >
+                    <td>
+                      <button onClick={() => handleDelete(subject.id)} className="btn btn-bg-danger">
+                        <i className="bi bi-gear text-white"></i>
+                      </button>
+                    </td>
+                    <td>{subject.code}</td>
+                    <td>{subject.name} </td>
+                    <td>{subject.description}</td>              
+                </tr>
+              ))}         
+            </tbody>
+        </table>
+      </div>
     </div>
+
+  <div className="modal fade" tabIndex={-1} id="modal_them_moi">
+    <div className="modal-dialog">
+      <div className="modal-content">
+        <div className="modal-header">
+          <h5 className="modal-title">Them Mon Hoc</h5>
+          <div
+            className="btn btn-icon btn-sm btn-active-light-primary ms-2"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          >            
+          </div>
+        </div>
+        <div className="modal-body">
+          <div className="mb-10">
+            <label className="form-label">Mã môn học</label>
+            <input
+              type="text"
+              className="form-control"
+              value={newSubject.code}
+              onChange={(e) => setNewSubject({ ...newSubject, code: e.target.value })}
+            />
+          </div>  
+          <div className="mb-10">
+            <label className="form-label">Tên môn học</label>
+            <input
+              type="text"
+              className="form-control"
+              value={newSubject.name}
+              onChange={(e) =>
+                setNewSubject({ ...newSubject, name: e.target.value })
+              }
+            />
+          </div>       
+          
+          <div className="mb-10">
+            <label className="form-label">Diễn giải</label>
+            <input
+              type="text"
+              className="form-control"
+              value={newSubject.description}
+              onChange={(e) =>
+                setNewSubject({ ...newSubject, description: e.target.value })
+              }
+            />
+
+            </div>       
+        </div>
+        <div className="modal-footer">
+          <button
+            type="button"
+            className="btn btn-light"
+            data-bs-dismiss="modal"
+          >
+            Close
+          </button>
+          <button type="button" className="btn btn-primary"   data-bs-dismiss="modal" onClick={handleAdd}>
+            Save changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>    
   );
 };
