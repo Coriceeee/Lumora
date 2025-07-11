@@ -6,53 +6,6 @@ import {
 } from "../../services/scoreTypeService";
 import { ScoreType } from "../../types/ScoreType";
 
-function ScoreTypeCard({
-  scoreType,
-  onDelete,
-}: {
-  scoreType: ScoreType;
-  onDelete: (id?: string) => void;
-}) {
-  // Đổi màu theo hệ số
-  const getColor = (weight: number) => {
-    if (weight >= 2) return "#d9534f"; // đỏ đậm
-    if (weight >= 1) return "#f0ad4e"; // cam
-    return "#5bc0de"; // xanh dương nhạt
-  };
-
-  return (
-    <div
-      className="scoretype-card p-3 rounded shadow-sm"
-      style={{
-        borderLeft: `6px solid ${getColor(scoreType.weight)}`,
-        backgroundColor: "#fff",
-        marginBottom: "1rem",
-        cursor: "default",
-      }}
-      title={scoreType.description}
-    >
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5 className="mb-0" style={{ color: getColor(scoreType.weight) }}>
-          {scoreType.name}
-        </h5>
-        <button
-          className="btn btn-sm btn-outline-danger"
-          onClick={() => onDelete(scoreType.id)}
-          title="Xóa loại điểm"
-        >
-          <i className="bi bi-trash3"></i>
-        </button>
-      </div>
-      <p className="mb-1">
-        <strong>Mã loại:</strong> {scoreType.code}
-      </p>
-      <p className="mb-0">
-        <strong>Hệ số:</strong> {scoreType.weight}
-      </p>
-    </div>
-  );
-}
-
 export default function DanhMucLoaiDiem() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [newScoreType, setNewScoreType] = useState<ScoreType>({
@@ -62,69 +15,115 @@ export default function DanhMucLoaiDiem() {
     description: "",
   });
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const fetchScoreTypes = async () => {
-    const data = await getAllScoreTypes();
-    setScoreTypes(data);
+    setLoading(true);
+    try {
+      const data = await getAllScoreTypes();
+      setScoreTypes(data);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAdd = async () => {
-    if (!newScoreType.code || !newScoreType.name) {
-      alert("Mã loại và Tên loại điểm không được để trống!");
+    if (!newScoreType.code.trim() || !newScoreType.name.trim()) {
+      alert("Mã loại điểm và Tên loại điểm không được để trống.");
       return;
     }
-    await addScoreType(newScoreType);
-    setNewScoreType({ code: "", name: "", weight: 1, description: "" });
-    setShowForm(false);
-    fetchScoreTypes();
+    try {
+      await addScoreType(newScoreType);
+      setNewScoreType({ code: "", name: "", weight: 1, description: "" });
+      setShowForm(false);
+      fetchScoreTypes();
+    } catch (error) {
+      alert("Lỗi khi thêm loại điểm.");
+      console.error(error);
+    }
   };
 
   const handleDelete = async (id?: string) => {
-    if (id && window.confirm("Bạn có chắc muốn xóa loại điểm này?")) {
+    if (!id) return;
+    if (!window.confirm("Bạn có chắc muốn xóa loại điểm này?")) return;
+    try {
       await deleteScoreType(id);
       fetchScoreTypes();
+    } catch (error) {
+      alert("Lỗi khi xóa loại điểm.");
+      console.error(error);
     }
   };
 
-  useEffect(() => {
-    fetchScoreTypes();
-  }, []);
-
   return (
-    <div className="container py-4">
-      <h3 className="text-success text-uppercase fw-bold mb-4">
-        Danh Mục Loại Điểm
-      </h3>
-
-      <button
-        className="btn btn-success mb-4"
-        onClick={() => setShowForm((v) => !v)}
-      >
-        {showForm ? "Đóng form thêm" : "Thêm loại điểm mới"}
-      </button>
+    <div className="container py-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2
+          className="fw-extrabold text-success"
+          style={{
+            fontSize: "2.6rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            userSelect: "none",
+          }}
+        >
+          📊 Danh Mục Loại Điểm
+        </h2>
+        <button
+          className="btn btn-lg btn-success"
+          style={{
+            background:
+              "linear-gradient(45deg, #28a745 0%, #71d28a 100%)",
+            fontWeight: "600",
+            boxShadow: "0 4px 15px rgba(40, 167, 69, 0.4)",
+            border: "none",
+          }}
+          onClick={() => setShowForm((v) => !v)}
+          aria-expanded={showForm}
+          aria-controls="scoretype-form"
+        >
+          {showForm ? (
+            <>
+              <i className="bi bi-x-circle me-2"></i> Đóng form
+            </>
+          ) : (
+            <>
+              <i className="bi bi-plus-circle me-2"></i> Thêm loại điểm
+            </>
+          )}
+        </button>
+      </div>
 
       {showForm && (
         <div
-          className="card p-4 mb-5 shadow-sm"
-          style={{ maxWidth: 500, backgroundColor: "#f9f9f9" }}
+          id="scoretype-form"
+          className="card shadow-lg border-0 p-4 mb-5"
+          style={{
+            maxWidth: 600,
+            backgroundColor: "#e8f5e9",
+            borderRadius: 16,
+          }}
         >
           <div className="mb-3">
-            <label className="form-label">Mã loại điểm</label>
+            <label className="form-label fw-semibold">Mã loại điểm *</label>
             <input
               type="text"
-              className="form-control"
+              className="form-control form-control-lg"
+              placeholder="Nhập mã loại điểm"
               value={newScoreType.code}
               onChange={(e) =>
                 setNewScoreType({ ...newScoreType, code: e.target.value })
               }
+              autoFocus
             />
           </div>
 
           <div className="mb-3">
-            <label className="form-label">Tên loại điểm</label>
+            <label className="form-label fw-semibold">Tên loại điểm *</label>
             <input
               type="text"
-              className="form-control"
+              className="form-control form-control-lg"
+              placeholder="Nhập tên loại điểm"
               value={newScoreType.name}
               onChange={(e) =>
                 setNewScoreType({ ...newScoreType, name: e.target.value })
@@ -133,27 +132,28 @@ export default function DanhMucLoaiDiem() {
           </div>
 
           <div className="mb-3">
-            <label className="form-label">Hệ số</label>
+            <label className="form-label fw-semibold">Hệ số</label>
             <input
               type="number"
-              className="form-control"
               min={0}
               step={0.1}
+              className="form-control form-control-lg"
               value={newScoreType.weight}
               onChange={(e) =>
                 setNewScoreType({
                   ...newScoreType,
-                  weight: parseFloat(e.target.value),
+                  weight: parseFloat(e.target.value) || 1,
                 })
               }
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label">Diễn giải</label>
-            <input
-              type="text"
+          <div className="mb-4">
+            <label className="form-label fw-semibold">Diễn giải</label>
+            <textarea
+              rows={3}
               className="form-control"
+              placeholder="Mô tả ngắn gọn loại điểm"
               value={newScoreType.description}
               onChange={(e) =>
                 setNewScoreType({ ...newScoreType, description: e.target.value })
@@ -161,26 +161,95 @@ export default function DanhMucLoaiDiem() {
             />
           </div>
 
-          <button className="btn btn-primary" onClick={handleAdd}>
-            Lưu loại điểm
+          <button
+            className="btn btn-success btn-lg w-100"
+            onClick={handleAdd}
+            style={{ fontWeight: "700", borderRadius: 12 }}
+          >
+            <i className="bi bi-save2 me-2"></i> Lưu loại điểm
           </button>
         </div>
       )}
 
-      {/* Danh sách các loại điểm dạng card */}
-      <div className="scoretype-list">
-        {scoreTypes.length === 0 ? (
-          <p>Chưa có loại điểm nào. Hãy thêm mới nhé!</p>
-        ) : (
-          scoreTypes.map((scoreType) => (
-            <ScoreTypeCard
-              key={scoreType.id}
-              scoreType={scoreType}
-              onDelete={handleDelete}
-            />
-          ))
-        )}
-      </div>
+      {loading ? (
+        <div className="text-center py-5">
+          <div className="spinner-border text-success" role="status" />
+          <p className="mt-3 text-success">Đang tải danh sách loại điểm...</p>
+        </div>
+      ) : scoreTypes.length === 0 ? (
+        <p className="text-center text-muted fst-italic">
+          Chưa có loại điểm nào. Hãy thêm mới nhé!
+        </p>
+      ) : (
+        <div className="row row-cols-1 row-cols-md-3 g-4">
+          {scoreTypes.map((scoreType) => (
+            <div key={scoreType.id} className="col" title={scoreType.description || "Không có mô tả"}>
+              <div
+                className="card h-100 shadow"
+                style={{
+                  borderRadius: 18,
+                  border: "2px solid transparent",
+                  transition: "all 0.3s ease",
+                  cursor: "default",
+                  backgroundColor: "#f0fdf4",
+                  boxShadow:
+                    "0 0 15px 2px rgba(40, 167, 69, 0.15), 0 4px 20px rgba(113, 210, 138, 0.15)",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.style.transform = "translateY(-6px)";
+                  el.style.borderColor = "#28a745";
+                  el.style.boxShadow =
+                    "0 0 20px 4px rgba(40, 167, 69, 0.3), 0 8px 30px rgba(113, 210, 138, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget;
+                  el.style.transform = "none";
+                  el.style.borderColor = "transparent";
+                  el.style.boxShadow =
+                    "0 0 15px 2px rgba(40, 167, 69, 0.15), 0 4px 20px rgba(113, 210, 138, 0.15)";
+                }}
+              >
+                <div className="card-body d-flex flex-column">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h5
+                      className="card-title text-success fw-bold"
+                      style={{ fontSize: "1.5rem", marginBottom: 0 }}
+                    >
+                      <i className="bi bi-pie-chart-fill me-2"></i>
+                      {scoreType.name}
+                    </h5>
+                    <button
+                      className="btn btn-sm btn-outline-danger"
+                      title="Xóa loại điểm"
+                      onClick={() => handleDelete(scoreType.id)}
+                      aria-label={`Xóa loại điểm ${scoreType.name}`}
+                      style={{ transition: "all 0.3s ease" }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.color = "#d6336c")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.color = "")
+                      }
+                    >
+                      <i className="bi bi-trash3"></i>
+                    </button>
+                  </div>
+                  <p className="text-muted fst-italic small mb-1" style={{userSelect: "none"}}>
+                    Mã loại: <span className="fw-semibold">{scoreType.code}</span>
+                  </p>
+                  <p className="mb-1">
+                    <b>Hệ số:</b> {scoreType.weight}
+                  </p>
+                  <p className="flex-grow-1 text-secondary" style={{ minHeight: "3.6rem" }}>
+                    {scoreType.description || <i>Chưa có mô tả.</i>}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
