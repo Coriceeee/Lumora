@@ -67,9 +67,10 @@ function SkillCard({
             <i className="bi bi-trash3"></i>
           </button>
         </div>
-        <p className="text-muted small mb-1" style={{ userSelect: "none" }}>
+        {/* Bỏ hiển thị mã kỹ năng */}
+        {/* <p className="text-muted small mb-1" style={{ userSelect: "none" }}>
           Mã: <span className="fw-semibold">{skill.code}</span>
-        </p>
+        </p> */}
         <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>
         <span
           className="badge"
@@ -93,8 +94,8 @@ function SkillCard({
 
 export default function DanhMucKyNang() {
   const [skills, setSkills] = useState<Skill[]>([]);
-  const [newSkill, setNewSkill] = useState<Skill>({
-    code: "",
+  // Bỏ code khỏi state newSkill
+  const [newSkill, setNewSkill] = useState<Omit<Skill, "code" | "id">>({
     name: "",
     level: "Cơ bản",
     description: "",
@@ -113,13 +114,18 @@ export default function DanhMucKyNang() {
   };
 
   const handleAdd = async () => {
-    if (!newSkill.code.trim() || !newSkill.name.trim()) {
-      alert("Mã kỹ năng và Tên kỹ năng không được để trống.");
+    if (!newSkill.name.trim()) {
+      alert("Tên kỹ năng không được để trống.");
       return;
     }
     try {
-      await addSkill(newSkill);
-      setNewSkill({ code: "", name: "", level: "Cơ bản", description: "" });
+      // Nếu backend yêu cầu code thì bạn có thể tự tạo mã từ tên ở đây
+      // Ví dụ:
+      // const code = newSkill.name.trim().toLowerCase().replace(/\s+/g, "_");
+      // await addSkill({ ...newSkill, code });
+
+      await addSkill(newSkill as Skill);
+      setNewSkill({ name: "", level: "Cơ bản", description: "" });
       setShowForm(false);
       fetchSkills();
     } catch (error) {
@@ -184,18 +190,7 @@ export default function DanhMucKyNang() {
           className="card shadow-lg border-0 p-4 mb-5"
           style={{ maxWidth: 600, borderRadius: 16, backgroundColor: "#fff8e1" }}
         >
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Mã kỹ năng *</label>
-            <input
-              type="text"
-              className="form-control form-control-lg"
-              placeholder="Nhập mã kỹ năng"
-              value={newSkill.code}
-              onChange={(e) => setNewSkill({ ...newSkill, code: e.target.value })}
-              autoFocus
-            />
-          </div>
-
+          {/* Bỏ nhập mã kỹ năng */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên kỹ năng *</label>
             <input
@@ -204,6 +199,7 @@ export default function DanhMucKyNang() {
               placeholder="Nhập tên kỹ năng"
               value={newSkill.name}
               onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
+              autoFocus
             />
           </div>
 

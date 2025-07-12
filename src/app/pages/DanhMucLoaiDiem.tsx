@@ -8,9 +8,10 @@ import { ScoreType } from "../../types/ScoreType";
 
 export default function DanhMucLoaiDiem() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
-  const [newScoreType, setNewScoreType] = useState<ScoreType>({
-    code: "",
+  // Thêm trường nhập điểm (point) vào state mới
+  const [newScoreType, setNewScoreType] = useState<Omit<ScoreType, "code" | "id"> & { point: number }>({
     name: "",
+    point: 0,
     weight: 1,
     description: "",
   });
@@ -27,14 +28,29 @@ export default function DanhMucLoaiDiem() {
     }
   };
 
+  useEffect(() => {
+    fetchScoreTypes();
+  }, []);
+
+  // Tạo code tự động từ tên
+  const generateCodeFromName = (name: string) => {
+    return name.trim().toLowerCase().replace(/\s+/g, "_");
+  };
+
   const handleAdd = async () => {
-    if (!newScoreType.code.trim() || !newScoreType.name.trim()) {
-      alert("Mã loại điểm và Tên loại điểm không được để trống.");
+    if (!newScoreType.name.trim()) {
+      alert("Tên loại điểm không được để trống.");
       return;
     }
     try {
-      await addScoreType(newScoreType);
-      setNewScoreType({ code: "", name: "", weight: 1, description: "" });
+      // Chuẩn bị dữ liệu để gửi lên server
+      const scoreTypeToAdd: ScoreType & { point?: number } = {
+        ...newScoreType,
+        code: generateCodeFromName(newScoreType.name),
+      };
+      // Nếu backend không cần trường point thì bạn có thể bỏ nó trước khi gửi
+      await addScoreType(scoreTypeToAdd);
+      setNewScoreType({ name: "", point: 0, weight: 1, description: "" });
       setShowForm(false);
       fetchScoreTypes();
     } catch (error) {
@@ -104,20 +120,7 @@ export default function DanhMucLoaiDiem() {
             borderRadius: 16,
           }}
         >
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Mã loại điểm *</label>
-            <input
-              type="text"
-              className="form-control form-control-lg"
-              placeholder="Nhập mã loại điểm"
-              value={newScoreType.code}
-              onChange={(e) =>
-                setNewScoreType({ ...newScoreType, code: e.target.value })
-              }
-              autoFocus
-            />
-          </div>
-
+          {/* Tên loại điểm */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên loại điểm *</label>
             <input
@@ -128,9 +131,30 @@ export default function DanhMucLoaiDiem() {
               onChange={(e) =>
                 setNewScoreType({ ...newScoreType, name: e.target.value })
               }
+              autoFocus
             />
           </div>
 
+          {/* Nhập điểm */}
+          <div className="mb-3">
+            <label className="form-label fw-semibold">Nhập điểm *</label>
+            <input
+              type="number"
+              min={0}
+              step={0.1}
+              className="form-control form-control-lg"
+              placeholder="Nhập điểm"
+              value={newScoreType.point}
+              onChange={(e) =>
+                setNewScoreType({
+                  ...newScoreType,
+                  point: parseFloat(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
+
+          {/* Hệ số */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Hệ số</label>
             <input
@@ -148,6 +172,7 @@ export default function DanhMucLoaiDiem() {
             />
           </div>
 
+          {/* Diễn giải */}
           <div className="mb-4">
             <label className="form-label fw-semibold">Diễn giải</label>
             <textarea
@@ -183,7 +208,11 @@ export default function DanhMucLoaiDiem() {
       ) : (
         <div className="row row-cols-1 row-cols-md-3 g-4">
           {scoreTypes.map((scoreType) => (
-            <div key={scoreType.id} className="col" title={scoreType.description || "Không có mô tả"}>
+            <div
+              key={scoreType.id}
+              className="col"
+              title={scoreType.description || "Không có mô tả"}
+            >
               <div
                 className="card h-100 shadow"
                 style={{
@@ -235,13 +264,16 @@ export default function DanhMucLoaiDiem() {
                       <i className="bi bi-trash3"></i>
                     </button>
                   </div>
-                  <p className="text-muted fst-italic small mb-1" style={{userSelect: "none"}}>
-                    Mã loại: <span className="fw-semibold">{scoreType.code}</span>
+                  <p className="mb-1">
+                    <b>Nhập điểm:</b> {scoreType.point ?? "-"}
                   </p>
                   <p className="mb-1">
                     <b>Hệ số:</b> {scoreType.weight}
                   </p>
-                  <p className="flex-grow-1 text-secondary" style={{ minHeight: "3.6rem" }}>
+                  <p
+                    className="flex-grow-1 text-secondary"
+                    style={{ minHeight: "3.6rem" }}
+                  >
                     {scoreType.description || <i>Chưa có mô tả.</i>}
                   </p>
                 </div>
