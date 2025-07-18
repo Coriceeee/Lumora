@@ -21,8 +21,8 @@ export function AsideMenuMain() {
           VIREYA (AI Mentor)
         </h4>
       </div>
-      <AsideMenuItem to="/chat" title="Cập nhật kết quả học tập" icon="fas fa-pen-alt text-primary px-2" />
-      <AsideMenuItem to="/shop/shop-1" title="Hồ sơ thành tích học tập" icon="fas fa-user-graduate text-primary px-2" />
+      <AsideMenuItem to="/vireya/ket-qua-hoc-tap" title="Kết quả học tập" icon="fas fa-pen-alt text-primary px-2" />
+      <AsideMenuItem to="/shop/shop-1" title="Hồ sơ học tập" icon="fas fa-user-graduate text-primary px-2" />
       <AsideMenuItem to="/shop/shop-2" title="Đánh giá trình độ" icon="fas fa-tasks text-primary px-2" />
       <AsideMenuItem to="/shop/shop-2" title="Định hướng kế hoạch học tập" icon="fas fa-map-signs text-primary px-2" />
 

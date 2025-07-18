@@ -6,11 +6,6 @@ import {
 } from "../../services/skillService";
 import { Skill } from "../../types/Skill";
 
-const levelColors = {
-  "Cơ bản": "#0d6efd",     // blue
-  "Trung bình": "#ffc107", // yellow
-  "Nâng cao": "#dc3545",   // red
-} as const;
 
 function SkillCard({
   skill,
@@ -24,26 +19,18 @@ function SkillCard({
       className="card h-100 shadow"
       style={{
         borderRadius: 18,
-        border: `3px solid ${levelColors[skill.level]}`,
+        border: `3px solid`,
         cursor: "default",
         transition: "transform 0.3s ease",
         backgroundColor: "#fff8f0",
       }}
-      title={skill.description || "Không có mô tả"}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.transform = "translateY(-6px)";
-        (e.currentTarget as HTMLElement).style.boxShadow = `0 0 20px 4px ${levelColors[skill.level]}80`;
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLElement).style.transform = "none";
-        (e.currentTarget as HTMLElement).style.boxShadow = "none";
-      }}
+      title={skill.description || "Không có mô tả"}      
     >
       <div className="card-body d-flex flex-column">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5
             className="fw-bold"
-            style={{ color: levelColors[skill.level], fontSize: "1.5rem" }}
+            style={{ fontSize: "1.5rem" }}
           >
             <i className="bi bi-stars me-2"></i>
             {skill.name}
@@ -71,22 +58,7 @@ function SkillCard({
         {/* <p className="text-muted small mb-1" style={{ userSelect: "none" }}>
           Mã: <span className="fw-semibold">{skill.code}</span>
         </p> */}
-        <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>
-        <span
-          className="badge"
-          style={{
-            backgroundColor: levelColors[skill.level],
-            color: "white",
-            fontWeight: "600",
-            fontSize: "0.9rem",
-            alignSelf: "start",
-            borderRadius: "9999px",
-            padding: "0.25em 0.8em",
-            userSelect: "none",
-          }}
-        >
-          {skill.level}
-        </span>
+        <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>       
       </div>
     </div>
   );
@@ -95,9 +67,8 @@ function SkillCard({
 export default function DanhMucKyNang() {
   const [skills, setSkills] = useState<Skill[]>([]);
   // Bỏ code khỏi state newSkill
-  const [newSkill, setNewSkill] = useState<Omit<Skill, "code" | "id">>({
+  const [newSkill, setNewSkill] = useState<Omit<Skill, "id">>({
     name: "",
-    level: "Cơ bản",
     description: "",
   });
   const [showForm, setShowForm] = useState(false);
@@ -125,7 +96,7 @@ export default function DanhMucKyNang() {
       // await addSkill({ ...newSkill, code });
 
       await addSkill(newSkill as Skill);
-      setNewSkill({ name: "", level: "Cơ bản", description: "" });
+      setNewSkill({ name: "", description: "" });
       setShowForm(false);
       fetchSkills();
     } catch (error) {
@@ -190,7 +161,7 @@ export default function DanhMucKyNang() {
           className="card shadow-lg border-0 p-4 mb-5"
           style={{ maxWidth: 600, borderRadius: 16, backgroundColor: "#fff8e1" }}
         >
-          {/* Bỏ nhập mã kỹ năng */}
+                    
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên kỹ năng *</label>
             <input
@@ -203,20 +174,6 @@ export default function DanhMucKyNang() {
             />
           </div>
 
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Trình độ</label>
-            <select
-              className="form-select form-select-lg"
-              value={newSkill.level}
-              onChange={(e) =>
-                setNewSkill({ ...newSkill, level: e.target.value as Skill["level"] })
-              }
-            >
-              <option value="Cơ bản">Cơ bản</option>
-              <option value="Trung bình">Trung bình</option>
-              <option value="Nâng cao">Nâng cao</option>
-            </select>
-          </div>
 
           <div className="mb-4">
             <label className="form-label fw-semibold">Diễn giải</label>

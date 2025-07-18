@@ -6,18 +6,10 @@ import {
 } from "../../services/certificateService";
 import { Certificate } from "../../types/Certificate";
 
-const levelColors = {
-  "Cơ bản": "text-primary bg-primary bg-opacity-10 border border-primary",
-  "Trung bình": "text-warning bg-warning bg-opacity-10 border border-warning",
-  "Nâng cao": "text-danger bg-danger bg-opacity-10 border border-danger",
-};
-
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [newCert, setNewCert] = useState<Certificate>({
-    code: "",
     name: "",
-    level: "Cơ bản",
     description: "",
   });
   const [showForm, setShowForm] = useState(false);
@@ -34,13 +26,13 @@ export default function CertificatesPage() {
   };
 
   const handleAdd = async () => {
-    if (!newCert.code.trim() || !newCert.name.trim()) {
+    if ( !newCert.name.trim()) {
       alert("Mã và tên chứng chỉ không được để trống.");
       return;
     }
     try {
       await addCertificate(newCert);
-      setNewCert({ code: "", name: "", level: "Cơ bản", description: "" });
+      setNewCert({ name: "", description: "" });
       setShowForm(false);
       fetchCertificates();
     } catch (error) {
@@ -117,19 +109,6 @@ export default function CertificatesPage() {
             borderRadius: 16,
           }}
         >
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Mã chứng chỉ *</label>
-            <input
-              type="text"
-              className="form-control form-control-lg"
-              placeholder="Nhập mã chứng chỉ"
-              value={newCert.code}
-              onChange={(e) =>
-                setNewCert({ ...newCert, code: e.target.value })
-              }
-              autoFocus
-            />
-          </div>
 
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên chứng chỉ *</label>
@@ -142,24 +121,6 @@ export default function CertificatesPage() {
                 setNewCert({ ...newCert, name: e.target.value })
               }
             />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Cấp độ</label>
-            <select
-              className="form-select form-select-lg"
-              value={newCert.level}
-              onChange={(e) =>
-                setNewCert({ ...newCert, level: e.target.value as Certificate["level"] })
-              }
-            >
-              <option>Cơ bản</option>
-              <option>Trung bình</option>
-              <option>Nâng cao</option>
-            </select>
-            <small className="form-text text-muted mt-1">
-              Cấp độ giúp phân loại mức độ chuyên môn của chứng chỉ.
-            </small>
           </div>
 
           <div className="mb-4">
@@ -266,19 +227,10 @@ export default function CertificatesPage() {
                       <i className="bi bi-trash3"></i>
                     </button>
                   </div>
-                  <p className="text-muted fst-italic small mb-1">
-                    Mã: <span className="fw-semibold">{cert.code}</span>
-                  </p>
+                  
                   <p className="flex-grow-1 text-secondary" style={{minHeight: "3.6rem"}}>
                     {cert.description || <i>Chưa có mô tả.</i>}
                   </p>
-                  <span
-                    className={`badge rounded-pill py-2 px-3 fw-semibold ${levelColors[cert.level]}`}
-                    style={{ fontSize: "0.85rem", userSelect: "none" }}
-                    title={`Cấp độ: ${cert.level}`}
-                  >
-                    {cert.level}
-                  </span>
                 </div>
               </div>
             </div>

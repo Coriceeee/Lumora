@@ -8,7 +8,7 @@ export class ElementStyleUtil {
     if (important) {
       element.style.setProperty(property, value, 'important');
     } else {
-      element.style[property] = value;
+      (element.style as any)[property] = value;
     }
   }
 

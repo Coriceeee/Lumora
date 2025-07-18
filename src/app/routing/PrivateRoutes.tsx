@@ -9,6 +9,7 @@ import DanhMucMonHoc from "../pages/DanhMucMonHoc";
 import DanhMucKyNang from "../pages/DanhMucKyNang";
 import DanhMucKhaoSat from "../pages/DanhMucKhaoSat";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
+import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -32,6 +33,9 @@ export function PrivateRoutes() {
         <Route path="/danh-muc/chung-chi" component={DanhMucChungChi} />
         <Route path="/danh-muc/khao-sat" component={DanhMucKhaoSat} />
         <Route path="/danh-muc/ky-nang" component={DanhMucKyNang} />
+
+        <Route path="/vireya/ket-qua-hoc-tap" component={KetQuaHocTapForm} />
+        
 
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />

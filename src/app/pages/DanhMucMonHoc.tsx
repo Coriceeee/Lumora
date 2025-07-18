@@ -9,7 +9,6 @@ import { Subject } from "../../types/Subject";
 export default function DanhMucMonHoc() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [newSubject, setNewSubject] = useState<Subject>({
-    code: "",
     name: "",
     description: "",
   });
@@ -27,13 +26,13 @@ export default function DanhMucMonHoc() {
   };
 
   const handleAdd = async () => {
-    if (!newSubject.code.trim() || !newSubject.name.trim()) {
-      alert("Mã môn học và Tên môn học không được để trống.");
+    if ( !newSubject.name.trim()) {
+      alert("Tên môn học không được để trống.");
       return;
     }
     try {
       await addSubject(newSubject);
-      setNewSubject({ code: "", name: "", description: "" });
+      setNewSubject({  name: "", description: "" });
       setShowForm(false);
       fetchSubjects();
     } catch (error) {
@@ -116,19 +115,6 @@ export default function DanhMucMonHoc() {
             borderRadius: 16,
           }}
         >
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Mã môn học *</label>
-            <input
-              type="text"
-              className="form-control form-control-lg"
-              placeholder="Nhập mã môn học"
-              value={newSubject.code}
-              onChange={(e) =>
-                setNewSubject({ ...newSubject, code: e.target.value })
-              }
-              autoFocus
-            />
-          </div>
 
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên môn học *</label>
@@ -244,13 +230,7 @@ export default function DanhMucMonHoc() {
                     >
                       <i className="bi bi-trash3"></i>
                     </button>
-                  </div>
-                  <p
-                    className="text-muted fst-italic small mb-1"
-                    style={{ userSelect: "none" }}
-                  >
-                    Mã môn học: <span className="fw-semibold">{subject.code}</span>
-                  </p>
+                  </div>                
                   <p
                     className="flex-grow-1 text-secondary"
                     style={{ minHeight: "3.6rem" }}

@@ -421,8 +421,7 @@ function getChartOptions(
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "30%",
-        endingShape: "rounded",
+        columnWidth: "30%"        
       },
     },
     legend: {

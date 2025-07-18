@@ -31,7 +31,7 @@ export function mockAuth(mock: MockAdapter) {
   mock.onPost(REGISTER_URL).reply(({ data }) => {
     const { email, firstname, lastname, password } = JSON.parse(data);
 
-    if (email && firstname && lastname &&  password) {
+    if (email && firstname && lastname && password) {
       const user: UserModel = {
         id: generateUserId(),
         email,
@@ -74,28 +74,39 @@ export function mockAuth(mock: MockAdapter) {
     return [400];
   });
 
-  mock
-    .onGet(GET_USER_BY_ACCESSTOKEN_URL)
-    .reply(({ headers: { Authorization } }) => {
-      
+  mock.onGet(GET_USER_BY_ACCESSTOKEN_URL).reply((config) => {
+    const headers = config.headers || {};
 
-      const accessToken =
-        Authorization &&
-        Authorization.startsWith("Bearer ") &&
-        Authorization.slice("Bearer ".length);
+    // Try to get Authorization header safely
+    let authHeader: string | undefined;
 
-      if (accessToken) {
-        const user = UsersTableMock.table.find(
-          (x) => x.auth?.accessToken === accessToken
-        );
+    if (typeof (headers as any).get === "function") {
+      // AxiosHeaders instance
+      authHeader = (headers as any).get("Authorization");
+    } else {
+      // Plain object headers, case insensitive check
+      authHeader =
+        (headers as any)["Authorization"] ||
+        (headers as any)["authorization"];
+    }
 
-        if (user) {
-          return [200, { ...user, password: undefined }];
-        }
+    const accessToken =
+      authHeader &&
+      authHeader.startsWith("Bearer ") &&
+      authHeader.slice("Bearer ".length);
+
+    if (accessToken) {
+      const user = UsersTableMock.table.find(
+        (x) => x.auth?.accessToken === accessToken
+      );
+
+      if (user) {
+        return [200, { ...user, password: undefined }];
       }
+    }
 
-      return [401];
-    });
+    return [401];
+  });
 
   function generateUserId(): number {
     const ids = UsersTableMock.table.map((el) => el.id);

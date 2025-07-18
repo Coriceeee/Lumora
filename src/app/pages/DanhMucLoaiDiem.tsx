@@ -9,9 +9,8 @@ import { ScoreType } from "../../types/ScoreType";
 export default function DanhMucLoaiDiem() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   // Thêm trường nhập điểm (point) vào state mới
-  const [newScoreType, setNewScoreType] = useState<Omit<ScoreType, "code" | "id"> & { point: number }>({
+  const [newScoreType, setNewScoreType] = useState<Omit<ScoreType, "id">>({
     name: "",
-    point: 0,
     weight: 1,
     description: "",
   });
@@ -32,10 +31,6 @@ export default function DanhMucLoaiDiem() {
     fetchScoreTypes();
   }, []);
 
-  // Tạo code tự động từ tên
-  const generateCodeFromName = (name: string) => {
-    return name.trim().toLowerCase().replace(/\s+/g, "_");
-  };
 
   const handleAdd = async () => {
     if (!newScoreType.name.trim()) {
@@ -46,11 +41,10 @@ export default function DanhMucLoaiDiem() {
       // Chuẩn bị dữ liệu để gửi lên server
       const scoreTypeToAdd: ScoreType & { point?: number } = {
         ...newScoreType,
-        code: generateCodeFromName(newScoreType.name),
       };
       // Nếu backend không cần trường point thì bạn có thể bỏ nó trước khi gửi
       await addScoreType(scoreTypeToAdd);
-      setNewScoreType({ name: "", point: 0, weight: 1, description: "" });
+      setNewScoreType({ name: "", weight: 1, description: "" });
       setShowForm(false);
       fetchScoreTypes();
     } catch (error) {
@@ -132,25 +126,6 @@ export default function DanhMucLoaiDiem() {
                 setNewScoreType({ ...newScoreType, name: e.target.value })
               }
               autoFocus
-            />
-          </div>
-
-          {/* Nhập điểm */}
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Nhập điểm *</label>
-            <input
-              type="number"
-              min={0}
-              step={0.1}
-              className="form-control form-control-lg"
-              placeholder="Nhập điểm"
-              value={newScoreType.point}
-              onChange={(e) =>
-                setNewScoreType({
-                  ...newScoreType,
-                  point: parseFloat(e.target.value) || 0,
-                })
-              }
             />
           </div>
 
@@ -263,10 +238,7 @@ export default function DanhMucLoaiDiem() {
                     >
                       <i className="bi bi-trash3"></i>
                     </button>
-                  </div>
-                  <p className="mb-1">
-                    <b>Nhập điểm:</b> {scoreType.point ?? "-"}
-                  </p>
+                  </div>                
                   <p className="mb-1">
                     <b>Hệ số:</b> {scoreType.weight}
                   </p>

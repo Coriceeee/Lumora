@@ -5,7 +5,6 @@ import { Survey } from "../../types/Survey";
 export default function DanhMucKhaoSat() {
   const [surveys, setSurveys] = useState<Survey[]>([]);
   const [newSurvey, setNewSurvey] = useState<Survey>({
-    code: "",
     title: "",
     description: "",
   });
@@ -23,13 +22,13 @@ export default function DanhMucKhaoSat() {
   };
 
   const handleAdd = async () => {
-    if (!newSurvey.code.trim() || !newSurvey.title.trim()) {
+    if ( !newSurvey.title.trim()) {
       alert("Mã khảo sát và Tiêu đề khảo sát không được để trống.");
       return;
     }
     try {
       await addSurvey(newSurvey);
-      setNewSurvey({ code: "", title: "", description: "" });
+      setNewSurvey({  title: "", description: "" });
       setShowForm(false);
       fetchSurveys();
     } catch (error) {
@@ -112,19 +111,6 @@ export default function DanhMucKhaoSat() {
             borderRadius: 16,
           }}
         >
-          <div className="mb-3">
-            <label className="form-label fw-semibold">Mã khảo sát *</label>
-            <input
-              type="text"
-              className="form-control form-control-lg"
-              placeholder="Nhập mã khảo sát"
-              value={newSurvey.code}
-              onChange={(e) =>
-                setNewSurvey({ ...newSurvey, code: e.target.value })
-              }
-              autoFocus
-            />
-          </div>
 
           <div className="mb-3">
             <label className="form-label fw-semibold">Tiêu đề khảo sát *</label>
@@ -245,13 +231,7 @@ export default function DanhMucKhaoSat() {
                     className="text-muted fst-italic small mb-1"
                     style={{ userSelect: "none" }}
                   >
-                    Mã khảo sát: <span className="fw-semibold">{survey.code}</span>
-                  </p>
-                  <p
-                    className="flex-grow-1 text-secondary"
-                    style={{ minHeight: "3.6rem" }}
-                  >
-                    {survey.description || <i>Chưa có mô tả.</i>}
+                  
                   </p>
                 </div>
               </div>
