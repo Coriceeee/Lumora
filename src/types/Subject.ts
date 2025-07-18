@@ -1,6 +1,9 @@
-// src/types/Subject.ts
+// types/Subject.ts
+import { ScoreType } from "./ScoreType";
+
 export interface Subject {
-  id?: string; // Firestore document ID
+  id?: string;
   name: string;
-  description: string;
+  description?: string;
+  scoreTypes?: ScoreType[]; // <-- thêm trường này
 }
