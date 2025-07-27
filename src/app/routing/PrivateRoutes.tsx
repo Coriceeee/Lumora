@@ -11,6 +11,7 @@ import DanhMucKhaoSat from "../pages/DanhMucKhaoSat";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
 import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
+import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
 
 
 export function PrivateRoutes() {
@@ -39,6 +40,7 @@ export function PrivateRoutes() {
         <Route path="/vireya/ket-qua-hoc-tap" component={KetQuaHocTapForm} />
         <Route path="/vireya/ho-so-hoc-tap" component={HoSoHocTapPage} />
 
+        <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
 
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />

@@ -99,33 +99,27 @@ export function MenuInner() {
           <h3 className="fw-bolder mb-5">Danh Mục</h3>
           <ul className="menu menu-column menu-fit menu-rounded menu-gray-600 menu-hover-primary menu-active-primary fw-bold fs-6 mb-10">
             <li className="menu-item">
-              <Link className="menu-link ps-0 py-2" to="/docs/getting-started">
+              <Link className="menu-link ps-0 py-2" to="/danh-muc/loai-diem">
                 Loại điểm
               </Link>
             </li>
             <li className="menu-item">
-              <a className="menu-link ps-0 py-2" href="#" data-kt-page="pro">
+              <Link className="menu-link ps-0 py-2" to="/danh-muc/mon-hoc">
                 Môn học
-                <span className="badge badge-pro badge-light-danger fw-bold fs-9 px-2 py-1 ms-1">
-                  Pro
-                </span>
-              </a>
-            </li>
-            <li className="menu-item">
-              <Link className="menu-link ps-0 py-2" to="/docs/changelog">
-                Kỹ năng
-                <span className="badge badge-changelog badge-light-danger bg-hover-danger text-hover-white fw-bold fs-9 px-2 ms-2">
-                  v1.0.0
-                </span>
               </Link>
             </li>
             <li className="menu-item">
-  <Link className="menu-link ps-0 py-2" to="/docs/certificates">
+              <Link className="menu-link ps-0 py-2" to="/danh-muc/ky-nang">
+                Kỹ năng
+              </Link>
+            </li>
+            <li className="menu-item">
+  <Link className="menu-link ps-0 py-2" to="/danh-muc/chung-chi">
     Chứng chỉ
   </Link>
 </li>
 <li className="menu-item">
-  <Link className="menu-link ps-0 py-2" to="/docs/surveys">
+  <Link className="menu-link ps-0 py-2" to="/danh-muc/khao-sat">
     Khảo sát
   </Link>
 </li>
