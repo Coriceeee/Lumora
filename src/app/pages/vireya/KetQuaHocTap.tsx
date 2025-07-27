@@ -54,7 +54,8 @@ export default function KetQuaHocTapForm({ currentUserId }: KetQuaHocTapFormProp
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      await addLearningResult({ userId: "id", ...data });
+      const userId = "fakeUserId"; // tạm hardcode để test
+      await addLearningResult({ userId, ...data });
       toast.success("🎉 Đã lưu kết quả học tập!");
       reset();
     } catch (error) {
