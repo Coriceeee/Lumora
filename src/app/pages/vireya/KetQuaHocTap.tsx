@@ -10,7 +10,7 @@ import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
 
 interface FormData {
-  classLevel: number;
+  classLevel: 10 | 11 | 12; // Chỉnh lại kiểu đúng
   subjectId: string;
   scoreTypeId: string;
   score: number;
@@ -27,7 +27,7 @@ export default function KetQuaHocTapForm({ currentUserId }: KetQuaHocTapFormProp
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(true); // Có thể toggle nếu muốn giống `DanhMucKhaoSat`
+  const [showForm, setShowForm] = useState(true);
 
   const {
     register,
@@ -54,7 +54,8 @@ export default function KetQuaHocTapForm({ currentUserId }: KetQuaHocTapFormProp
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      const userId = "fakeUserId"; // tạm hardcode để test
+      // Lấy userId từ props hiện tại, không hardcode nữa
+      const userId = currentUserId;
       await addLearningResult({ userId, ...data });
       toast.success("🎉 Đã lưu kết quả học tập!");
       reset();
@@ -114,6 +115,7 @@ export default function KetQuaHocTapForm({ currentUserId }: KetQuaHocTapFormProp
                 <small className="text-danger fst-italic">{errors.semester.message}</small>
               )}
             </div>
+
             {/* Lớp học */}
             <div>
               <label className="form-label fw-semibold">Lớp học</label>
