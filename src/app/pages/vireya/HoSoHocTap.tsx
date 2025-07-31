@@ -21,19 +21,19 @@ type GroupedRow = {
 const ScoreColorLegend = () => (
   <div className="mb-6 flex justify-center gap-6 flex-wrap text-sm select-none">
     <div className="flex items-center gap-2">
-      <div className="w-6 h-6 bg-green-700 rounded-md shadow-inner"></div>
+      <div className="w-6 h-6 bg-green-100 border border-green-700 rounded-md shadow-inner"></div>
       <span className="font-semibold text-green-700">≥ 8: Xuất sắc</span>
     </div>
     <div className="flex items-center gap-2">
-      <div className="w-6 h-6 bg-yellow-700 rounded-md shadow-inner"></div>
+      <div className="w-6 h-6 bg-yellow-100 border border-yellow-700 rounded-md shadow-inner"></div>
       <span className="font-semibold text-yellow-700">5 - 7.9: Khá</span>
     </div>
     <div className="flex items-center gap-2">
-      <div className="w-6 h-6 bg-red-500 rounded-md shadow-inner"></div>
-      <span className="font-semibold text-red-500">3 - 4.9: Trung bình</span>
+      <div className="w-6 h-6 bg-red-100 border border-red-600 rounded-md shadow-inner"></div>
+      <span className="font-semibold text-red-600">3 - 4.9: Trung bình</span>
     </div>
     <div className="flex items-center gap-2">
-      <div className="w-6 h-6 bg-red-700 rounded-md shadow-inner"></div>
+      <div className="w-6 h-6 bg-red-200 border border-red-700 rounded-md shadow-inner"></div>
       <span className="font-semibold text-red-700">＜ 3: Yếu kém</span>
     </div>
   </div>
@@ -82,11 +82,11 @@ export default function HoSoHocTapPage() {
   };
 
   const scoreTypeIcons: Record<string, string> = {
-    kttx: "📝", // kiểm tra thường xuyên
-    kt15p: "⏱️", // 15 phút
-    kt1t: "🧪",  // 1 tiết
-    giuaki: "📅", // giữa kỳ
-    cuoiki: "🏁", // cuối kỳ
+    kttx: "📝",
+    kt15p: "⏱️",
+    kt1t: "🧪",
+    giuaki: "📅",
+    cuoiki: "🏁",
   };
 
   const filteredResults = learningResults.filter((r) => {
@@ -119,6 +119,10 @@ export default function HoSoHocTapPage() {
 
   const groupedRows = Array.from(groupMap.values());
 
+  const sortedScoreTypes = [...scoreTypes].sort(
+    (a, b) => (a.weight ?? 0) - (b.weight ?? 0)
+  );
+
   return (
     <motion.div
       className="container max-w-7xl mx-auto py-12 px-4 text-black select-none"
@@ -143,7 +147,9 @@ export default function HoSoHocTapPage() {
       </div>
 
       {loading ? (
-        <p className="text-center italic text-gray-600 text-lg">Đang tải dữ liệu...</p>
+        <p className="text-center italic text-gray-600 text-lg">
+          Đang tải dữ liệu...
+        </p>
       ) : groupedRows.length === 0 ? (
         <p className="text-center italic text-gray-600 text-lg">
           Không tìm thấy kết quả phù hợp.
@@ -180,7 +186,7 @@ export default function HoSoHocTapPage() {
                         <th className="py-3 px-6">Học kỳ</th>
                         <th className="py-3 px-6">Ngày học</th>
                         <th className="py-3 px-6 rounded-r-3xl max-w-xs">Ghi chú</th>
-                        {scoreTypes.map((type) =>
+                        {sortedScoreTypes.map((type) =>
                           type.id ? (
                             <th
                               key={type.id}
@@ -191,7 +197,9 @@ export default function HoSoHocTapPage() {
                                 <span className="text-xl">
                                   {scoreTypeIcons[type.id.toLowerCase()] ?? "📊"}
                                 </span>
-                                <span className="font-semibold">{type.name}</span>
+                                <span className="font-semibold">
+                                  {type.name}
+                                </span>
                               </div>
                             </th>
                           ) : null
@@ -203,15 +211,16 @@ export default function HoSoHocTapPage() {
                         <td className="py-4 px-6 font-semibold text-center align-top">
                           {row.classLevel}
                         </td>
-                        <td className="py-4 px-6 text-center align-top">Học kỳ {row.semester}</td>
+                        <td className="py-4 px-6 text-center align-top">
+                          Học kỳ {row.semester}
+                        </td>
                         <td className="py-4 px-6 text-center align-top">
                           {minDate ? minDate.toLocaleDateString("vi-VN") : "—"}
                         </td>
                         <td className="py-4 px-6 italic text-gray-600 max-w-xs break-words align-top">
                           {row.notes.length > 0 ? row.notes.join("; ") : "—"}
                         </td>
-
-                        {scoreTypes.map((type) => {
+                        {sortedScoreTypes.map((type) => {
                           if (!type.id) return <td key="empty">—</td>;
 
                           const resultsForType = row.scoresByType[type.id] || [];
@@ -229,32 +238,36 @@ export default function HoSoHocTapPage() {
                                         new Date(a.date).getTime() - new Date(b.date).getTime()
                                     )
                                     .map((res, idx) => {
-                                      let colorClass = "text-gray-400";
-                                      if (res.score >= 8)
-                                        colorClass = "text-green-700 font-bold";
-                                      else if (res.score >= 5)
-                                        colorClass = "text-yellow-700 font-semibold";
-                                      else if (res.score < 3)
-                                        colorClass = "text-red-700 font-bold";
-                                      else colorClass = "text-red-500 font-semibold";
+                                      let bgColorClass = "bg-gray-100";
+                                      let textColorClass = "text-gray-500";
+
+                                      if (res.score >= 8) {
+                                        bgColorClass = "bg-green-100";
+                                        textColorClass = "text-green-800 font-semibold";
+                                      } else if (res.score >= 5) {
+                                        bgColorClass = "bg-yellow-100";
+                                        textColorClass = "text-yellow-800 font-medium";
+                                      } else if (res.score >= 3) {
+                                        bgColorClass = "bg-red-100";
+                                        textColorClass = "text-red-600 font-medium";
+                                      } else {
+                                        bgColorClass = "bg-red-200";
+                                        textColorClass = "text-red-800 font-bold";
+                                      }
 
                                       return (
                                         <div
                                           key={idx}
-                                          className={`text-center select-text ${colorClass} bg-white rounded-md shadow-sm px-2 py-1 cursor-default hover:scale-105 transition-transform duration-150 flex items-center justify-center gap-1`}
-                                          title={`Điểm: ${res.score} - Ngày: ${new Date(
+                                          className={`text-center select-text ${bgColorClass} ${textColorClass} rounded-xl px-2 py-1 shadow-inner cursor-default hover:scale-105 transition-transform duration-150 flex items-center justify-center gap-1`}
+                                          title={`Điểm: ${res.score} • Ngày: ${new Date(
                                             res.date
                                           ).toLocaleDateString("vi-VN")}${
-                                            res.score < 7 ? " ⚠️ Điểm thấp!" : ""
+                                            res.score < 5 ? " ⚠️ Cần cải thiện" : ""
                                           }`}
                                         >
                                           <span>{res.score}</span>
-                                          {res.score < 7 && (
-                                            <span
-                                              className="text-red-600"
-                                              role="img"
-                                              aria-label="warning"
-                                            >
+                                          {res.score < 5 && (
+                                            <span className="text-red-600" role="img" aria-label="warning">
                                               ⚠️
                                             </span>
                                           )}

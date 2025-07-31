@@ -1,7 +1,14 @@
 import { OpenAI } from "openai";
 
+// ✅ Dành cho Create React App: chỉ dùng REACT_APP_ prefix
+const apiKey = process.env.REACT_APP_OPENAI_API_KEY || "";
+
+if (!apiKey) {
+  console.warn("⚠️ REACT_APP_OPENAI_API_KEY is missing.");
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "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",
+  apiKey,
   dangerouslyAllowBrowser: true,
 });
 
