@@ -4,6 +4,7 @@ export interface LearningDashboard {
   id: string;
   userId: string;
   createdAt: Timestamp;
+  title: string;
   summary: string;
 
   importantSubjects: {

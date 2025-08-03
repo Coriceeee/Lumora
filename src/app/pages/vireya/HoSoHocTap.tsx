@@ -3,12 +3,28 @@ import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-import { getAllLearningResults } from "../../../services/learningResultService";
+import { getAllLearningResults, updateLearningResult, deleteLearningResult } from "../../../services/learningResultService";
 import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
 import { getAllSubjects } from "../../../services/subjectService";
 import { getAllScoreTypes } from "../../../services/scoreTypeService";
 import { LearningResult } from "../../../types/LearningResult";
+
+import {
+  BookOpen,
+  Languages,
+  Computer,
+  Lightbulb,
+  FlaskConical,
+  NotebookPen,
+  Timer,
+  CalendarClock,
+  Flag,
+  TestTube2,
+  Edit,
+  Trash2,
+  Save,
+} from "lucide-react";
 
 type GroupedRow = {
   subjectId: string;
@@ -46,6 +62,14 @@ export default function HoSoHocTapPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
+  // id môn đang bật chế độ edit (1 môn 1 lúc)
+  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
+  // map resultId => số điểm đang edit
+  const [editedScores, setEditedScores] = useState<Record<string, number>>({});
+
+  // map resultId => đang đánh dấu xóa
+  const [deleteQueue, setDeleteQueue] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -67,37 +91,101 @@ export default function HoSoHocTapPage() {
     fetchData();
   }, []);
 
-  const getSubjectName = (id: string | undefined) =>
+  const getSubjectName = (id: string) =>
     subjects.find((s) => s.id === id)?.name || "Không rõ";
 
   const getSubjectIcon = (subjectName: string) => {
-    if (subjectName.includes("Toán")) return "📐";
-    if (subjectName.includes("Văn")) return "📖";
-    if (subjectName.includes("Lý")) return "💡";
-    if (subjectName.includes("Hóa")) return "⚗️";
-    if (subjectName.includes("Sinh")) return "🌿";
-    if (subjectName.includes("Anh")) return "🇬🇧";
-    if (subjectName.includes("Tin")) return "💻";
-    return "📘";
+    if (subjectName.includes("Toán")) return <BookOpen className="w-6 h-6 text-indigo-600" />;
+    if (subjectName.includes("Văn")) return <NotebookPen className="w-6 h-6 text-pink-600" />;
+    if (subjectName.includes("Lý")) return <Lightbulb className="w-6 h-6 text-yellow-500" />;
+    if (subjectName.includes("Hóa")) return <FlaskConical className="w-6 h-6 text-purple-600" />;
+    if (subjectName.includes("Sinh")) return <BookOpen className="w-6 h-6 text-green-600" />;
+    if (subjectName.includes("Anh")) return <Languages className="w-6 h-6 text-blue-600" />;
+    if (subjectName.includes("Tin")) return <Computer className="w-6 h-6 text-sky-600" />;
+    return <BookOpen className="w-6 h-6 text-gray-600" />;
   };
 
-  const scoreTypeIcons: Record<string, string> = {
-    kttx: "📝",
-    kt15p: "⏱️",
-    kt1t: "🧪",
-    giuaki: "📅",
-    cuoiki: "🏁",
+  const scoreTypeIcons: Record<string, JSX.Element> = {
+    kttx: <NotebookPen className="w-4 h-4" />,
+    kt15p: <Timer className="w-4 h-4" />,
+    kt1t: <TestTube2 className="w-4 h-4" />,
+    giuaki: <CalendarClock className="w-4 h-4" />,
+    cuoiki: <Flag className="w-4 h-4" />,
   };
 
+  // cập nhật điểm của từng resultId
+  const onScoreChange = (resultId: string, value: string) => {
+    const num = parseFloat(value);
+    if (isNaN(num)) return;
+    setEditedScores((prev) => ({ ...prev, [resultId]: num }));
+  };
+
+  // lưu điểm đã chỉnh sửa
+  const handleSaveEditedScores = async () => {
+    if (!editingSubjectId) return;
+
+    try {
+      for (const [resultId, score] of Object.entries(editedScores)) {
+        if (deleteQueue.has(resultId)) {
+          await deleteLearningResult(resultId);
+          toast.success("Xóa điểm thành công!");
+        } else {
+          await updateLearningResult(resultId, { score });
+          toast.success("Cập nhật điểm thành công!");
+        }
+      }
+      // tải lại dữ liệu
+      const updated = await getAllLearningResults();
+      setLearningResults(updated);
+      setEditingSubjectId(null);
+      setEditedScores({});
+      setDeleteQueue(new Set());
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật hoặc xóa điểm.");
+    }
+  };
+
+  // bật/tắt chế độ edit cho 1 môn
+  const toggleEditSubject = (subjectId: string) => {
+    if (editingSubjectId === subjectId) {
+      // đóng edit, reset
+      setEditingSubjectId(null);
+      setEditedScores({});
+      setDeleteQueue(new Set());
+    } else {
+      // mở edit, lấy tất cả điểm của môn để preload
+      const subjectResults = learningResults.filter((r) => r.subjectId === subjectId);
+      const scoresMap: Record<string, number> = {};
+      subjectResults.forEach((r) => {
+        if (r.id) scoresMap[r.id] = r.score;
+      });
+      setEditingSubjectId(subjectId);
+      setEditedScores(scoresMap);
+      setDeleteQueue(new Set());
+    }
+  };
+
+  // đánh dấu/unmark xóa điểm
+  const toggleDeleteScore = (resultId: string) => {
+    setDeleteQueue((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(resultId)) newSet.delete(resultId);
+      else newSet.add(resultId);
+      return newSet;
+    });
+  };
+
+  // lọc kết quả theo search
   const filteredResults = learningResults.filter((r) => {
-    const subjectName = getSubjectName(r.subjectId).toLowerCase();
-    return subjectName.includes(search.toLowerCase());
+    const subjectName = getSubjectName(r.subjectId ?? "");
+    return subjectName.toLowerCase().includes(search.toLowerCase());
   });
 
+  // gom nhóm theo môn, lớp, học kỳ
   const groupMap = new Map<string, GroupedRow>();
-
   filteredResults.forEach((r) => {
-    const key = `${r.subjectId}-${r.classLevel}-${r.semester}`;
+    const subjectId = r.subjectId ?? "";
+    const key = `${subjectId}-${r.classLevel}-${r.semester}`;
     const existing = groupMap.get(key);
 
     if (existing) {
@@ -108,7 +196,7 @@ export default function HoSoHocTapPage() {
       if (r.note) existing.notes.push(r.note);
     } else {
       groupMap.set(key, {
-        subjectId: r.subjectId ?? "",
+        subjectId,
         classLevel: r.classLevel,
         semester: r.semester,
         notes: r.note ? [r.note] : [],
@@ -118,10 +206,7 @@ export default function HoSoHocTapPage() {
   });
 
   const groupedRows = Array.from(groupMap.values());
-
-  const sortedScoreTypes = [...scoreTypes].sort(
-    (a, b) => (a.weight ?? 0) - (b.weight ?? 0)
-  );
+  const sortedScoreTypes = [...scoreTypes].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
 
   return (
     <motion.div
@@ -130,7 +215,8 @@ export default function HoSoHocTapPage() {
       animate={{ opacity: 1, y: 0 }}
     >
       <h2 className="text-4xl font-extrabold mb-4 text-center drop-shadow-md">
-        📘 Hồ Sơ Học Tập
+        <BookOpen className="inline-block w-8 h-8 mr-2 text-indigo-600" />
+        Hồ Sơ Học Tập
       </h2>
 
       <ScoreColorLegend />
@@ -147,35 +233,36 @@ export default function HoSoHocTapPage() {
       </div>
 
       {loading ? (
-        <p className="text-center italic text-gray-600 text-lg">
-          Đang tải dữ liệu...
-        </p>
+        <p className="text-center italic text-gray-600 text-lg">Đang tải dữ liệu...</p>
       ) : groupedRows.length === 0 ? (
-        <p className="text-center italic text-gray-600 text-lg">
-          Không tìm thấy kết quả phù hợp.
-        </p>
+        <p className="text-center italic text-gray-600 text-lg">Không tìm thấy kết quả phù hợp.</p>
       ) : (
         <div className="space-y-12">
           {groupedRows.map((row, i) => {
             const subjectName = getSubjectName(row.subjectId);
             const subjectIcon = getSubjectIcon(subjectName);
-
-            const allResultsForRow = Object.values(row.scoresByType).flat();
-            const minDate = allResultsForRow.length
-              ? allResultsForRow.reduce((min, r) => {
-                  const d = new Date(r.date);
-                  return d < min ? d : min;
-                }, new Date(allResultsForRow[0].date))
+            const allResults = Object.values(row.scoresByType).flat();
+            const minDate = allResults.length
+              ? allResults.reduce((min, r) => new Date(r.date) < min ? new Date(r.date) : min, new Date(allResults[0].date))
               : null;
 
+            const isEditingSubject = editingSubjectId === row.subjectId;
+
             return (
-              <section
-                key={`${row.subjectId}-${row.classLevel}-${row.semester}-${i}`}
-                className="bg-white rounded-3xl shadow-lg border border-gray-200 p-6"
-              >
-                <header className="flex items-center mb-6 gap-4">
-                  <span className="text-5xl">{subjectIcon}</span>
-                  <h3 className="text-3xl font-semibold text-gray-900">{subjectName}</h3>
+              <section key={`${row.subjectId}-${row.classLevel}-${row.semester}-${i}`} className="bg-white rounded-3xl shadow-lg border border-gray-200 p-6">
+                <header className="flex items-center mb-6 gap-4 justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="text-5xl">{subjectIcon}</div>
+                    <h3 className="text-3xl font-semibold text-gray-900">{subjectName}</h3>
+                  </div>
+                  <button
+                    onClick={() => toggleEditSubject(row.subjectId)}
+                    className={`flex items-center gap-1 text-indigo-700 hover:text-indigo-900 font-semibold select-none`}
+                    title={isEditingSubject ? "Hủy chỉnh sửa" : "Chỉnh sửa điểm môn này"}
+                  >
+                    <Edit size={20} />
+                    <span>{isEditingSubject ? "Hủy" : "Sửa điểm"}</span>
+                  </button>
                 </header>
 
                 <div className="overflow-x-auto">
@@ -194,12 +281,8 @@ export default function HoSoHocTapPage() {
                               title={type.description}
                             >
                               <div className="flex items-center justify-center gap-2">
-                                <span className="text-xl">
-                                  {scoreTypeIcons[type.id.toLowerCase()] ?? "📊"}
-                                </span>
-                                <span className="font-semibold">
-                                  {type.name}
-                                </span>
+                                {scoreTypeIcons[type.id.toLowerCase()] ?? "📊"}
+                                <span className="font-semibold">{type.name}</span>
                               </div>
                             </th>
                           ) : null
@@ -208,12 +291,8 @@ export default function HoSoHocTapPage() {
                     </thead>
                     <tbody>
                       <tr className="bg-white hover:bg-indigo-50 transition-colors duration-200 border-b border-gray-200">
-                        <td className="py-4 px-6 font-semibold text-center align-top">
-                          {row.classLevel}
-                        </td>
-                        <td className="py-4 px-6 text-center align-top">
-                          Học kỳ {row.semester}
-                        </td>
+                        <td className="py-4 px-6 font-semibold text-center align-top">{row.classLevel}</td>
+                        <td className="py-4 px-6 text-center align-top">Học kỳ {row.semester}</td>
                         <td className="py-4 px-6 text-center align-top">
                           {minDate ? minDate.toLocaleDateString("vi-VN") : "—"}
                         </td>
@@ -221,9 +300,7 @@ export default function HoSoHocTapPage() {
                           {row.notes.length > 0 ? row.notes.join("; ") : "—"}
                         </td>
                         {sortedScoreTypes.map((type) => {
-                          if (!type.id) return <td key="empty">—</td>;
-
-                          const resultsForType = row.scoresByType[type.id] || [];
+                          const results = type.id ? row.scoresByType[type.id] || [] : [];
 
                           return (
                             <td
@@ -231,45 +308,84 @@ export default function HoSoHocTapPage() {
                               className="py-4 px-6 align-top border-l border-gray-300 max-w-[120px]"
                             >
                               <div className="flex flex-col gap-1">
-                                {resultsForType.length > 0 ? (
-                                  resultsForType
+                                {results.length > 0 ? (
+                                  results
                                     .sort(
                                       (a, b) =>
-                                        new Date(a.date).getTime() - new Date(b.date).getTime()
+                                        new Date(a.date).getTime() -
+                                        new Date(b.date).getTime()
                                     )
-                                    .map((res, idx) => {
-                                      let bgColorClass = "bg-gray-100";
-                                      let textColorClass = "text-gray-500";
+                                    .map((res) => {
+                                      const isDeleted = deleteQueue.has(res.id ?? "");
+                                      const isEditing = isEditingSubject && res.id !== undefined;
 
-                                      if (res.score >= 8) {
-                                        bgColorClass = "bg-green-100";
-                                        textColorClass = "text-green-800 font-semibold";
-                                      } else if (res.score >= 5) {
-                                        bgColorClass = "bg-yellow-100";
-                                        textColorClass = "text-yellow-800 font-medium";
-                                      } else if (res.score >= 3) {
-                                        bgColorClass = "bg-red-100";
-                                        textColorClass = "text-red-600 font-medium";
-                                      } else {
-                                        bgColorClass = "bg-red-200";
-                                        textColorClass = "text-red-800 font-bold";
-                                      }
+                                      // màu nền điểm
+                                      const scoreBoxStyle =
+                                        (editedScores[res.id ?? ""] ?? res.score) >= 8
+                                          ? "bg-green-100 text-green-800 font-semibold"
+                                          : (editedScores[res.id ?? ""] ?? res.score) >= 5
+                                          ? "bg-yellow-100 text-yellow-800 font-medium"
+                                          : (editedScores[res.id ?? ""] ?? res.score) >= 3
+                                          ? "bg-red-100 text-red-600 font-medium"
+                                          : "bg-red-200 text-red-800 font-bold";
 
                                       return (
                                         <div
-                                          key={idx}
-                                          className={`text-center select-text ${bgColorClass} ${textColorClass} rounded-xl px-2 py-1 shadow-inner cursor-default hover:scale-105 transition-transform duration-150 flex items-center justify-center gap-1`}
-                                          title={`Điểm: ${res.score} • Ngày: ${new Date(
-                                            res.date
-                                          ).toLocaleDateString("vi-VN")}${
-                                            res.score < 5 ? " ⚠️ Cần cải thiện" : ""
+                                          key={res.id}
+                                          className={`relative text-center rounded-xl px-2 py-1 shadow-inner flex items-center justify-center gap-1 transition-transform duration-150 ${
+                                            scoreBoxStyle
+                                          } ${isDeleted ? "opacity-40 line-through" : ""}`}
+                                          title={`Điểm: ${editedScores[res.id ?? ""] ?? res.score} • Ngày: ${new Date(res.date).toLocaleDateString("vi-VN")}${
+                                            (editedScores[res.id ?? ""] ?? res.score) < 5
+                                              ? " ⚠️ Cần cải thiện"
+                                              : ""
                                           }`}
                                         >
-                                          <span>{res.score}</span>
-                                          {res.score < 5 && (
-                                            <span className="text-red-600" role="img" aria-label="warning">
-                                              ⚠️
-                                            </span>
+                                          {isEditing ? (
+                                            <>
+                                              <input
+                                                type="number"
+                                                step="0.1"
+                                                min={0}
+                                                max={10}
+                                                className="w-14 text-center rounded-md border border-gray-300 text-sm px-1 py-0.5"
+                                                value={editedScores[res.id ?? ""] ?? res.score}
+                                                onChange={(e) =>
+                                                  onScoreChange(res.id ?? "", e.target.value)
+                                                }
+                                                disabled={isDeleted}
+                                              />
+                                              {isDeleted ? (
+                                                <button
+                                                  onClick={() =>
+                                                    toggleDeleteScore(res.id ?? "")
+                                                  }
+                                                  title="Hoàn tác xóa"
+                                                  className="text-yellow-700 hover:text-yellow-900"
+                                                  type="button"
+                                                >
+                                                  ↩️
+                                                </button>
+                                              ) : (
+                                                <button
+                                                  onClick={() =>
+                                                    toggleDeleteScore(res.id ?? "")
+                                                  }
+                                                  title="Xóa điểm"
+                                                  className="text-red-700 hover:text-red-900"
+                                                  type="button"
+                                                >
+                                                  <Trash2 size={16} />
+                                                </button>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span>{editedScores[res.id ?? ""] ?? res.score}</span>
+                                              {(editedScores[res.id ?? ""] ?? res.score) < 5 && (
+                                                <span className="text-red-600">⚠️</span>
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                       );
@@ -285,6 +401,24 @@ export default function HoSoHocTapPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {isEditingSubject && (
+                  <div className="mt-4 flex justify-end gap-3">
+                    <button
+                      onClick={handleSaveEditedScores}
+                      className="flex items-center gap-2 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition select-none"
+                    >
+                      <Save size={18} />
+                      Lưu thay đổi
+                    </button>
+                    <button
+                      onClick={() => toggleEditSubject(row.subjectId)}
+                      className="flex items-center gap-2 px-4 py-2 rounded bg-gray-300 hover:bg-gray-400 transition select-none"
+                    >
+                      Hủy
+                    </button>
+                  </div>
+                )}
               </section>
             );
           })}

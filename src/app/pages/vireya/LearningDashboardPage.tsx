@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from "react";
+import SVG from "react-inlinesvg";
 import { getLearningDashboardsByUser, addLearningDashboard } from "../../../services/learningDashboardService";
-import { getLearningResultsByUser } from "../../../services/learningResultService"; // bạn cần tạo
+import { getLearningResultsByUser } from "../../../services/learningResultService";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
-import { callGPTForDashboard } from "../../../services/gptVireyaDashboardService"; // bạn cần tạo
+import { vireyaDashboardService } from "../../../services/vireyaDashboardService";
 import { LearningDashboard } from "../../../types/LearningDashboard";
 
 const LearningDashboardPage = () => {
-  const userId = "fakeUserId"; // tạm hardcode để test
+  const userId = "user_fake_id_123456"; // tạm hardcode để test
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +29,7 @@ const LearningDashboardPage = () => {
 
       // 2. Gửi GPT
       toast.info("Đang phân tích với AI...");
-      const dashboardData = await callGPTForDashboard(results);
+      const dashboardData = await vireyaDashboardService(results);
 
       // 3. Thêm userId & timestamp
       const dashboardWithMeta = {
@@ -43,8 +44,12 @@ const LearningDashboardPage = () => {
 
       // 5. Cập nhật UI
       await loadDashboards();
-    } catch (err) {
-      toast.error("Lỗi khi tạo Dashboard mới");
+    } catch (err: any) {
+      if (err.status === 429) {
+        toast.error("Bạn đã vượt quá hạn mức sử dụng OpenAI. Vui lòng thử lại sau hoặc nâng cấp tài khoản.");
+      } else {
+        toast.error("Đã xảy ra lỗi khi gọi GPT.");
+      }
       console.error(err);
     } finally {
       setLoading(false);
@@ -55,57 +60,98 @@ const LearningDashboardPage = () => {
     loadDashboards();
   }, [userId]);
 
+  const latestDashboard = dashboards[0];
+
   return (
-    <div className="grid grid-cols-3 gap-4 p-4">      
-    <ToastContainer position="top-right" autoClose={3000} />
+    <div className="row g-0 g-xl-5 g-xxl-8">
+      <ToastContainer position="top-right" autoClose={3000} />
+
       {/* Bên trái: Timeline */}
-      <div className="col-span-1">
+      <div className="col-xl-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-semibold">🧭 Định hướng học tập</h2>
           <button onClick={handleCreateDashboard} disabled={loading}>
             {loading ? "Đang tạo..." : "Tạo mới"}
           </button>
         </div>
-        <div className="space-y-4">
-          {dashboards.map((dashboard) => (
-            <motion.div
-              key={dashboard.id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
-              className="p-3 bg-white shadow rounded-xl border-l-4 border-blue-500"
-            >
-              <p className="text-sm text-gray-500">{new Date(dashboard.createdAt.toDate()).toLocaleString()}</p>
-              <p className="text-md font-semibold line-clamp-2">{dashboard.summary}</p>
-            </motion.div>
-          ))}
+        <div className="card">
+          <div className="card-header align-items-center border-0 mt-5">
+            <h3 className="card-title align-items-start flex-column">
+              <span className="fw-bolder text-dark fs-3">Timeline</span>
+              <span className="text-muted mt-2 fw-bold fs-6">
+                Updates & notifications
+              </span>
+            </h3>
+            <div className="card-toolbar">
+              <button
+                type="button"
+                className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"                
+              >
+                <span className="svg-icon svg-icon-1">
+                  <SVG src="/media/icons/duotone/Layout/Layout-4-blocks-2.svg" className="svg-icon-1" />
+                </span>
+                
+              </button>              
+            </div>
+          </div>
+          <div className="card-body pt-3">
+            <div className="timeline-label">
+              {dashboards.map((dashboard) => (
+                <div className="timeline-item">
+                  <div className="timeline-label fw-bolder text-gray-800 fs-6">
+                    {dashboard.createdAt?.toDate ? 
+                    new Date(dashboard.createdAt.toDate()).toLocaleDateString("vi-VN", {  day: "2-digit",  month: "2-digit",}) : "N/A"}                  
+                  </div>
+          
+                  <div className="timeline-badge">
+                    <i className="fa fa-genderless text-success fs-1"></i>
+                  </div>
+          
+                  <div className="timeline-content d-flex">
+                    <span className="fw-bolder text-gray-800 ps-3">
+                      {dashboard.title}
+                    </span>
+                  </div>
+                </div>                
+              ))}
+            </div>
+          </div>
         </div>
-      </div>      
+      </div>
+
       {/* Bên phải: Hiển thị dashboard mới nhất */}
-      <div className="col-span-2 bg-white rounded-xl shadow p-4">
-        {dashboards.length > 0 ? (
+      <div className="col-xl-8">
+        {latestDashboard ? (
           <>
             <h2 className="text-lg font-semibold mb-2">📊 Phân tích gần nhất</h2>
             <div className="space-y-2">
-              <p><strong>Tổng quan:</strong> {dashboards[0].summary}</p>
+              <p><strong>Tổng quan:</strong> {latestDashboard.summary}</p>
 
-              <div className="bg-blue-50 p-2 rounded-lg">
-                <h4 className="font-semibold mb-1">🎯 Gợi ý học tập chung</h4>
-                <p><strong>Điểm mạnh:</strong> {dashboards[0].importantSubjects.overallStrengths}</p>
-                <p><strong>Điểm yếu:</strong> {dashboards[0].importantSubjects.overallWeaknesses}</p>
-                <p><strong>Chiến lược:</strong> {dashboards[0].importantSubjects.learningAdvice}</p>
-              </div>
+              {latestDashboard.importantSubjects ? (
+                <div className="bg-blue-50 p-2 rounded-lg">
+                  <h4 className="font-semibold mb-1">🎯 Gợi ý học tập chung</h4>
+                  <p><strong>Điểm mạnh:</strong> {latestDashboard.importantSubjects.overallStrengths ?? "Chưa có dữ liệu"}</p>
+                  <p><strong>Điểm yếu:</strong> {latestDashboard.importantSubjects.overallWeaknesses ?? "Chưa có dữ liệu"}</p>
+                  <p><strong>Chiến lược:</strong> {latestDashboard.importantSubjects.learningAdvice ?? "Chưa có dữ liệu"}</p>
+                </div>
+              ) : (
+                <p className="text-gray-500 italic">Chưa có dữ liệu tổng quan để hiển thị.</p>
+              )}
 
               <h4 className="font-semibold mt-4">📚 Phân tích theo từng môn</h4>
-              {dashboards[0].subjectInsights.map((item, idx) => (
-                <div key={idx} className="border p-3 rounded-md">
-                  <p><strong>{item.subjectName}</strong></p>
-                  <p><em>Xu hướng:</em> {item.trend}</p>
-                  <p><em>Điểm mạnh:</em> {item.strength}</p>
-                  <p><em>Điểm yếu:</em> {item.weakness}</p>
-                  <p><em>Gợi ý:</em> {item.suggestion}</p>
-                </div>
-              ))}
+              {latestDashboard.subjectInsights?.length > 0 ? (
+                latestDashboard.subjectInsights.map((item, idx) => (
+                  <div key={idx} className="border p-3 rounded-md">
+                    <p><strong>{item.subjectName}</strong></p>
+                    <p><em>Xu hướng:</em> {item.trend}</p>
+                    <p><em>Điểm mạnh:</em> {item.strength}</p>
+                    <p><em>Điểm yếu:</em> {item.weakness}</p>
+                    <p><em>Gợi ý:</em> {item.suggestion}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">Không có dữ liệu phân tích môn học.</p>
+              )}
             </div>
           </>
         ) : (

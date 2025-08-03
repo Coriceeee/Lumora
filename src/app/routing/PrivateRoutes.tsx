@@ -13,6 +13,7 @@ import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
+import Step1_JournalPage from "../pages/ayura/Step1_JournalPage";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -42,6 +43,8 @@ export function PrivateRoutes() {
         <Route path="/vireya/danh-gia-trinh-do" component={LearningDashboardPage} />
 
         <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
+
+        <Route path="/ayura/nhat-ky-chua-lanh" component={Step1_JournalPage} />
 
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />

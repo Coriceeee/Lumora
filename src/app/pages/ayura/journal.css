@@ -1,0 +1,94 @@
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;600&display=swap");
+
+body {
+  font-family: "Inter", sans-serif;
+  background: #f9f7f1;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Gradient nền nhẹ nhàng */
+.bg-gradient-journal {
+  background: linear-gradient(135deg, #faf8f2 0%, #f3ead7 100%);
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Font tiêu đề */
+.font-playfair {
+  font-family: "Playfair Display", serif !important;
+}
+
+/* Bong bóng ánh sáng lơ lửng */
+.healing-bubble {
+  animation: floatUp 6s ease-in-out infinite;
+  opacity: 0.35;
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px #dfce95);
+  z-index: 0;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-25px) scale(1.08);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-50px) scale(1);
+    opacity: 0.35;
+  }
+}
+
+/* Hiệu ứng nguyên liệu cảm xúc bay lơ lửng */
+.emotion-floating {
+  animation: floatEmotion 5.5s ease-in-out infinite;
+  user-select: none;
+}
+
+@keyframes floatEmotion {
+  0% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+}
+
+/* Scrollbar cho textarea đẹp */
+textarea::-webkit-scrollbar {
+  width: 10px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: #f3eedf;
+  border-radius: 6px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background-color: #c6b591;
+  border-radius: 6px;
+}
+
+/* Nút và text hiệu ứng khi disable */
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Ẩn chọn chữ cho các phần chỉ để xem */
+.select-none {
+  user-select: none;
+}
