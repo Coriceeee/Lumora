@@ -1,13 +1,26 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { KTSVG } from "../../../helpers";
 import { Dropdown1 } from "../../content/dropdown/Dropdown1";
+import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
+import { LearningDashboard } from "../../../../types/LearningDashboard";
 
 type Props = {
   className: string;
 };
 
 const ListsWidget1: React.FC<Props> = ({ className }) => {
+  const userId = "user_fake_id_123456";
+  const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const data = await getLearningDashboardsByUser(userId);
+      setDashboards(data);
+    };
+    fetchData();
+  }, [userId]);
+
   return (
     <div className={`card ${className}`}>
       {/* begin::Header */}
@@ -19,7 +32,6 @@ const ListsWidget1: React.FC<Props> = ({ className }) => {
           </span>
         </h3>
         <div className="card-toolbar">
-          {/* begin::Dropdown */}
           <button
             type="button"
             className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
@@ -33,185 +45,37 @@ const ListsWidget1: React.FC<Props> = ({ className }) => {
             />
           </button>
           <Dropdown1 />
-          {/* end::Dropdown */}
         </div>
       </div>
       {/* end::Header */}
 
       {/* begin::Body */}
       <div className="card-body pt-3">
-        {/* <begin::Timeline */}
         <div className="timeline-label">
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              10:00
-            </div>
-            {/* end::Label */}
+          {dashboards.map((dashboard) => (
+            <div className="timeline-item" key={dashboard.id}>
+              <div className="timeline-label fw-bolder text-gray-800 fs-6">
+                {dashboard.createdAt?.toDate
+                  ? new Date(dashboard.createdAt.toDate()).toLocaleDateString("vi-VN", {
+                      day: "2-digit",
+                      month: "2-digit",
+                    })
+                  : "N/A"}
+              </div>
 
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-success fs-1"></i>
-            </div>
-            {/* end::Badge */}
+              <div className="timeline-badge">
+                <i className="fa fa-genderless text-success fs-1"></i>
+              </div>
 
-            {/* begin::Content */}
-            <div className="timeline-content d-flex">
-              <span className="fw-bolder text-gray-800 ps-3">AEOL meeting</span>
+              <div className="timeline-content d-flex">
+                <span className="fw-bolder text-gray-800 ps-3">
+                  {dashboard.title}
+                </span>
+              </div>
             </div>
-            {/* end::Content */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              14:37
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-danger fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Desc */}
-            <div className="timeline-content fw-bolder text-gray-800 ps-3">
-              Make deposit{" "}
-              <a href="#" className="text-primary">
-                USD 700
-              </a>
-              . to ESL
-            </div>
-            {/* end::Desc */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              16:50
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-primary fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Text */}
-            <div className="timeline-content fw-mormal text-muted ps-3">
-              Indulging in poorly driving and keep structure keep great
-            </div>
-            {/* end::Text */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              21:03
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-danger fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Desc */}
-            <div className="timeline-content fw-bold text-gray-800 ps-3">
-              New order placed{" "}
-              <a href="#" className="text-primary">
-                #XF-2356
-              </a>
-              .
-            </div>
-            {/* end::Desc */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              16:50
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-primary fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Text */}
-            <div className="timeline-content fw-mormal text-muted ps-3">
-              Indulging in poorly driving and keep structure keep great
-            </div>
-            {/* end::Text */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              21:03
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-danger fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Desc */}
-            <div className="timeline-content fw-bold text-gray-800 ps-3">
-              New order placed{" "}
-              <a href="#" className="text-primary">
-                #XF-2356
-              </a>
-              .
-            </div>
-            {/* end::Desc */}
-          </div>
-          {/* end::Item */}
-
-          {/* begin::Item */}
-          <div className="timeline-item">
-            {/* begin::Label */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              10:30
-            </div>
-            {/* end::Label */}
-
-            {/* begin::Badge */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-success fs-1"></i>
-            </div>
-            {/* end::Badge */}
-
-            {/* begin::Text */}
-            <div className="timeline-content fw-mormal text-muted ps-3">
-              Finance KPI Mobile app launch preparion meeting
-            </div>
-            {/* end::Text */}
-          </div>
-          {/* end::Item */}
+          ))}
         </div>
-        {/* <end::Timeline */}
       </div>
-
-      {/* <end: Card Body */}
     </div>
   );
 };

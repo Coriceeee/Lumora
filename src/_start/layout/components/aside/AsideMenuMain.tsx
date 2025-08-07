@@ -32,8 +32,8 @@ export function AsideMenuMain() {
         </h4>
       </div>
       <AsideMenuItem to="/neovana/ho-so-ca-nhan" title="Hồ sơ cá nhân" icon="fas fa-id-card text-success px-2" />
-      <AsideMenuItem to="/general/invoice" title="Phân tích năng lực" icon="fas fa-chart-line text-success px-2" />
-      <AsideMenuItem to="/general/wizard" title="Định hướng phát triển" icon="fas fa-compass text-success px-2" />
+      <AsideMenuItem to="/neovana/phan-tich-nang-luc" title="Phân tích năng lực" icon="fas fa-chart-line text-success px-2" />
+      <AsideMenuItem to="/neovana/dinh-huong-phat-trien" title="Định hướng phát triển" icon="fas fa-compass text-success px-2" />
 
       {/* AYURA */}
       <div className="menu-item mt-10">

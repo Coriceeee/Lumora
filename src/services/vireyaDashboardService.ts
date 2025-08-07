@@ -1,8 +1,13 @@
+// ✅ FILE: src/services/vireyaDashboardService.ts
+
+import { db } from "../firebase/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { LearningResult } from "../types/LearningResult";
 import { callGeminiForDashboard } from "./geminiDashboardService";
 import { getAllScoreTypes } from "./scoreTypeService";
 import { getAllSubjects } from "./subjectService";
 
+// ✅ Hàm 1: Gọi Gemini để tạo dashboard
 export const vireyaDashboardService = async (results: any[]) => {
   const subjects = await getAllSubjects();
   const scoreTypes = await getAllScoreTypes();
@@ -10,9 +15,9 @@ export const vireyaDashboardService = async (results: any[]) => {
   const subjectData: Record<string, any> = {};
 
   results.forEach((item) => {
-    const subject = subjects.find(sub => sub.id === item.subjectId);
-    const scoreType = scoreTypes.find(type => type.id === item.scoreTypeId);
-    if(subject && scoreType) {
+    const subject = subjects.find((sub) => sub.id === item.subjectId);
+    const scoreType = scoreTypes.find((type) => type.id === item.scoreTypeId);
+    if (subject && scoreType) {
       if (!subjectData[subject.name]) {
         subjectData[subject.name] = {};
       }
@@ -65,12 +70,10 @@ Trả kết quả chỉ trả về theo định dạng JSON chuẩn như sau:
     weakness: string;
     suggestion: string;
   }[];
-}
-`;
+}`;
 
   const raw = await callGeminiForDashboard(prompt);
 
-  // ✅ Tách JSON từ khối ```json ... ``` nếu có
   const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
 
   if (!jsonMatch) {
@@ -80,7 +83,7 @@ Trả kết quả chỉ trả về theo định dạng JSON chuẩn như sau:
 
   let parsed: any;
   try {
-    parsed = JSON.parse(jsonMatch[1]); // Lấy nội dung bên trong khối ```
+    parsed = JSON.parse(jsonMatch[1]);
   } catch (err) {
     console.error("Lỗi khi parse JSON từ Gemini:", err);
     throw new Error("Kết quả từ AI không hợp lệ.");
@@ -88,3 +91,14 @@ Trả kết quả chỉ trả về theo định dạng JSON chuẩn như sau:
 
   return parsed;
 };
+
+// ✅ Hàm 2: Lấy danh sách dashboards từ Firestore cho mục "Định hướng phát triển"
+export async function getVireyaDashboards(userId: string) {
+  const q = query(collection(db, "dashboards"), where("userId", "==", userId));
+  const querySnapshot = await getDocs(q);
+
+  return querySnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}

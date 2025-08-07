@@ -13,6 +13,7 @@ import { LearningResult } from "../types/LearningResult";
 
 const learningResultsCollection = collection(db, "learningResults");
 
+// Thêm kết quả học tập
 export async function addLearningResult(data: LearningResult) {
   if (!data.userId) {
     console.error("❌ Lỗi: userId bị undefined:", data);
@@ -27,6 +28,7 @@ export async function addLearningResult(data: LearningResult) {
   return docRef.id;
 }
 
+// Lấy tất cả kết quả học tập
 export const getAllLearningResults = async (): Promise<LearningResult[]> => {
   const snapshot = await getDocs(learningResultsCollection);
   return snapshot.docs.map(
@@ -34,6 +36,7 @@ export const getAllLearningResults = async (): Promise<LearningResult[]> => {
   );
 };
 
+// Lấy kết quả học tập theo userId
 export const getLearningResultsByUser = async (
   userId: string
 ): Promise<LearningResult[]> => {
@@ -44,7 +47,7 @@ export const getLearningResultsByUser = async (
   );
 };
 
-// Cập nhật điểm
+// Cập nhật kết quả học tập
 export async function updateLearningResult(
   id: string,
   data: Partial<LearningResult>
@@ -54,9 +57,10 @@ export async function updateLearningResult(
   await updateDoc(docRef, data);
 }
 
-// Xóa điểm
-export async function deleteLearningResult(id: string) {``
+// Xóa kết quả học tập
+export async function deleteLearningResult(id: string) {
   if (!id) throw new Error("Missing id to deleteLearningResult");
   const docRef = doc(db, "learningResults", id);
   await deleteDoc(docRef);
 }
+  

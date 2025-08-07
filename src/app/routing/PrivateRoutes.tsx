@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from "react";
+import { Suspense, lazy } from "react";
 import { Redirect, Route, Switch } from "react-router-dom";
 import { FallbackView } from "../../_start/partials";
 import { LightDashboardWrapper } from "../pages/dashboards/light-dashboard/LightDashboardWrapper";
@@ -14,6 +14,8 @@ import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
 import Step1_JournalPage from "../pages/ayura/Step1_JournalPage";
+import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
+import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage"
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -43,6 +45,9 @@ export function PrivateRoutes() {
         <Route path="/vireya/danh-gia-trinh-do" component={LearningDashboardPage} />
 
         <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
+        <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
+        <Route path="/neovana/dinh-huong-phat-trien" component={DinhHuongPhatTrien} />
+
 
         <Route path="/ayura/nhat-ky-chua-lanh" component={Step1_JournalPage} />
 
