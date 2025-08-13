@@ -68,6 +68,7 @@ export function MenuInner() {
           </ul>
         </div>
       </div>
+
       <div className="row">
         <div className="col-sm-4">
           <h3 className="fw-bolder mb-5">Profile</h3>
@@ -93,36 +94,6 @@ export function MenuInner() {
                 </span>
               </a>
             </li>
-          </ul>
-        </div>
-        <div className="col-sm-4">
-          <h3 className="fw-bolder mb-5">Danh Mục</h3>
-          <ul className="menu menu-column menu-fit menu-rounded menu-gray-600 menu-hover-primary menu-active-primary fw-bold fs-6 mb-10">
-            <li className="menu-item">
-              <Link className="menu-link ps-0 py-2" to="/danh-muc/loai-diem">
-                Loại điểm
-              </Link>
-            </li>
-            <li className="menu-item">
-              <Link className="menu-link ps-0 py-2" to="/danh-muc/mon-hoc">
-                Môn học
-              </Link>
-            </li>
-            <li className="menu-item">
-              <Link className="menu-link ps-0 py-2" to="/danh-muc/ky-nang">
-                Kỹ năng
-              </Link>
-            </li>
-            <li className="menu-item">
-  <Link className="menu-link ps-0 py-2" to="/danh-muc/chung-chi">
-    Chứng chỉ
-  </Link>
-</li>
-<li className="menu-item">
-  <Link className="menu-link ps-0 py-2" to="/danh-muc/khao-sat">
-    Khảo sát
-  </Link>
-</li>
           </ul>
         </div>
       </div>

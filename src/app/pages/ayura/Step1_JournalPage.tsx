@@ -112,31 +112,31 @@ const Step1_JournalPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-journal py-20 px-8 font-sans text-gray-900 flex justify-center relative overflow-hidden">
-      <div className="healing-bubble bg-yellow-300 w-14 h-14 left-[12%] top-[30%]" />
-      <div className="healing-bubble bg-pink-300 w-10 h-10 left-[65%] top-[50%]" />
-      <div className="healing-bubble bg-orange-300 w-12 h-12 left-[82%] top-[20%]" />
+    <div className="journal-page">
+      <div className="healing-bubble bubble-yellow" />
+      <div className="healing-bubble bubble-pink" />
+      <div className="healing-bubble bubble-orange" />
 
       <ToastContainer />
 
       <motion.div
-        className="max-w-3xl w-full bg-white rounded-3xl shadow-xl p-12 relative z-10"
+        className="journal-container"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.7 }}
       >
         <motion.h1
-          className="text-4xl font-playfair mb-8 text-[#7A6851] text-center flex items-center justify-center gap-4 select-none drop-shadow-md"
+          className="journal-title"
           initial={{ y: -15, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.25 }}
         >
-          <Sparkles size={36} className="text-[#C6B591]" />
+          <Sparkles size={36} className="sparkles-icon" />
           Nhật ký chữa lành
         </motion.h1>
 
         <motion.p
-          className="mb-6 text-center text-base text-[#A79F91] italic select-none tracking-wide"
+          className="journal-question"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
@@ -148,21 +148,19 @@ const Step1_JournalPage = () => {
           value={entry}
           onChange={(e) => setEntry(e.target.value)}
           placeholder="Cho mình biết bạn đang cảm thấy điều gì hôm nay..."
-          className="w-full min-h-[220px] p-8 border border-[#C6B591] rounded-2xl focus:outline-none focus:ring-4 focus:ring-[#C6B591] bg-[#FCFAF7] placeholder-[#B4A991] text-lg leading-relaxed resize-none shadow-inner transition duration-300"
+          className="journal-textarea"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
           spellCheck={true}
         />
 
-        <div className="mt-8 flex items-center justify-between gap-6">
+        <div className="journal-actions">
           <motion.button
             type="button"
             onClick={toggleRecording}
             whileTap={{ scale: 0.9 }}
-            className={`flex items-center gap-3 py-4 px-7 rounded-full border-2 border-[#C6B591] font-semibold text-[#C6B591] hover:bg-gradient-to-r hover:from-yellow-400 hover:via-yellow-300 hover:to-yellow-400 hover:text-white shadow-lg transition select-none ${
-              recording ? "bg-gradient-to-r from-yellow-400 to-yellow-300 text-white" : ""
-            }`}
+            className={`btn-record ${recording ? "recording" : ""}`}
           >
             <Mic size={22} />
             {recording ? "Đang ghi âm..." : "Ghi âm"}
@@ -172,7 +170,7 @@ const Step1_JournalPage = () => {
             onClick={handleSubmit}
             disabled={loading}
             whileTap={{ scale: 0.97 }}
-            className="flex items-center gap-3 bg-gradient-to-r from-[#C6B591] to-[#A78E58] hover:from-[#BFB588] hover:to-[#988C4E] text-white font-semibold py-4 px-8 rounded-full shadow-xl transition select-none disabled:opacity-60 disabled:cursor-not-allowed"
+            className="btn-submit"
           >
             <Send size={22} />
             {loading ? "Đang gửi..." : "🌱 Gửi đi một lời nhẹ"}
@@ -181,30 +179,30 @@ const Step1_JournalPage = () => {
 
         {response && (
           <motion.div
-            className="mt-12 bg-[#FAF5E9] p-8 rounded-3xl border border-[#E3DCC9] select-text shadow-md"
+            className="journal-response"
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
           >
-            <p className="italic text-[#9C8D6E] text-lg">💬 AYURA với bạn:</p>
-            <p className="mt-4 text-xl text-[#7A6851] leading-relaxed">{response}</p>
+            <p className="response-label">💬 AYURA với bạn:</p>
+            <p className="response-text">{response}</p>
           </motion.div>
         )}
 
         {emotions.length > 0 && (
           <motion.div
-            className="mt-8 space-y-3"
+            className="journal-emotions"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
           >
-            <p className="text-[#9C8D6E] text-lg font-medium">🍯 Nguyên liệu cảm xúc hôm nay:</p>
-            <div className="flex flex-wrap gap-4">
+            <p className="emotions-label">🍯 Nguyên liệu cảm xúc hôm nay:</p>
+            <div className="emotions-list">
               {emotions.map((e, i) => (
                 <motion.span
                   key={i}
                   whileHover={{ scale: 1.1 }}
-                  className="bg-[#FFF8E7] text-[#A78E58] px-5 py-2 rounded-full font-semibold text-base emotion-floating select-none shadow-sm cursor-default"
+                  className="emotion-item"
                   title={e}
                 >
                   🌸 {e}

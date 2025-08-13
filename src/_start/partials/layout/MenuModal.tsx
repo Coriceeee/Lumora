@@ -26,7 +26,7 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
       className="bg-white"
       id="kt_mega_menu_modal"
       aria-hidden="true"
-      tabIndex="-1"
+      tabIndex={-1}
       dialogClassName="modal-fullscreen"
       contentClassName="shadow-none"
       show={show}
@@ -49,6 +49,12 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
           <div
             className="btn btn-icon btn-sm btn-light-primary ms-2"
             onClick={handleClose}
+            role="button"
+            tabIndex={0}
+            aria-label="Close menu modal"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") handleClose();
+            }}
           >
             <KTSVG
               path="/media/icons/duotone/Navigation/Close.svg"
@@ -66,46 +72,43 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
 
             {/* begin::Column */}
             <div className="col-lg-6">
-              <h3 className="fw-bolder mb-8">Quick Links</h3>
+              <h3 className="fw-bolder mb-8">Danh Mục</h3>
 
               {/* begin::Row */}
               <div className="row g-5">
                 <div className="col-sm-4">
-                  <a
-                    href="#"
-                    className="card card-custom bg-light-success hoverable min-h-125px shadow-none mb-5"
+                  <Link
+                    to="/danh-muc/loai-diem"
+                    className="card card-custom bg-light-success hoverable min-h-125px shadow-none mb-5 text-decoration-none"
                   >
                     <div className="card-body d-flex flex-column flex-center">
                       <h3 className="fs-3 mb-2 text-dark fw-bolder">
-                        Security
+                        Loại điểm
                       </h3>
-                      <p className="mb-0 text-gray-600">$2.99/month</p>
                     </div>
-                  </a>
+                  </Link>
                 </div>
                 <div className="col-sm-4">
-                  <a
-                    href="#"
-                    className="card card-custom bg-light-danger hoverable min-h-125px shadow-none mb-5"
+                  <Link
+                    to="/danh-muc/mon-hoc"
+                    className="card card-custom bg-light-danger hoverable min-h-125px shadow-none mb-5 text-decoration-none"
                   >
                     <div className="card-body d-flex flex-column flex-center text-center">
-                      <h3 className="fs-3 mb-2 text-dark fw-bolder">Demo</h3>
-                      <p className="mb-0 text-gray-600">Free Version</p>
+                      <h3 className="fs-3 mb-2 text-dark fw-bolder">Môn học</h3>
                     </div>
-                  </a>
+                  </Link>
                 </div>
                 <div className="col-sm-4">
-                  <a
-                    href="#"
-                    className="card card-custom bg-light-warning hoverable min-h-125px shadow-none mb-5"
+                  <Link
+                    to="/danh-muc/ky-nang"
+                    className="card card-custom bg-light-warning hoverable min-h-125px shadow-none mb-5 text-decoration-none"
                   >
                     <div className="card-body d-flex flex-column flex-center text-center">
                       <h3 className="fs-3 mb-2 text-dark text-hover-primary fw-bolder">
-                        Try Now
+                        Kỹ năng
                       </h3>
-                      <p className="mb-0 text-gray-600">Pro Version</p>
                     </div>
-                  </a>
+                  </Link>
                 </div>
               </div>
               {/* end::Row */}
@@ -113,37 +116,37 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
               {/* begin::Row */}
               <div className="row g-5">
                 <div className="col-sm-8">
-                  <a
-                    href="#"
-                    className="card card-custom bg-light-primary hoverable min-h-125px shadow-none mb-5"
+                  <Link
+                    to="/danh-muc/khao-sat"
+                    className="card card-custom bg-light-primary hoverable min-h-125px shadow-none mb-5 text-decoration-none"
                   >
                     <div className="card-body d-flex flex-column flex-center text-center">
                       <h3 className="fs-3 mb-2 text-dark fw-bolder">
-                        Payment Methods
+                        Khảo sát
                       </h3>
-                      <p className="mb-0 text-gray-600">
-                        Credit Cards/Debit Cards, Paypal,
-                        <br /> Transferwise & Others
-                      </p>
                     </div>
-                  </a>
+                  </Link>
 
                   {/* begin::Row */}
                   <div className="row g-5">
                     <div className="col-sm-6">
-                      <a className="card card-custom bg-light-warning hoverable shadow-none min-h-125px mb-5">
+                      <Link
+                        to="/danh-muc/chung-chi"
+                        className="card card-custom bg-light-warning hoverable shadow-none min-h-125px mb-5 text-decoration-none"
+                      >
                         <div className="card-body d-flex flex-column flex-center text-center">
                           <h3 className="fs-3 mb-2 text-dark fw-bolder">
-                            Support
+                            Chứng chỉ
                           </h3>
                           <p className="mb-0 text-gray-600">6 Month Free</p>
                         </div>
-                      </a>
+                      </Link>
                     </div>
                     <div className="col-sm-6">
-                      <a
-                        href="#"
+                      <div
                         className="card card-custom bg-light-success hoverable shadow-none min-h-125px mb-5"
+                        role="region"
+                        aria-label="Installation info"
                       >
                         <div className="card-body d-flex flex-column flex-center text-center">
                           <h3 className="fs-3 mb-2 text-dark fw-bolder">
@@ -153,15 +156,16 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
                             $0.99 Per Machine
                           </p>
                         </div>
-                      </a>
+                      </div>
                     </div>
                   </div>
                   {/* end::Row */}
                 </div>
                 <div className="col-sm-4">
-                  <a
-                    href="#"
+                  <div
                     className="card card-custom card-stretch mb-5 bg-light-info hoverable shadow-none min-h-250px"
+                    role="region"
+                    aria-label="Quick start info"
                   >
                     <div className="card-body d-flex flex-column p-0">
                       <div className="d-flex flex-column flex-center text-center px-5 pt-10">
@@ -181,7 +185,7 @@ const MenuModal: React.FC<Props> = ({ show, handleClose, children }) => {
                         }}
                       />
                     </div>
-                  </a>
+                  </div>
                 </div>
               </div>
               {/* end::Row */}

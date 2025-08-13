@@ -1,18 +1,77 @@
+// learningResultService.ts
+
+import { db } from "../firebase/firebase"; // Sửa đường dẫn theo dự án bạn
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
+import { LearningResult } from "../types/LearningResult";
+
+/**
+ * Collection Firestore lưu kết quả học tập
+ */
+const learningResultsCollection = collection(db, "learningResults");
+
+// --- CRUD LearningResult ---
+
+export async function getAllLearningResults(): Promise<LearningResult[]> {
+  const snapshot = await getDocs(learningResultsCollection);
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as LearningResult));
+}
+
+export async function getLearningResultsByUser(userId: string): Promise<LearningResult[]> {
+  if (!userId) throw new Error("userId không hợp lệ");
+  const q = query(learningResultsCollection, where("userId", "==", userId));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as LearningResult));
+}
+
+export async function addLearningResult(data: LearningResult): Promise<string> {
+  if (!data.userId) throw new Error("userId là bắt buộc");
+  const docRef = await addDoc(learningResultsCollection, {
+    ...data,
+    createdAt: new Date(),
+  });
+  return docRef.id;
+}
+
+export async function updateLearningResult(id: string, data: Partial<LearningResult>): Promise<void> {
+  const docRef = doc(db, "learningResults", id);
+  await updateDoc(docRef, data);
+}
+
+export async function deleteLearningResult(id: string): Promise<void> {
+  const docRef = doc(db, "learningResults", id);
+  await deleteDoc(docRef);
+}
+
+// --- Gemini API ---
+
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE"; // 🔑 Đảm bảo key này không bị lộ public
+/**
+ * ⚠️ Không để lộ API KEY trong production,
+ * đây chỉ demo, bạn nên dùng env var hoặc server proxy bảo mật
+ */
+const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE";
 
 /**
- * Gọi Gemini với prompt bất kỳ
+ * Gọi API Gemini với prompt đầu vào
+ * @param prompt chuỗi prompt gửi cho Gemini
+ * @returns phản hồi dạng text raw
  */
-export const callGeminiForDashboard = async (prompt: string): Promise<string> => {
+export async function callGeminiForDashboard(prompt: string): Promise<string> {
   try {
     const res = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [
           {
@@ -34,69 +93,87 @@ export const callGeminiForDashboard = async (prompt: string): Promise<string> =>
     console.error("Gemini API exception:", error);
     throw error;
   }
-};
+}
 
 /**
- * ✅ Prompt phân tích năng lực học tập (Radar + Line + AI summary)
+ * Tạo prompt phân tích năng lực học tập từ dữ liệu điểm thực tế
+ * @param results mảng điểm học tập
+ * @returns chuỗi prompt
  */
-const geminiLearningAnalysisPrompt = `
-Đây là dữ liệu điểm của học sinh theo từng môn qua 3 học kỳ:
-- Toán: 8, 9, 7
-- Văn: 6, 6, 7
-- Anh: 9, 9, 10
+export function buildLearningAnalysisPrompt(results: LearningResult[]): string {
+  const grouped: Record<string, Record<string, number>> = {};
 
-Hãy phân tích theo mẫu JSON dưới đây và chỉ TRẢ VỀ JSON THUẦN TÚY (KHÔNG giải thích, KHÔNG markdown, KHÔNG comment):
+  results.forEach((r) => {
+    const subjectName = r.subjectName?.trim() || "Không rõ môn";
+    if (!grouped[subjectName]) grouped[subjectName] = {};
+    grouped[subjectName][r.termLabel] = r.score;
+  });
+
+  const termOrder = ["Giữa HK1", "Cuối HK1", "Giữa HK2", "Cuối HK2"];
+
+  const lines = Object.entries(grouped).map(([subject, scores]) => {
+    const scoreLine = termOrder
+      .map((term) =>
+        scores[term] !== undefined ? scores[term].toFixed(1) : "-"
+      )
+      .join(", ");
+    return `- ${subject}: ${scoreLine}`;
+  });
+
+  return `
+Đây là dữ liệu điểm của học sinh theo từng mốc thời gian:
+${lines.join("\n")}
+
+Yêu cầu:
+- Phân tích xu hướng điểm từng môn: "Tăng", "Giảm", "Ổn định", hoặc "Dao động"
+- Nêu điểm mạnh nổi bật
+- Nêu điểm yếu cần cải thiện
+- Đưa ra gợi ý cải thiện cho từng môn
+
+Chỉ TRẢ VỀ duy nhất KẾT QUẢ dạng JSON thuần túy theo cấu trúc sau, KHÔNG giải thích, KHÔNG markdown, KHÔNG comment:
 
 {
   "subjectInsights": [
     {
       "subjectName": "Toán",
-      "trend": "Dao động",
-      "strength": "Hiểu nhanh công thức",
-      "weakness": "Thiếu ổn định đầu kỳ",
-      "suggestion": "Cần luyện đề giữ phong độ"
+      "trend": "Tăng / Giảm / Dao động / Ổn định",
+      "strength": "Thế mạnh nổi bật",
+      "weakness": "Điểm cần cải thiện",
+      "suggestion": "Gợi ý cải thiện"
     }
   ],
   "radarChartData": [
-    { "subject": "Toán", "score": 8.0 },
-    { "subject": "Văn", "score": 6.3 },
-    { "subject": "Anh", "score": 9.3 }
+    { "subject": "Toán", "score": 8.0 }
   ],
   "trendChartData": [
-    { "name": "HK1", "Toán": 8, "Văn": 6, "Anh": 9 },
-    { "name": "HK2", "Toán": 9, "Văn": 6, "Anh": 9 },
-    { "name": "HK3", "Toán": 7, "Văn": 7, "Anh": 10 }
+    { "name": "Giữa HK1", "Toán": 8, "Văn": 6, "Anh": 9 }
   ],
-  "overallSummary": "Học sinh có kết quả tốt ở môn Anh và Toán. Môn Văn cần được cải thiện thêm."
+  "overallSummary": "Tóm tắt ngắn gọn toàn bộ kết quả học tập"
 }
+
+Nếu không có dữ liệu hoặc không thể phân tích, trả về JSON với các trường rỗng.
 `;
+}
 
 /**
- * 🔜 Prompt placeholder cho mục khác (bạn sửa nội dung theo nhu cầu)
+ * Gọi Gemini phân tích năng lực học tập
+ * @param results mảng LearningResult
+ * @returns Promise với JSON phân tích parsed
  */
-const geminiOtherPrompt = `
-# TODO: Prompt cho mục khác (ví dụ: định hướng phát triển, gợi ý ngành nghề,...)
+export async function getGeminiAnalysisFromResults(results: LearningResult[]) {
+  if (results.length === 0) throw new Error("Không có dữ liệu học tập");
 
-Bạn hãy phân tích XYZ...
---> Trả về JSON theo mẫu ...
-(CHỈ JSON, KHÔNG markdown, KHÔNG lời giải thích)
-`;
+  const prompt = buildLearningAnalysisPrompt(results);
 
-/**
- * Hàm gọi Gemini để phân tích năng lực học tập
- */
-export const getGeminiAnalysis = async () => {
-  const responseText = await callGeminiForDashboard(geminiLearningAnalysisPrompt);
+  const responseText = await callGeminiForDashboard(prompt);
 
-  const cleanedText = responseText
-    .replace(/```json|```/g, "") // loại bỏ markdown nếu có
-    .trim();
+  // Loại bỏ markdown code block nếu có
+  const cleanedText = responseText.replace(/```json|```/g, "").trim();
 
   try {
-    const parsed = JSON.parse(cleanedText);
-    return parsed;
+    return JSON.parse(cleanedText);
   } catch (e) {
     console.error("❌ Không thể parse JSON từ Gemini:\n", cleanedText);
     throw new Error("Kết quả từ Gemini không phải JSON hợp lệ");
   }
-};
+}

@@ -6,6 +6,8 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  query,
+  orderBy,
 } from "firebase/firestore";
 import { ScoreType } from "../types/ScoreType";
 
@@ -16,7 +18,10 @@ export const addScoreType = async (scoreType: ScoreType) => {
 };
 
 export const getAllScoreTypes = async (): Promise<ScoreType[]> => {
-  const snapshot = await getDocs(scoreTypesCollection);
+    // Tạo query với orderBy tăng dần
+  const q = query(scoreTypesCollection, orderBy("weight", "asc"));
+
+  const snapshot = await getDocs(q);
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as ScoreType));
 };
 

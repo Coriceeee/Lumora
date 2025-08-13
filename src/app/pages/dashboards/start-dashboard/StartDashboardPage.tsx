@@ -1,5 +1,6 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   EngageWidget5,
   ListsWidget1,
@@ -20,12 +21,14 @@ export const StartDashboardPage: React.FC = () => {
           <EngageWidget5 className="card-stretch mb-5 mb-xxl-8">
             {/* begin::Action */}
             <div className="text-center pt-7">
-              <a
+              <Link
+                to="/vireya/ket-qua-hoc-tap" // đổi thành link bạn muốn
                 className="btn btn-primary fw-bolder fs-6 px-7 py-3"
-                onClick={() => setShow(true)}
+                // Nếu vẫn cần mở modal khi click link, bạn có thể thêm onClick ở đây, nhưng sẽ vừa chuyển trang vừa mở modal không hợp lý
+                // onClick={() => setShow(true)}
               >
                 Cập nhật
-              </a>
+              </Link>
             </div>
             {/* end::Action */}
           </EngageWidget5>

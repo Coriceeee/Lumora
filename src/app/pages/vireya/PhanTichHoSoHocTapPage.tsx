@@ -136,12 +136,6 @@ const PhanTichNangLucPage: React.FC = () => {
 
   // Danh sách tổ hợp mặc định
   const defaultCombinations: Record<string, string[]> = {
-    A00: ["Toán", "Lý", "Hóa"],
-    A01: ["Toán", "Lý", "Anh"],
-    B00: ["Toán", "Hóa", "Sinh"],
-    C00: ["Văn", "Sử", "Địa"],
-    D01: ["Toán", "Văn", "Anh"],
-    D07: ["Toán", "Hóa", "Anh"],
   };
 
   // Kết hợp tổ hợp mặc định + tổ hợp do người dùng tạo
@@ -232,7 +226,7 @@ const PhanTichNangLucPage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h2 className="text-3xl font-bold text-blue-700 mb-6">📊 Phân Tích Năng Lực Học Tập</h2>
+      <h2 className="text-3xl font-bold text-blue-700 mb-6">📊 Phân Tích Hồ Sơ Học Tập</h2>
 
       {/* Form tạo tổ hợp */}
       <div className="mb-6 space-y-3">
@@ -268,7 +262,7 @@ const PhanTichNangLucPage: React.FC = () => {
           </select>
           <button
             onClick={handleAddCombination}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-black rounded hover:bg-green-700"
           >
             + Thêm tổ hợp
           </button>

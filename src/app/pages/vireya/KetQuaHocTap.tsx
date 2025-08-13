@@ -24,6 +24,7 @@ export default function KetQuaHocTapForm() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Tạm thời hardcode userId, sau có thể thay bằng user auth thật
   const userFakeId = "user_fake_id_123456";
   const maxScoreCount = 5;
 
@@ -57,13 +58,13 @@ export default function KetQuaHocTapForm() {
   const selectedScoreTypeId = watch("scoreTypeId");
   const selectedScoreType = scoreTypes.find((st) => st.id === selectedScoreTypeId);
 
-  // Xác định số lượng input điểm hiển thị theo hệ số
+  // Xác định số lượng input điểm hiển thị theo hệ số weight của loại điểm
   let inputCount = 1;
   if (selectedScoreType?.weight === 1) {
     inputCount = maxScoreCount;
   }
 
-  // ✅ Hàm validate điểm - cho phép trống hoặc từ 0 đến 10
+  // Hàm validate điểm - cho phép trống hoặc giá trị từ 0 đến 10
   const validateScore = (v: number | undefined) => {
     if (v === undefined || v === null || isNaN(v)) return true;
     if (v >= 0 && v <= 10) return true;
@@ -82,7 +83,7 @@ export default function KetQuaHocTapForm() {
         );
 
       if (validScores.length === 0) {
-        toast.info("Bạn chưa nhập điểm nào.");
+        toast.info("Bạn chưa nhập điểm nào hợp lệ.");
         setLoading(false);
         return;
       }
@@ -93,10 +94,12 @@ export default function KetQuaHocTapForm() {
           classLevel: data.classLevel,
           semester: data.semester,
           subjectId: data.subjectId,
+          subjectName: subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn",
           scoreTypeId: data.scoreTypeId,
-          date: data.date,
           score,
+          date: data.date,
           note: data.note,
+          termLabel: "", // Bạn có thể xử lý termLabel tùy theo logic của dự án
         });
       }
 
@@ -144,12 +147,16 @@ export default function KetQuaHocTapForm() {
           <div>
             <label className="form-label fw-semibold">Học kỳ</label>
             <select
-              {...register("semester", { required: "Vui lòng chọn học kỳ." })}
+              {...register("semester", {
+                required: "Vui lòng chọn học kỳ.",
+                valueAsNumber: true,
+                validate: (v) => v === 1 || v === 2 || "Học kỳ không hợp lệ.",
+              })}
               className="form-select form-select-lg"
             >
               <option value="">-- Chọn học kỳ --</option>
-              <option value="1">Học kỳ 1</option>
-              <option value="2">Học kỳ 2</option>
+              <option value={1}>Học kỳ 1</option>
+              <option value={2}>Học kỳ 2</option>
             </select>
             {errors.semester && (
               <small className="text-danger fst-italic">{errors.semester.message}</small>
@@ -160,9 +167,14 @@ export default function KetQuaHocTapForm() {
           <div>
             <label className="form-label fw-semibold">Lớp học</label>
             <select
-              {...register("classLevel", { required: true, valueAsNumber: true })}
+              {...register("classLevel", {
+                required: "Vui lòng chọn lớp học.",
+                valueAsNumber: true,
+                validate: (v) => [10, 11, 12].includes(v) || "Lớp học không hợp lệ.",
+              })}
               className="form-select form-select-lg"
             >
+              <option value="">-- Chọn lớp học --</option>
               {[10, 11, 12].map((level) => (
                 <option key={level} value={level}>
                   Lớp {level}
@@ -170,7 +182,7 @@ export default function KetQuaHocTapForm() {
               ))}
             </select>
             {errors.classLevel && (
-              <small className="text-danger fst-italic">Vui lòng chọn lớp học.</small>
+              <small className="text-danger fst-italic">{errors.classLevel.message}</small>
             )}
           </div>
 
@@ -264,7 +276,12 @@ export default function KetQuaHocTapForm() {
 
           {/* Nút thao tác */}
           <div className="d-flex justify-content-between pt-2">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => reset()}>
+            <button
+              type="button"
+              className="btn btn-outline-secondary"
+              onClick={() => reset()}
+              disabled={loading}
+            >
               Đặt lại
             </button>
             <button

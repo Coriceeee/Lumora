@@ -1,94 +1,186 @@
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@400;600&display=swap");
-
-body {
-  font-family: "Inter", sans-serif;
-  background: #f9f7f1;
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-}
-
-/* Gradient nền nhẹ nhàng */
-.bg-gradient-journal {
-  background: linear-gradient(135deg, #faf8f2 0%, #f3ead7 100%);
-  position: relative;
+.journal-page {
   min-height: 100vh;
+  background: linear-gradient(135deg, #fff8e7, #fcefd9);
+  padding: 80px 32px;
+  font-family: sans-serif;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Font tiêu đề */
-.font-playfair {
-  font-family: "Playfair Display", serif !important;
-}
-
-/* Bong bóng ánh sáng lơ lửng */
 .healing-bubble {
-  animation: floatUp 6s ease-in-out infinite;
-  opacity: 0.35;
   position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: drop-shadow(0 0 10px #dfce95);
-  z-index: 0;
+  border-radius: 9999px;
+  opacity: 0.7;
+}
+.bubble-yellow {
+  background: #fcd34d;
+  width: 56px;
+  height: 56px;
+  left: 12%;
+  top: 30%;
+}
+.bubble-pink {
+  background: #f9a8d4;
+  width: 40px;
+  height: 40px;
+  left: 65%;
+  top: 50%;
+}
+.bubble-orange {
+  background: #fdba74;
+  width: 48px;
+  height: 48px;
+  left: 82%;
+  top: 20%;
 }
 
-@keyframes floatUp {
-  0% {
-    transform: translateY(0) scale(1);
-    opacity: 0.35;
-  }
-  50% {
-    transform: translateY(-25px) scale(1.08);
-    opacity: 0.55;
-  }
-  100% {
-    transform: translateY(-50px) scale(1);
-    opacity: 0.35;
-  }
+.journal-container {
+  max-width: 768px;
+  width: 100%;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 48px;
+  position: relative;
+  z-index: 10;
 }
 
-/* Hiệu ứng nguyên liệu cảm xúc bay lơ lửng */
-.emotion-floating {
-  animation: floatEmotion 5.5s ease-in-out infinite;
-  user-select: none;
+.journal-title {
+  font-size: 2.5rem;
+  font-family: 'Playfair Display', serif;
+  margin-bottom: 32px;
+  color: #7A6851;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}
+.sparkles-icon {
+  color: #C6B591;
 }
 
-@keyframes floatEmotion {
-  0% {
-    transform: translateY(0);
-    opacity: 0.85;
-  }
-  50% {
-    transform: translateY(-10px);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 0.85;
-  }
+.journal-question {
+  margin-bottom: 24px;
+  text-align: center;
+  font-size: 1rem;
+  font-style: italic;
+  color: #A79F91;
+  letter-spacing: 0.5px;
 }
 
-/* Scrollbar cho textarea đẹp */
-textarea::-webkit-scrollbar {
-  width: 10px;
+.journal-textarea {
+  width: 100%;
+  min-height: 220px;
+  padding: 32px;
+  border: 1px solid #C6B591;
+  border-radius: 16px;
+  background: #FCFAF7;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  resize: none;
+  box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
+  transition: all 0.3s;
+}
+.journal-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(198,181,145,0.5);
 }
 
-textarea::-webkit-scrollbar-track {
-  background: #f3eedf;
-  border-radius: 6px;
+.journal-actions {
+  margin-top: 32px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
 }
 
-textarea::-webkit-scrollbar-thumb {
-  background-color: #c6b591;
-  border-radius: 6px;
+.btn-record {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px;
+  border-radius: 9999px;
+  border: 2px solid #C6B591;
+  font-weight: 600;
+  color: #C6B591;
+  background: transparent;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: 0.3s;
+}
+.btn-record:hover {
+  background: linear-gradient(to right, #facc15, #fde047);
+  color: white;
+}
+.btn-record.recording {
+  background: linear-gradient(to right, #facc15, #fde047);
+  color: white;
 }
 
-/* Nút và text hiệu ứng khi disable */
-button:disabled {
-  cursor: not-allowed;
+.btn-submit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+  border-radius: 9999px;
+  font-weight: 600;
+  background: linear-gradient(to right, #C6B591, #A78E58);
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+.btn-submit:hover {
+  background: linear-gradient(to right, #BFB588, #988C4E);
+}
+.btn-submit:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* Ẩn chọn chữ cho các phần chỉ để xem */
-.select-none {
-  user-select: none;
+.journal-response {
+  margin-top: 48px;
+  background: #FAF5E9;
+  padding: 32px;
+  border-radius: 24px;
+  border: 1px solid #E3DCC9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+.response-label {
+  font-style: italic;
+  color: #9C8D6E;
+  font-size: 1.125rem;
+}
+.response-text {
+  margin-top: 16px;
+  font-size: 1.25rem;
+  color: #7A6851;
+  line-height: 1.6;
+}
+
+.journal-emotions {
+  margin-top: 32px;
+}
+.emotions-label {
+  color: #9C8D6E;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+.emotions-list {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.emotion-item {
+  background: #FFF8E7;
+  color: #A78E58;
+  padding: 8px 20px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  cursor: default;
 }

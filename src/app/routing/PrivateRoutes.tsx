@@ -11,11 +11,13 @@ import DanhMucKhaoSat from "../pages/DanhMucKhaoSat";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
 import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
+import PhanTichHoSoHocTapPage from "../pages/vireya/PhanTichHoSoHocTapPage";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
 import Step1_JournalPage from "../pages/ayura/Step1_JournalPage";
 import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
 import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage"
+import VoidZone from "../pages/zenora/VoidZone";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -43,6 +45,7 @@ export function PrivateRoutes() {
         <Route path="/vireya/ket-qua-hoc-tap" component={KetQuaHocTapForm} />
         <Route path="/vireya/ho-so-hoc-tap" component={HoSoHocTapPage} />
         <Route path="/vireya/danh-gia-trinh-do" component={LearningDashboardPage} />
+        <Route path="/vireya/phan-tich-ho-so-hoc-tap" component={PhanTichHoSoHocTapPage} />
 
         <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
         <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
@@ -51,6 +54,9 @@ export function PrivateRoutes() {
 
         <Route path="/ayura/nhat-ky-chua-lanh" component={Step1_JournalPage} />
 
+        <Route path="/zenora/void-zone" component={VoidZone} />
+
+      
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />
         <Redirect to="dashboard" />
