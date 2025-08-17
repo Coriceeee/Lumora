@@ -1,18 +1,18 @@
-import React from "react";
-import SVG from "react-inlinesvg";
-import { toAbsoluteUrl } from "../AssetHelpers";
-type Props = {
-  className?: string;
-  path: string;
-  svgClassName?: string;
-};
+// src/_metronic/helpers/KTSVG.tsx
 
-const KTSVG: React.FC<Props> = ({ className = '', path, svgClassName = "mh-50px" }) => {
+import React from 'react'
+
+type Props = {
+  className?: string
+  path: string
+}
+
+const KTSVG: React.FC<Props> = ({className = '', path}) => {
   return (
     <span className={`svg-icon ${className}`}>
-      <SVG src={toAbsoluteUrl(path)} className={svgClassName} />
+      <img src={path} alt="svg icon" />
     </span>
-  );
-};
+  )
+}
 
-export { KTSVG };
+export {KTSVG}
