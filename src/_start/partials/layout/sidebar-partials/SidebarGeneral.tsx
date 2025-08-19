@@ -22,13 +22,14 @@ const SidebarGeneral: React.FC = () => {
     0: [
       { label: "📊 Kết quả học tập", to: "/vireya/ket-qua-hoc-tap", color: "#ff6b81" },
       { label: "📂 Hồ sơ học tập", to: "/vireya/ho-so-hoc-tap", color: "#ff8787" },
-      { label: "🧪 Đánh giá trình độ", to: "/vireya/danh-gia-trinh-do", color: "#ff8787" },
+      { label: "🧪 Đánh giá & Định hướng học tập", to: "/vireya/danh-gia-trinh-do", color: "#ff8787" },
       { label: "📈 Phân tích hồ sơ học tập", to: "/vireya/phan-tich-ho-so-hoc-tap", color: "#ff8787" },
     ],
     1: [
-      { label: "👤 Hồ sơ cá nhân", to: "/neovana/ho-so-ca-nhan", color: "#6f42c1" },
+      { label: "👤 Hồ sơ năng lực", to: "/neovana/ho-so-ca-nhan", color: "#6f42c1" },
+      { label: "🚀 Đánh giá & Định hướng nghề nghiệp", to: "/neovana/dinh-huong-phat-trien", color: "#845ef7" },
       { label: "🧠 Phân tích năng lực", to: "/neovana/phan-tich-nang-luc", color: "#845ef7" },
-      { label: "🚀 Định hướng phát triển", to: "/neovana/dinh-huong-phat-trien", color: "#845ef7" },
+      
     ],
     2: [{ label: "📝 Nhật ký chữa lành", to: "/ayura/nhat-ky-chua-lanh", color: "#20c997" }],
     3: [{ label: "🌀 Void Zone", to: "/zenora/void-zone", color: "#fd7e14" }],
@@ -77,7 +78,43 @@ const SidebarGeneral: React.FC = () => {
 
   return (
     <div style={{ display: "flex", height: "100vh", backgroundColor: "#1f1f2e" }}>
-      {/* Sidebar Tabs */}
+      {/* Sidebar Content (giữ bên trái) */}
+      <div style={{ flexGrow: 1, overflowY: "auto", padding: "1rem" }}>
+        <div className="card card-custom bg-transparent w-100">
+          <div className="card-header d-flex justify-content-between align-items-center border-0 mb-3">
+            <h3 className="card-title fw-bolder text-white fs-2">{tabs[activeTab].title}</h3>
+            <div className="card-toolbar d-flex align-items-center gap-2">
+              <button type="button" className="btn btn-md btn-icon btn-icon-white btn-info">
+                <KTSVG path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg" className="svg-icon-1" />
+              </button>
+              <Dropdown1 />
+            </div>
+          </div>
+
+          <div>
+            {menus[activeTab].map((item) => (
+              <div
+                key={item.to}
+                style={{
+                  ...menuItemStyles,
+                  color: item.color,
+                  boxShadow: "0 0 8px rgba(0,0,0,0.3)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                className="menu-item mb-2"
+                onClick={() => history.push(item.to)}
+                ref={(el) => {
+                  if (el) el.style.boxShadow = computeGlow(el, item.color);
+                }}
+              >
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar Tabs (chuyển sang bên phải) */}
       <div
         style={{
           width: 80,
@@ -85,7 +122,7 @@ const SidebarGeneral: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          borderRight: "1px solid rgba(255,255,255,0.2)",
+          borderLeft: "1px solid rgba(255,255,255,0.2)",
         }}
       >
         {tabs.map((tab) => (
@@ -124,42 +161,6 @@ const SidebarGeneral: React.FC = () => {
             />
           </div>
         ))}
-      </div>
-
-      {/* Sidebar Content */}
-      <div style={{ flexGrow: 1, overflowY: "auto", padding: "1rem" }}>
-        <div className="card card-custom bg-transparent w-100">
-          <div className="card-header d-flex justify-content-between align-items-center border-0 mb-3">
-            <h3 className="card-title fw-bolder text-white fs-2">{tabs[activeTab].title}</h3>
-            <div className="card-toolbar d-flex align-items-center gap-2">
-              <button type="button" className="btn btn-md btn-icon btn-icon-white btn-info">
-                <KTSVG path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg" className="svg-icon-1" />
-              </button>
-              <Dropdown1 />
-            </div>
-          </div>
-
-          <div>
-            {menus[activeTab].map((item) => (
-              <div
-                key={item.to}
-                style={{
-                  ...menuItemStyles,
-                  color: item.color,
-                  boxShadow: "0 0 8px rgba(0,0,0,0.3)",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                }}
-                className="menu-item mb-2"
-                onClick={() => history.push(item.to)}
-                ref={(el) => {
-                  if (el) el.style.boxShadow = computeGlow(el, item.color);
-                }}
-              >
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ export interface LearningDashboard {
     trend: string;
     strength: string;
     weakness: string;
-    suggestion: string;
+    suggestion: string; 
+    growthMetric: number;
   }[];
 }

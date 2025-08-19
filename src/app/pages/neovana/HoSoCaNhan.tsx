@@ -247,7 +247,7 @@ export default function ProfilePage() {
 
   return (
     <Container>
-      <Title>Hồ sơ cá nhân</Title>
+      <Title>Hồ sơ năng lực</Title>
 
       <BtnGroup>
         <Btn close={showSkillForm} onClick={() => setShowSkillForm((v) => !v)} aria-label="Toggle skill form">

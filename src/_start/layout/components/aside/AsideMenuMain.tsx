@@ -24,7 +24,7 @@ export function AsideMenuMain() {
       <AsideMenuItem to="/vireya/ket-qua-hoc-tap" title="Kết quả học tập" icon="fas fa-pen-alt text-primary px-2" />
       <AsideMenuItem to="/vireya/ho-so-hoc-tap" title="Hồ sơ học tập" icon="fas fa-user-graduate text-primary px-2" />
       <AsideMenuItem to="/vireya/phan-tich-ho-so-hoc-tap" title="Phân tích hồ sơ học tập" icon="fas fa-chart-bar text-primary px-2" />
-      <AsideMenuItem to="/vireya/danh-gia-trinh-do" title="Định hướng kế hoạch & Đánh giá trình độ" icon="fas fa-tasks text-primary px-2" />
+      <AsideMenuItem to="/vireya/danh-gia-trinh-do" title="Đánh giá & Định hướng học tập" icon="fas fa-tasks text-primary px-2" />
       {/* NEOVANA */}
       <div className="menu-item mt-10">
         <h4 className="menu-content text-success mb-0 fs-6 fw-bold text-uppercase">

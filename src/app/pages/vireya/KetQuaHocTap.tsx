@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
+import { motion, AnimatePresence } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
 
 import { addLearningResult } from "../../../services/learningResultService";
@@ -23,8 +24,8 @@ export default function KetQuaHocTapForm() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(true); // 👈 control hiển thị form
 
-  // Tạm thời hardcode userId, sau có thể thay bằng user auth thật
   const userFakeId = "user_fake_id_123456";
   const maxScoreCount = 5;
 
@@ -58,13 +59,11 @@ export default function KetQuaHocTapForm() {
   const selectedScoreTypeId = watch("scoreTypeId");
   const selectedScoreType = scoreTypes.find((st) => st.id === selectedScoreTypeId);
 
-  // Xác định số lượng input điểm hiển thị theo hệ số weight của loại điểm
   let inputCount = 1;
   if (selectedScoreType?.weight === 1) {
     inputCount = maxScoreCount;
   }
 
-  // Hàm validate điểm - cho phép trống hoặc giá trị từ 0 đến 10
   const validateScore = (v: number | undefined) => {
     if (v === undefined || v === null || isNaN(v)) return true;
     if (v >= 0 && v <= 10) return true;
@@ -99,7 +98,7 @@ export default function KetQuaHocTapForm() {
           score,
           date: data.date,
           note: data.note,
-          termLabel: "", // Bạn có thể xử lý termLabel tùy theo logic của dự án
+          termLabel: "",
         });
       }
 
@@ -114,192 +113,238 @@ export default function KetQuaHocTapForm() {
   };
 
   return (
-    <div className="container py-5">
+    <div className="form-wrapper">
       <ToastContainer position="top-right" autoClose={3000} />
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2
-          className="fw-extrabold d-flex align-items-center"
-          style={{ fontSize: "2.6rem", userSelect: "none" }}
-        >
-          <i
-            className="bi bi-bar-chart-line-fill me-3"
-            style={{ color: "#6366f1", fontSize: "2.6rem" }}
-          />
-          <span
-            style={{
-              background: "linear-gradient(90deg, #6366f1 0%, #ec4899 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              fontWeight: "900",
-            }}
-          >
-            Nhập Kết Quả Học Tập
-          </span>
+
+      <div className="form-header">
+        <h2 className="form-title">
+          <i className="bi bi-bar-chart-line-fill icon" />
+          Nhập Kết Quả Học Tập
         </h2>
       </div>
 
-      <div
-        className="card shadow-lg border-0 p-4 mb-5"
-        style={{ maxWidth: 700, backgroundColor: "#f4f5ff", borderRadius: 18 }}
-      >
-        <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-          {/* Học kỳ */}
-          <div>
-            <label className="form-label fw-semibold">Học kỳ</label>
-            <select
-              {...register("semester", {
-                required: "Vui lòng chọn học kỳ.",
-                valueAsNumber: true,
-                validate: (v) => v === 1 || v === 2 || "Học kỳ không hợp lệ.",
-              })}
-              className="form-select form-select-lg"
-            >
-              <option value="">-- Chọn học kỳ --</option>
-              <option value={1}>Học kỳ 1</option>
-              <option value={2}>Học kỳ 2</option>
-            </select>
-            {errors.semester && (
-              <small className="text-danger fst-italic">{errors.semester.message}</small>
-            )}
-          </div>
+      {/* AnimatePresence cho form */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            <div className="form-card">
+              <form onSubmit={handleSubmit(onSubmit)} noValidate>
+                {/* Học kỳ */}
+                <div className="form-group">
+                  <label>Học kỳ</label>
+                  <select {...register("semester", { required: "Vui lòng chọn học kỳ." })}>
+                    <option value="">-- Chọn học kỳ --</option>
+                    <option value={1}>Học kỳ 1</option>
+                    <option value={2}>Học kỳ 2</option>
+                  </select>
+                  {errors.semester && <small className="error">{errors.semester.message}</small>}
+                </div>
 
-          {/* Lớp học */}
-          <div>
-            <label className="form-label fw-semibold">Lớp học</label>
-            <select
-              {...register("classLevel", {
-                required: "Vui lòng chọn lớp học.",
-                valueAsNumber: true,
-                validate: (v) => [10, 11, 12].includes(v) || "Lớp học không hợp lệ.",
-              })}
-              className="form-select form-select-lg"
-            >
-              <option value="">-- Chọn lớp học --</option>
-              {[10, 11, 12].map((level) => (
-                <option key={level} value={level}>
-                  Lớp {level}
-                </option>
-              ))}
-            </select>
-            {errors.classLevel && (
-              <small className="text-danger fst-italic">{errors.classLevel.message}</small>
-            )}
-          </div>
+                {/* Lớp */}
+                <div className="form-group">
+                  <label>Lớp học</label>
+                  <select {...register("classLevel", { required: "Vui lòng chọn lớp học." })}>
+                    <option value="">-- Chọn lớp học --</option>
+                    {[10, 11, 12].map((level) => (
+                      <option key={level} value={level}>
+                        Lớp {level}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.classLevel && <small className="error">{errors.classLevel.message}</small>}
+                </div>
 
-          {/* Môn học */}
-          <div>
-            <label className="form-label fw-semibold">Môn học</label>
-            <select
-              {...register("subjectId", { required: "Vui lòng chọn môn học." })}
-              className="form-select form-select-lg"
-            >
-              <option value="">-- Chọn môn học --</option>
-              {subjects.map((subj) => (
-                <option key={subj.id} value={subj.id}>
-                  {subj.name}
-                </option>
-              ))}
-            </select>
-            {errors.subjectId && (
-              <small className="text-danger fst-italic">{errors.subjectId.message}</small>
-            )}
-          </div>
+                {/* Môn */}
+                <div className="form-group">
+                  <label>Môn học</label>
+                  <select {...register("subjectId", { required: "Vui lòng chọn môn học." })}>
+                    <option value="">-- Chọn môn học --</option>
+                    {subjects.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.subjectId && <small className="error">{errors.subjectId.message}</small>}
+                </div>
 
-          {/* Loại điểm */}
-          <div>
-            <label className="form-label fw-semibold">Loại điểm</label>
-            <select
-              {...register("scoreTypeId", { required: "Vui lòng chọn loại điểm." })}
-              className="form-select form-select-lg"
-            >
-              <option value="">-- Chọn loại điểm --</option>
-              {scoreTypes.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.name}
-                </option>
-              ))}
-            </select>
-            {errors.scoreTypeId && (
-              <small className="text-danger fst-italic">{errors.scoreTypeId.message}</small>
-            )}
-          </div>
+                {/* Loại điểm */}
+                <div className="form-group">
+                  <label>Loại điểm</label>
+                  <select {...register("scoreTypeId", { required: "Vui lòng chọn loại điểm." })}>
+                    <option value="">-- Chọn loại điểm --</option>
+                    {scoreTypes.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.scoreTypeId && <small className="error">{errors.scoreTypeId.message}</small>}
+                </div>
 
-          {/* Nhập điểm */}
-          <div>
-            <label className="form-label fw-semibold">
-              Nhập điểm (tối đa {inputCount} điểm, không bắt buộc)
-            </label>
-            {Array.from({ length: inputCount }).map((_, idx) => (
-              <div key={idx} className="mb-2">
-                <input
-                  type="number"
-                  step={0.1}
-                  min={0}
-                  max={10}
-                  placeholder={`Điểm ${idx + 1}`}
-                  {...register(`scores.${idx}` as const, {
-                    valueAsNumber: true,
-                    validate: validateScore,
-                  })}
-                  className="form-control"
-                />
-                {errors.scores?.[idx]?.message && (
-                  <small className="text-danger fst-italic">{errors.scores[idx]?.message}</small>
-                )}
-              </div>
-            ))}
-          </div>
+                {/* Điểm */}
+                <div className="form-group">
+                  <label>Nhập điểm (tối đa {inputCount} điểm, không bắt buộc)</label>
+                  {Array.from({ length: inputCount }).map((_, i) => (
+                    <input
+                      key={i}
+                      type="number"
+                      placeholder={`Điểm ${i + 1}`}
+                      {...register(`scores.${i}` as const, {
+                        valueAsNumber: true,
+                        validate: validateScore,
+                      })}
+                    />
+                  ))}
+                  {errors.scores && <small className="error">Điểm không hợp lệ</small>}
+                </div>
 
-          {/* Ngày kiểm tra */}
-          <div>
-            <label className="form-label fw-semibold">Ngày kiểm tra</label>
-            <input
-              type="date"
-              {...register("date", { required: "Vui lòng chọn ngày kiểm tra." })}
-              className="form-control form-control-lg"
-            />
-            {errors.date && (
-              <small className="text-danger fst-italic">{errors.date.message}</small>
-            )}
-          </div>
+                {/* Ngày */}
+                <div className="form-group">
+                  <label>Ngày kiểm tra</label>
+                  <input type="date" {...register("date", { required: "Vui lòng chọn ngày kiểm tra." })} />
+                  {errors.date && <small className="error">{errors.date.message}</small>}
+                </div>
 
-          {/* Ghi chú */}
-          <div>
-            <label className="form-label fw-semibold">Ghi chú</label>
-            <textarea
-              rows={3}
-              {...register("note")}
-              className="form-control"
-              placeholder="Ghi chú thêm nếu có..."
-            />
-          </div>
+                {/* Note */}
+                <div className="form-group">
+                  <label>Ghi chú</label>
+                  <textarea rows={3} {...register("note")} placeholder="Ghi chú thêm nếu có..." />
+                </div>
 
-          {/* Nút thao tác */}
-          <div className="d-flex justify-content-between pt-2">
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => reset()}
-              disabled={loading}
-            >
-              Đặt lại
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-lg"
-              style={{
-                background: "linear-gradient(45deg, #6366f1 0%, #ec4899 100%)",
-                color: "white",
-                fontWeight: 600,
-                borderRadius: 12,
-              }}
-            >
-              {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
-            </button>
-          </div>
-        </form>
-      </div>
+                {/* Buttons */}
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={() => reset()}
+                    disabled={loading}
+                  >
+                    Đặt lại
+                  </button>
+                  <button type="submit" disabled={loading} className="btn-gradient">
+                    {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* CSS giữ nguyên */}
+      <style>{`
+        .form-wrapper {
+          max-width: 800px;
+          margin: 40px auto;
+          padding: 20px;
+        }
+        .form-header {
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        .form-title {
+          font-size: 2.4rem;
+          font-weight: 900;
+          background: linear-gradient(90deg, #6366f1, #ec4899);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 12px;
+        }
+        .form-title .icon {
+          font-size: 2.4rem;
+          color: #6366f1;
+        }
+        .form-card {
+          background: #ffffff;
+          border-radius: 18px;
+          padding: 30px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+        }
+        .form-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 14px 40px rgba(0,0,0,0.15);
+        }
+        .form-group {
+          margin-bottom: 18px;
+          display: flex;
+          flex-direction: column;
+        }
+        .form-group label {
+          font-weight: 600;
+          margin-bottom: 6px;
+          color: #374151;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+          border: 1px solid #d1d5db;
+          border-radius: 10px;
+          padding: 12px 14px;
+          font-size: 1rem;
+          transition: border 0.2s, box-shadow 0.2s;
+          outline: none;
+        }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        }
+        .form-group textarea {
+          resize: none;
+        }
+        .error {
+          color: #dc2626;
+          font-size: 0.85rem;
+          margin-top: 4px;
+          font-style: italic;
+        }
+        .form-actions {
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 20px;
+        }
+        .btn-outline {
+          flex: 1;
+          padding: 12px;
+          border-radius: 12px;
+          border: 2px solid #9ca3af;
+          background: white;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-outline:hover {
+          border-color: #6366f1;
+          color: #6366f1;
+        }
+        .btn-gradient {
+          flex: 2;
+          padding: 12px;
+          border-radius: 12px;
+          border: none;
+          background: linear-gradient(45deg, #6366f1, #ec4899);
+          color: white;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        .btn-gradient:hover {
+          opacity: 0.9;
+          transform: translateY(-2px);
+        }
+      `}</style>
     </div>
   );
 }
