@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import * as Recharts from "recharts";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, TrendingUp, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import {
   getLearningDashboardsByUser,
   addLearningDashboard,
@@ -14,6 +14,9 @@ import { toast, ToastContainer } from "react-toastify";
 import { vireyaDashboardService } from "../../../services/vireyaDashboardService";
 import { LearningDashboard } from "../../../types/LearningDashboard";
 import "react-toastify/dist/ReactToastify.css";
+import classNames from "classnames";
+import { KTSVG } from "../../../_start/helpers";
+import { Dropdown1 } from "../../../_start/partials";
 
 const {
   BarChart,
@@ -36,12 +39,6 @@ function colorFromString(str: string) {
   return `linear-gradient(180deg, hsl(${hue} 85% 65% / 1), hsl(${(hue + 20) % 360} 75% 55% / 1))`;
 }
 
-/**
- * Cố gắng lấy điểm cho 1 môn từ nhiều nơi:
- * - importantSubjects.subjects[subject]
- * - subjectInsights[*].scores / marks / examScores (nếu có)
- * Nếu không có thì trả 0 và đánh dấu fallback.
- */
 function extractScoresForSubject(
   dashboard: any,
   subjectName: string
@@ -97,26 +94,18 @@ function extractScoresForSubject(
   return { tx: 0, gk: 0, ck: 0, fromInsight: true };
 }
 
-/**
- * Wrapper cập nhật dashboard:
- * - Nếu service updateLearningDashboard có sẵn -> gọi nó
- * - Nếu lỗi "not found" hoặc update thất bại -> gọi addLearningDashboard để tạo (id mặc định "unique_id_string")
- */
 async function safeUpdateOrCreateDashboard(id: string | undefined, payload: any) {
   const docId = id || "unique_id_string";
   try {
     if (typeof updateLearningDashboard === "function") {
-      // gọi service update (nên dùng try/catch khi service dùng updateDoc và document không tồn tại)
       await updateLearningDashboard(docId, payload);
       return { updated: true, created: false };
     } else {
-      // nếu service không tồn tại, fallback tạo document mới
       await addLearningDashboard({ id: docId, ...payload } as any);
       return { updated: false, created: true };
     }
   } catch (err: any) {
     const msg = String(err?.message || err || "");
-    // nếu lỗi do doc không tồn tại -> tạo mới
     if (msg.includes("No document to update") || msg.toLowerCase().includes("not-found") || msg.toLowerCase().includes("not found")) {
       try {
         await addLearningDashboard({ id: docId, ...payload } as any);
@@ -125,10 +114,43 @@ async function safeUpdateOrCreateDashboard(id: string | undefined, payload: any)
         throw addErr;
       }
     }
-    // nếu lỗi khác -> rethrow để xử lý caller
     throw err;
   }
 }
+
+/* ---------- Small UI component: SubjectTrendCard ---------- */
+type SubjectTrendCardProps = {
+  p: { delta: number; percent: number; trendLabel: string; last?: number; prev?: number };
+  compact?: boolean;
+};
+
+const SubjectTrendCard: React.FC<SubjectTrendCardProps> = ({ p, compact = false }) => {
+  const up = p.delta > 0.05;
+  const down = p.delta < -0.05;
+  const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+
+  return (
+    <div style={{ display: "flex", gap: compact ? 8 : 12, alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: compact ? 14 : 18, fontWeight: 900, color: up ? "#16a34a" : down ? "#ef4444" : "#64748b" }}>
+          {up ? <ArrowUp size={compact ? 14 : 18} /> : down ? <ArrowDown size={compact ? 14 : 18} /> : <Minus size={compact ? 14 : 18} />}
+        </div>
+        {!compact && (
+          <div style={{ fontSize: 13, fontWeight: 800, color: up ? "#16a34a" : down ? "#ef4444" : "#64748b" }}>{p.trendLabel}</div>
+        )}
+      </div>
+
+      <div style={{ marginLeft: compact ? 4 : "auto", display: "flex", alignItems: "center", gap: 8 }}>
+        {compact ? <div style={{ fontSize: 12, fontWeight: 800, color: up ? "#16a34a" : down ? "#ef4444" : "#64748b" }}>{percentText}</div> : (
+          <>
+            <div style={{ fontSize: 12, color: "#94a3b8" }}>Tiến bộ</div>
+            <div style={{ fontWeight: 900, fontSize: 16, color: up ? "#16a34a" : down ? "#ef4444" : "#64748b" }}>{percentText}</div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /* ---------- Component ---------- */
 const LearningDashboardPage: React.FC = () => {
@@ -155,7 +177,6 @@ const LearningDashboardPage: React.FC = () => {
     }
   };
 
-
   const loadLearningResults = async () => {
     try {
       const results = await getLearningResultsByUser(userId);
@@ -175,12 +196,11 @@ const LearningDashboardPage: React.FC = () => {
 
   const dashboardToShow = selectedDashboard || dashboards[0];
 
-
   const { subjectsData, anyFallback } = useMemo(() => {
     const data: Array<{ subject: string; "Thường xuyên": number; "Giữa kỳ": number; "Cuối kỳ": number; }> = [];
     if (!dashboardToShow) return { subjectsData: data, anyFallback: false };
     const fb = new Map<string, boolean>();
-    const subjectNames = Object.keys(dashboardToShow.importantSubjects.subjects);
+    const subjectNames = Object.keys(dashboardToShow.importantSubjects?.subjects || {});
 
     (subjectNames || []).forEach((name) => {
       const { tx, gk, ck, fromInsight } = extractScoresForSubject(dashboardToShow, name);
@@ -190,17 +210,23 @@ const LearningDashboardPage: React.FC = () => {
     return { subjectsData: data, anyFallback: Array.from(fb.values()).some((v) => v) };
   }, [dashboardToShow]);
 
-  const toggleSubject = (idx: number) => {
+  const toggleSubject = (idx: number, subjectName?: string) => {
     setExpandedSubjects((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(idx)) newSet.delete(idx);
-      else newSet.add(idx);
+      const willOpen = !newSet.has(idx);
+      if (willOpen) newSet.add(idx);
+      else newSet.delete(idx);
+
+      if (willOpen && subjectName) {
+        saveProgressForSubject(subjectName).catch((err) => console.error("Lưu tiến bộ thất bại", err));
+      }
+
       return newSet;
     });
   };
 
   const handleTimelineClick = (dashboard: LearningDashboard) => {
-    setSelectedDashboard(dashboard);    
+    setSelectedDashboard(dashboard);
   };
 
   const getShortDesc = (item: any) => {
@@ -223,6 +249,50 @@ const LearningDashboardPage: React.FC = () => {
       };
     });
     return normalized;
+  }
+
+  function computeProgressForSubject(subjectName: string) {
+    const serie = seriesForSubject(subjectName);
+    if (!serie || serie.length === 0) return { delta: 0, percent: 0, trendLabel: "Chưa đủ dữ liệu" };
+    const last = serie[serie.length - 1]?.score ?? 0;
+    const prev = serie[serie.length - 2]?.score ?? 0;
+    const delta = +(last - prev).toFixed(2);
+    let percent = 0;
+    if (prev === 0) {
+      percent = last === 0 ? 0 : 100;
+    } else {
+      percent = +(((delta) / (prev || 1)) * 100).toFixed(1);
+    }
+    let trendLabel = "Ổn định";
+    if (delta > 0.05) trendLabel = `Tăng ${Math.abs(percent).toFixed(1)}%`;
+    else if (delta < -0.05) trendLabel = `Giảm ${Math.abs(percent).toFixed(1)}%`;
+
+    return { delta, percent, trendLabel, last, prev };
+  }
+
+  function currentAverageFromDashboard(subjectName: string) {
+    if (!dashboardToShow) return 0;
+    const { tx, gk, ck } = extractScoresForSubject(dashboardToShow, subjectName);
+    const txN = Number(tx) || 0;
+    const gkN = Number(gk) || 0;
+    const ckN = Number(ck) || 0;
+    const weighted = txN * 0.2 + gkN * 0.3 + ckN * 0.5;
+    return Math.round((weighted + Number.EPSILON) * 100) / 100;
+  }
+
+  async function saveProgressForSubject(subjectName: string) {
+    try {
+      const p = computeProgressForSubject(subjectName);
+      const docId = (dashboardToShow as any)?.id || "unique_id_string";
+      const payload: any = {};
+      payload[`subjectProgress.${subjectName}`] = { ...p, updatedAt: new Date() };
+      await safeUpdateOrCreateDashboard(docId, payload);
+      toast.success(`${subjectName}: Tiến bộ đã được lưu (${Math.abs(p.percent).toFixed(1)}%).`);
+    } catch (err) {
+      console.error("saveProgressForSubject failed", err);
+      toast.error("Không thể lưu tiến bộ.");
+      throw err;
+    }
   }
 
   const handleSelectSubjectDetail = async (subjectName: string) => {
@@ -272,29 +342,85 @@ const LearningDashboardPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="ld-card ld-card--tight">
-            <div className="ld-timeline-head">
-              <div className="ld-timeline-title">Timeline</div>
-              <div className="ld-timeline-sub">Các lần phân tích trước</div>
+<div className={`card ${classNames}`}>
+  {/* begin::Header */}
+  <div className="card-header align-items-center border-0 mt-5">
+    <h3 className="card-title align-items-start flex-column">
+      <span className="fw-bolder text-dark fs-3">Lịch sử cập nhật</span>
+      <span className="text-muted mt-2 fw-bold fs-6">Nhật ký hoạt động</span>
+    </h3>
+    <div className="card-toolbar">
+      <button
+        type="button"
+        className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+        data-kt-menu-trigger="click"
+        data-kt-menu-placement="bottom-end"
+        data-kt-menu-flip="top-end"
+      >
+        <KTSVG
+          path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
+          className="svg-icon-1"
+        />
+      </button>
+      <Dropdown1 />
+    </div>
+  </div>
+  {/* end::Header */}
+
+  {/* begin::Body */}
+  <div className="card-body pt-3">
+    <div className="timeline-label">
+      {dashboards.length === 0 && (
+        <div className="text-muted fs-7">Chưa có dữ liệu.</div>
+      )}
+
+      {dashboards.map((dashboard) => {
+        const dateObj: Date | null = dashboard.createdAt
+          ? "toDate" in (dashboard as any).createdAt
+            ? (dashboard.createdAt as any).toDate()
+            : new Date(dashboard.createdAt as any)
+          : null;
+
+        const dateStr = dateObj
+          ? dateObj.toLocaleDateString("vi-VN", {
+              day: "2-digit",
+              month: "2-digit",
+            })
+          : "N/A";
+
+        return (
+          <div
+            className="timeline-item"
+            key={dashboard.id || Math.random().toString()}
+            onClick={() => handleTimelineClick(dashboard)}
+            style={{ cursor: "pointer" }}
+          >
+            {/* Label (ngày) */}
+            <div className="timeline-label fw-bolder text-gray-800 fs-6">
+              {dateStr}
             </div>
 
-            <div className="ld-timeline-list">
-              {dashboards.length === 0 && <div className="ld-empty">Chưa có dữ liệu.</div>}
-              {dashboards.map((dashboard) => {
-                const key = dashboard.createdAt?.toString() || Math.random().toString();
-                const dateObj: Date | null = dashboard.createdAt ? ("toDate" in (dashboard as any).createdAt ? (dashboard.createdAt as any).toDate() : new Date(dashboard.createdAt as any)) : null;
-                const dateStr = dateObj ? dateObj.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }) : "N/A";
-                const active = selectedDashboard && selectedDashboard.id === dashboard.id;
-                return (
-                  <div key={key} onClick={() => handleTimelineClick(dashboard)} className={`ld-timeline-item ${active ? "ld-timeline-item--active" : ""}`}>
-                    <div className="ld-dot" />
-                    <div className="ld-timeline-item-title">{dashboard.title}</div>
-                    <div className="ld-timeline-item-date">{dateStr}</div>
-                  </div>
-                );
-              })}
+            {/* Badge (icon giữa timeline) */}
+            <div className="timeline-badge">
+              <i className="fa fa-genderless text-success fs-1"></i>
+            </div>
+
+            {/* Content */}
+            <div className="timeline-content d-flex">
+              <span className="fw-bold fs-6 text-dark ps-3">
+                {dashboard.title}
+              </span>
             </div>
           </div>
+        );
+      })}
+    </div>
+  </div>
+  {/* end::Body */}
+</div>
+
+
+
 
           <div className="ld-card">
             <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Kết quả học tập (Chọn để xem chi tiết)</div>
@@ -305,7 +431,18 @@ const LearningDashboardPage: React.FC = () => {
                 {subjectsFromResults.map((s) => (
                   <li key={s} style={{ marginBottom: 8 }}>
                     <button className="subject-button-compact" onClick={() => handleSelectSubjectDetail(s)}>
-                      <div style={{ fontWeight: 700 }}>{s}</div>
+                      {/* show compact progress next to subject name */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ fontWeight: 700 }}>{s}</div>
+                        {(() => {
+                          const p = computeProgressForSubject(s);
+                          const up = p.delta > 0.05;
+                          const down = p.delta < -0.05;
+                          const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                          const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+                          return <div style={{ fontSize: 12, fontWeight: 900, color }}>{percentText}</div>;
+                        })()}
+                      </div>
                       {selectedSubjectDetail === s ? <ChevronUp /> : <ChevronDown />}
                     </button>
 
@@ -339,6 +476,83 @@ const LearningDashboardPage: React.FC = () => {
                                 return <div style={{ fontStyle: "italic", color: "#64748b" }}>Chưa có phân tích AI cho môn này — đang hiển thị biểu đồ điểm gốc nếu có.</div>;
                               }
                             })()}
+
+                            {/* --- NEW: Chi tiết điểm và Tiến bộ --- */}
+                            <div style={{ marginTop: 12 }} className="ld-subject-detail">
+                              <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
+                                <div style={{ minWidth: 220 }}>
+                                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Chi tiết điểm</div>
+                                  {/* Lấy TX/GK/CK từ dashboard hoặc insight */}
+                                  {(() => {
+                                    const scores = extractScoresForSubject(dashboardToShow, s);
+                                    const avg = currentAverageFromDashboard(s);
+                                    return (
+                                      <div>
+                                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Thường xuyên</div><div style={{ fontWeight: 700 }}>{scores.tx ?? 0}</div></div>
+                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Giữa kỳ</div><div style={{ fontWeight: 700 }}>{scores.gk ?? 0}</div></div>
+                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Cuối kỳ</div><div style={{ fontWeight: 700 }}>{scores.ck ?? 0}</div></div>
+                                        </div>
+
+                                        <div style={{ marginTop: 6 }}>
+                                          <div style={{ fontSize: 12, color: "#94a3b8" }}>Điểm trung bình (trọng số TX20/GK30/CK50)</div>
+                                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                                            <div style={{ flex: 1, background: "#eef2ff", height: 12, borderRadius: 8, overflow: "hidden" }}>
+                                              <div style={{ width: `${Math.min(100, (avg / 10) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#60a5fa,#06b6d4)" }} />
+                                            </div>
+                                            <div style={{ minWidth: 48, textAlign: "right", fontWeight: 700 }}>{avg ?? 0}/10</div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+
+                                <div style={{ flex: 1, minWidth: 200 }}>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    {/* show subject name + small progress badge beside it */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                      {(() => {
+                                        const p = computeProgressForSubject(s);
+                                        const up = p.delta > 0.05;
+                                        const down = p.delta < -0.05;
+                                        const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                                        const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+                                        return (
+                                          <>
+                                            <div style={{ fontWeight: 700, fontSize: 15 }}>{s}</div>
+                                            <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
+                                          </>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    {/* single IIFE returning trend + percent (fixed structure) */}
+                                    {(() => {
+                                      const p = computeProgressForSubject(s);
+                                      return <SubjectTrendCard p={p} />;
+                                    })()}
+                                  </div>
+
+                                  <div style={{ marginTop: 8 }}>
+                                    {(seriesForSubject(s) || []).length > 0 ? (
+                                      <div style={{ height: 90 }}>
+                                        <ResponsiveContainer width="100%" height={90}>
+                                          <LineChart data={seriesForSubject(s)}>
+                                            <XAxis dataKey="semester" hide />
+                                            <YAxis domain={[0, 10]} hide />
+                                            <Tooltip />
+                                            <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} dot={false} />
+                                          </LineChart>
+                                        </ResponsiveContainer>
+                                      </div>
+                                    ) : (
+                                      <div style={{ fontSize: 13, color: "#64748b" }}>Không có dữ liệu điểm lịch sử.</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
 
                             {(seriesForSubject(s) || []).length > 0 ? (
                               <div style={{ marginTop: 8 }}>
@@ -431,10 +645,26 @@ const LearningDashboardPage: React.FC = () => {
                     const leftMarkStyle = { background: colorFromString(item?.subjectName || String(idx)) };
                     return (
                       <div key={idx} className={`ld-accordion ${expanded ? "ld-accordion--open" : ""}`}>
-                        <div className="ld-accordion-head" onClick={() => toggleSubject(idx)} role="button" aria-expanded={expanded} tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") toggleSubject(idx); }}>
+                        <div className="ld-accordion-head" onClick={() => toggleSubject(idx, item?.subjectName)} role="button" aria-expanded={expanded} tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") toggleSubject(idx, item?.subjectName); }}>
                           <div className="ld-leftmark" style={leftMarkStyle as any} />
                           <div className="ld-acc-main">
-                            <div className="ld-acc-title">{item?.subjectName}</div>
+                            {/* show subject name with small progress badge next to it */}
+                            <div className="ld-acc-title">
+                              {(() => {
+                                const sub = item?.subjectName || "";
+                                const p = computeProgressForSubject(sub);
+                                const up = p.delta > 0.05;
+                                const down = p.delta < -0.05;
+                                const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                                const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+                                return (
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <div style={{ fontSize: 16, fontWeight: 700 }}>{sub}</div>
+                                    <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
                             <div className="ld-acc-short">{getShortDesc(item)}</div>
                           </div>
                           <div className="ld-acc-right">
@@ -519,24 +749,60 @@ const LearningDashboardPage: React.FC = () => {
 /* Left top row */
 .ld-left-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
-/* Timeline */
-.ld-timeline-head { margin-bottom: 8px; }
-.ld-timeline-title { font-weight: 800; color: #062173; }
-.ld-timeline-sub { font-size: 13px; color: #64748b; }
-
-.ld-timeline-list { margin-top: 8px; }
+.ld-timeline-list { margin-top: 12px; }
 .ld-timeline-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 8px; border-radius: 10px; cursor: pointer;
-  margin-bottom: 8px; background: transparent;
-  border: 1px solid rgba(15,23,42,0.03);
-  transition: background .2s ease, border-color .2s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid rgba(15,23,42,0.06);
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 .ld-timeline-item:hover { border-color: rgba(79,70,229,0.18); }
-.ld-timeline-item--active { background: linear-gradient(90deg, rgba(79,70,229,0.06), rgba(34,197,94,0.02)); border-color: rgba(79,70,229,0.22); }
-.ld-dot { width: 10px; height: 10px; border-radius: 999px; background: #34d399; flex-shrink: 0; }
-.ld-timeline-item-title { font-size: 13px; font-weight: 700; }
-.ld-timeline-item-date { margin-left: auto; font-size: 12px; color: #64748b; }
+.ld-timeline-item--active {
+  background: linear-gradient(90deg, rgba(79,70,229,0.06), rgba(34,197,94,0.02));
+  border-color: rgba(79,70,229,0.22);
+}
+.ld-dot {
+  width: 12px; height: 12px; border-radius: 999px;
+  background: #34d399; margin-top: 4px; flex-shrink: 0;
+}
+.timeline-content { display: flex; flex-direction: column; }
+.timeline-content span:first-child { font-weight: 700; color: #062173; }
+timeline-content span:last-child { color: #64748b; font-size: 12px; }
+
+
+.ld-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #34d399;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.ld-timeline-item-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.ld-timeline-item-date {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ld-timeline-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #062173;
+}
 
 /* Compact subject button (left list) */
 .subject-button-compact { width: 100%; text-align: left; padding: 10px 12px; background: #f8fafc; border: none; outline: none; cursor: pointer; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
@@ -571,7 +837,7 @@ const LearningDashboardPage: React.FC = () => {
 .ld-accordion-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; }
 .ld-leftmark { width: 8px; height: 48px; border-radius: 8px; margin-right: 4px; flex-shrink: 0; }
 .ld-acc-main { flex: 1; min-width: 0; }
-.ld-acc-title { font-size: 16px; font-weight: 700; margin: 0; color: #07113a; }
+.ld-acc-title { font-size: 16px; font-weight: 700; margin: 0; color: #07113a; display: flex; align-items: center; gap: 8px; }
 .ld-acc-short { margin-top: 4px; font-size: 13px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
 .ld-acc-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .ld-acc-hint { font-size: 12px; color: #94a3b8; }
@@ -590,6 +856,9 @@ const LearningDashboardPage: React.FC = () => {
 .ld-field-text { color: #475569; }
 
 .ld-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+/* subject detail */
+.ld-subject-detail { margin-top: 8px; }
 
 @media (max-width: 900px) { .ld-grid { flex-direction: column; } }
       `}</style>

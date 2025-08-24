@@ -83,17 +83,13 @@ const Btn = styled.button<BtnProps>`
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.35s ease;
   background: ${(props) =>
-    props.close
-      ? "#999"
-      : "linear-gradient(270deg, #a855f7, #ec4899)"};
+    props.close ? "#999" : "linear-gradient(270deg, #a855f7, #ec4899)"};
   background-size: 400% 400%;
   animation: ${(props) => (props.close ? "none" : gradientAnimation)} 8s ease infinite;
 
   &:hover {
     box-shadow: ${(props) =>
-      props.close
-        ? "0 0 12px #555 inset"
-        : "0 8px 30px rgba(0, 0, 0, 0.25)"};
+      props.close ? "0 0 12px #555 inset" : "0 8px 30px rgba(0, 0, 0, 0.25)"};
     background-position: 100% 50%;
     transform: scale(1.07);
   }
@@ -115,23 +111,27 @@ const FormWrapper = styled.div<{ purple?: boolean }>`
   box-shadow: 0 0 25px rgba(219, 39, 119, 0.3);
 `;
 
+/* === CHANGED: stacked layout === */
 const Grid2Col = styled.div`
+  /* Luôn xếp dọc: mỗi card chiếm 1 dòng (stacked) */
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  grid-template-columns: 1fr;
+  gap: 32px;
   margin-top: 40px;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
+  width: 100%;
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
 `;
 
+/* Đồng thời đảm bảo mỗi Card chiếm full width trong container */
 const Card = styled.section`
+  width: 100%;
   background: white;
   border-radius: 40px;
   box-shadow: 0 18px 50px rgba(124, 58, 237, 0.15);
   padding: 40px 48px;
-  transition: box-shadow 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
   position: relative;
   overflow: hidden;
 
@@ -140,6 +140,7 @@ const Card = styled.section`
     transform: translateY(-3px);
   }
 `;
+/* === end change === */
 
 const SectionHeader = styled.header`
   display: flex;
@@ -228,10 +229,7 @@ export default function ProfilePage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [s, c] = await Promise.all([
-        getUserSkills(userId),
-        getUserCertificates(userId),
-      ]);
+      const [s, c] = await Promise.all([getUserSkills(userId), getUserCertificates(userId)]);
       setSkills(s);
       setCertificates(c);
     } catch {
