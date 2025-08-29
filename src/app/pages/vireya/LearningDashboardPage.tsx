@@ -1,18 +1,19 @@
-// src/app/pages/vireya/LearningDashboardPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
+// FILE: src/app/pages/vireya/LearningDashboardPage.tsx
+// (Merged & cleaned version — includes suggestionPriority feature, suggestion priority chart moved to its own Card, show ALL subjects)
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as Recharts from "recharts";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, TrendingUp, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import {
   getLearningDashboardsByUser,
   addLearningDashboard,
-  updateLearningDashboard, // sử dụng service (nếu có)
+  updateLearningDashboard,
 } from "../../../services/learningDashboardService";
 import { getLearningResultsByUser, getAllLearningResults } from "../../../services/learningResultService";
-import { getAllSubjects } from "../../../services/subjectService";
 import { toast, ToastContainer } from "react-toastify";
 import { vireyaDashboardService } from "../../../services/vireyaDashboardService";
-import { LearningDashboard } from "../../../types/LearningDashboard";
+import { LearningDashboard, SuggestionScale } from "../../../types/LearningDashboard";
 import "react-toastify/dist/ReactToastify.css";
 import classNames from "classnames";
 import { KTSVG } from "../../../_start/helpers";
@@ -34,9 +35,9 @@ const {
 /* ---------- Helpers ---------- */
 function colorFromString(str: string) {
   let h = 0;
-  for (let i = 0; i < str.length; i++) h = (h << 5) - h + str.charCodeAt(i);
+  for (let i = 0; i < (str || "").length; i++) h = (h << 5) - h + (str || "").charCodeAt(i);
   const hue = Math.abs(h) % 360;
-  return `linear-gradient(180deg, hsl(${hue} 85% 65% / 1), hsl(${(hue + 20) % 360} 75% 55% / 1))`;
+  return `linear-gradient(90deg, hsl(${hue} 85% 55%), hsl(${(hue + 30) % 360} 70% 45%))`;
 }
 
 function extractScoresForSubject(
@@ -94,8 +95,13 @@ function extractScoresForSubject(
   return { tx: 0, gk: 0, ck: 0, fromInsight: true };
 }
 
+/**
+ * safer update/create:
+ * - try updateLearningDashboard()
+ * - if update fails with "not found" or HTTP 4xx, try addLearningDashboard()
+ */
 async function safeUpdateOrCreateDashboard(id: string | undefined, payload: any) {
-  const docId = id || "unique_id_string";
+  const docId = id || `unique_${Date.now()}`;
   try {
     if (typeof updateLearningDashboard === "function") {
       await updateLearningDashboard(docId, payload);
@@ -106,7 +112,16 @@ async function safeUpdateOrCreateDashboard(id: string | undefined, payload: any)
     }
   } catch (err: any) {
     const msg = String(err?.message || err || "");
-    if (msg.includes("No document to update") || msg.toLowerCase().includes("not-found") || msg.toLowerCase().includes("not found")) {
+    const code = err?.code ?? err?.status ?? null;
+    const shouldTryAdd =
+      msg.toLowerCase().includes("no document") ||
+      msg.toLowerCase().includes("not-found") ||
+      msg.toLowerCase().includes("not found") ||
+      (typeof code === "number" && code >= 400 && code < 500) ||
+      msg.includes("404") ||
+      msg.includes("400");
+
+    if (shouldTryAdd) {
       try {
         await addLearningDashboard({ id: docId, ...payload } as any);
         return { updated: false, created: true };
@@ -152,6 +167,92 @@ const SubjectTrendCard: React.FC<SubjectTrendCardProps> = ({ p, compact = false 
   );
 };
 
+/* ---------- Status Indicator: horizontal bar + percent (animated to exact %) ---------- */
+type StatusIndicatorProps = {
+  subjectName?: string;
+  percent: number; // standardized to 0..100
+  color?: string; // can be gradient string
+  compact?: boolean;
+  showPercent?: boolean;
+  minVisiblePercent?: number; // default 0 (use 0 to follow exact %)
+};
+
+const StatusIndicator: React.FC<StatusIndicatorProps> = ({ subjectName = "x", percent, color, compact = false, showPercent = true, minVisiblePercent = 0 }) => {
+  // percent is expected to be 0..100
+  const pct = Math.round(percent * 10) / 10; // one decimal for display
+
+  // fillPct controls the width of fill. Clamp to 0..100
+  const fillPct = Math.max(minVisiblePercent, Math.min(100, percent));
+
+  const barColor = color || colorFromString(subjectName || "x");
+
+  // size
+  const barWidthPx = compact ? 100 : 120;
+  const barHeightPx = compact ? 8 : 10;
+
+  // animated width state (mount and when avg changes)
+  const [animatedWidth, setAnimatedWidth] = useState<number>(0);
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    // animate from 0 -> fillPct with a slight delay so transition triggers
+    setAnimatedWidth(0);
+    const t = window.setTimeout(() => {
+      // use requestAnimationFrame for smoother paint
+      rafRef.current = window.requestAnimationFrame(() => setAnimatedWidth(fillPct));
+    }, 30);
+    return () => {
+      clearTimeout(t);
+      if (rafRef.current) {
+        window.cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [fillPct]);
+
+  // alignment adjust
+  const justify = showPercent ? "flex-end" : "center";
+
+  return (
+    <div
+      className="ld-status-cell"
+      title={`${pct}%`}
+      style={{ justifyContent: justify, display: "flex", alignItems: "center", gap: 10, marginLeft: 12 }}
+    >
+      <div
+        className="ld-status-bar"
+        aria-hidden
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.min(100, Math.max(0, Math.round(pct)))}
+        style={{
+          width: barWidthPx,
+          height: barHeightPx,
+          background: "#eef2ff",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className="ld-status-fill"
+          style={{
+            width: `${animatedWidth}%`,
+            height: "100%",
+            transition: "width 700ms cubic-bezier(.2,.9,.2,1)",
+            background: barColor,
+            borderRadius: 999,
+          }}
+        />
+      </div>
+
+      {showPercent && (
+        <div className="ld-status-percent" style={{ width: 48, textAlign: "right", fontWeight: 700, fontSize: 12, color: "#0f172a" }}>
+          {pct}%
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ---------- Component ---------- */
 const LearningDashboardPage: React.FC = () => {
   const userId = "user_fake_id_123456"; // test id (thay bằng động nếu cần)
@@ -162,6 +263,18 @@ const LearningDashboardPage: React.FC = () => {
 
   const [learningResults, setLearningResults] = useState<any[]>([]);
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<string | null>(null);
+
+  // CONFIG: choose how suggestion priority should be represented
+  // "percent" => 0..100
+  // "five" => 1..5 scale
+  // Use React state so UI can toggle later if needed
+  const [suggestionScale, setSuggestionScale] = useState<SuggestionScale>("percent");
+
+  // Additional UI config requested: sort order, chart type, color palette, and limit (top N)
+  const [prioritySort, setPrioritySort] = useState<'desc' | 'asc'>('desc');
+  const [priorityChartType, setPriorityChartType] = useState<'vertical' | 'horizontal'>('vertical');
+  const [priorityColor, setPriorityColor] = useState<'red' | 'blue' | 'gradient'>('red');
+  const [priorityLimit, setPriorityLimit] = useState<number>(0); // 0 => show all
 
   const loadDashboards = async () => {
     if (!userId) return;
@@ -196,19 +309,68 @@ const LearningDashboardPage: React.FC = () => {
 
   const dashboardToShow = selectedDashboard || dashboards[0];
 
+  // compute suggestion priority for a subject (0..100 fallback) — prefer explicit field from AI if present
+  function computeSuggestionPriorityForSubject(subjectName: string) {
+    const rawInsights: any[] = Array.isArray(dashboardToShow?.subjectInsights) ? dashboardToShow.subjectInsights : [];
+    const item = rawInsights.find((it: any) => (it?.subjectName || "").toString().toLowerCase() === (subjectName || "").toLowerCase());
+    if (item && typeof item.suggestionPriority === "number") {
+      // accept either 0..100 or 1..5 (map to 0..100)
+      const v = item.suggestionPriority;
+      if (v > 5) return Math.max(0, Math.min(100, Math.round(v)));
+      // if 1..5 scale from AI, map to 0..100
+      const mapped = Math.round(((v - 1) / 4) * 100);
+      return Math.max(0, Math.min(100, mapped));
+    }
+
+    // fallback heuristic (deterministic):
+    // - lower average => higher priority
+    // - if AI reported weakness => +30
+    // - if recent trend negative => +10
+    const avg = currentAverageFromDashboard(subjectName) || 0;
+    const p = computeProgressForSubject(subjectName);
+    const itemWeak = (rawInsights.find((it:any)=> (it?.subjectName||"").toLowerCase() === (subjectName||"").toLowerCase())?.weakness) ? 1 : 0;
+
+    let score = Math.round(((10 - avg) / 10) * 60 + itemWeak * 30 + (p.delta < 0 ? Math.min(10, Math.round(Math.abs(p.percent) / 10)) : 0));
+    if (score < 0) score = 0;
+    if (score > 100) score = 100;
+    return score;
+  }
+
   const { subjectsData, anyFallback } = useMemo(() => {
-    const data: Array<{ subject: string; "Thường xuyên": number; "Giữa kỳ": number; "Cuối kỳ": number; }> = [];
+    const data: Array<{ subject: string; "Thường xuyên": number; "Giữa kỳ": number; "Cuối kỳ": number; suggestionPriority?: number } > = [];
     if (!dashboardToShow) return { subjectsData: data, anyFallback: false };
     const fb = new Map<string, boolean>();
     const subjectNames = Object.keys(dashboardToShow.importantSubjects?.subjects || {});
 
     (subjectNames || []).forEach((name) => {
       const { tx, gk, ck, fromInsight } = extractScoresForSubject(dashboardToShow, name);
-      data.push({ subject: name, "Thường xuyên": Number(tx) || 0, "Giữa kỳ": Number(gk) || 0, "Cuối kỳ": Number(ck) || 0 });
+      const suggestionPriority = computeSuggestionPriorityForSubject(name); // 0..100
+      data.push({ subject: name, "Thường xuyên": Number(tx) || 0, "Giữa kỳ": Number(gk) || 0, "Cuối kỳ": Number(ck) || 0, suggestionPriority });
       fb.set(name, fromInsight);
     });
     return { subjectsData: data, anyFallback: Array.from(fb.values()).some((v) => v) };
-  }, [dashboardToShow]);
+  }, [dashboardToShow, learningResults]);
+
+  // Build a list of ALL subjects to show in the separate Suggestion Priority card
+  const allSubjectsWithPriority = useMemo(() => {
+    // compute subjects directly from available sources (avoid using a var declared later)
+    const set = new Set<string>();
+    // from importantSubjects
+    const importantKeys = Object.keys(dashboardToShow?.importantSubjects?.subjects || {});
+    importantKeys.forEach((k) => set.add((k || "").toString()));
+    // from insights
+    if (Array.isArray(dashboardToShow?.subjectInsights)) {
+      dashboardToShow!.subjectInsights!.forEach((it: any) => { if (it?.subjectName) set.add((it.subjectName||"").toString()); });
+    }
+    // from raw learningResults (compute locally to avoid temporal-deadzone error)
+    const resultsSubjects = Array.from(new Set((learningResults || []).map((r: any) => r.subjectName).filter(Boolean)));
+    resultsSubjects.forEach((s: any) => set.add((s||"").toString()));
+
+    const arr = Array.from(set).map((sub) => ({ subject: sub, suggestionPriority: computeSuggestionPriorityForSubject(sub) }));
+    // sort descending so the highest priority (largest %) appears first
+    arr.sort((a, b) => b.suggestionPriority - a.suggestionPriority);
+    return arr;
+  }, [dashboardToShow, learningResults]);
 
   const toggleSubject = (idx: number, subjectName?: string) => {
     setExpandedSubjects((prev) => {
@@ -240,6 +402,11 @@ const LearningDashboardPage: React.FC = () => {
     return names;
   }, [learningResults]);
 
+  // A set for quick lookup (lowercased)
+  const subjectsFromResultsSet = useMemo(() => {
+    return new Set((subjectsFromResults || []).map((s) => (s || "").toString().toLowerCase()));
+  }, [subjectsFromResults]);
+
   function seriesForSubject(subjectName: string) {
     const rows = (learningResults || []).filter((r: any) => (r.subjectName || "").toLowerCase() === (subjectName || "").toLowerCase());
     const normalized = rows.map((r: any) => {
@@ -251,23 +418,40 @@ const LearningDashboardPage: React.FC = () => {
     return normalized;
   }
 
+  // --- Updated: computeProgressForSubject now returns "Bằng nhau" when last === prev ---
   function computeProgressForSubject(subjectName: string) {
     const serie = seriesForSubject(subjectName);
-    if (!serie || serie.length === 0) return { delta: 0, percent: 0, trendLabel: "Chưa đủ dữ liệu" };
-    const last = serie[serie.length - 1]?.score ?? 0;
-    const prev = serie[serie.length - 2]?.score ?? 0;
-    const delta = +(last - prev).toFixed(2);
-    let percent = 0;
-    if (prev === 0) {
-      percent = last === 0 ? 0 : 100;
-    } else {
-      percent = +(((delta) / (prev || 1)) * 100).toFixed(1);
-    }
-    let trendLabel = "Ổn định";
-    if (delta > 0.05) trendLabel = `Tăng ${Math.abs(percent).toFixed(1)}%`;
-    else if (delta < -0.05) trendLabel = `Giảm ${Math.abs(percent).toFixed(1)}%`;
+    // nếu có lịch sử
+    if (serie && serie.length > 0) {
+      const last = serie[serie.length - 1]?.score ?? 0;
+      const prev = serie[serie.length - 2]?.score ?? 0;
+      const delta = +(last - prev).toFixed(2);
 
-    return { delta, percent, trendLabel, last, prev };
+      let percent = 0;
+      if (prev === 0) {
+        percent = last === 0 ? 0 : 100;
+      } else {
+        percent = +(((delta) / (prev || 1)) * 100).toFixed(1);
+      }
+
+      let trendLabel = "Ổn định";
+
+      // Nếu điểm **bằng nhau chính xác** -> ghi "Bằng nhau"
+      if (last === prev) {
+        trendLabel = "Bằng nhau";
+      } else if (delta > 0.05) {
+        trendLabel = `Tăng ${Math.abs(percent).toFixed(1)}%`;
+      } else if (delta < -0.05) {
+        trendLabel = `Giảm ${Math.abs(percent).toFixed(1)}%`;
+      }
+
+      return { delta, percent, trendLabel, last, prev };
+    }
+
+    // fallback: nếu không có lịch sử, dùng avg từ dashboard (0..10) -> map sang 0..100
+    const avg = currentAverageFromDashboard(subjectName) || 0;
+    const percentFromAvg = Math.round(avg * 10 * 10) / 10; // 1 decimal, e.g. 3.85 -> 38.5
+    return { delta: 0, percent: percentFromAvg, trendLabel: "Không có dữ liệu lịch sử", last: avg, prev: avg };
   }
 
   function currentAverageFromDashboard(subjectName: string) {
@@ -283,9 +467,13 @@ const LearningDashboardPage: React.FC = () => {
   async function saveProgressForSubject(subjectName: string) {
     try {
       const p = computeProgressForSubject(subjectName);
-      const docId = (dashboardToShow as any)?.id || "unique_id_string";
+      const docId = (dashboardToShow as any)?.id || `unique_${Date.now()}`;
       const payload: any = {};
-      payload[`subjectProgress.${subjectName}`] = { ...p, updatedAt: new Date() };
+
+      // create nested object instead of dot-path key (avoid Firestore 400)
+      payload.subjectProgress = { ...(payload.subjectProgress || {}) };
+      payload.subjectProgress[subjectName] = { ...p, updatedAt: new Date() };
+
       await safeUpdateOrCreateDashboard(docId, payload);
       toast.success(`${subjectName}: Tiến bộ đã được lưu (${Math.abs(p.percent).toFixed(1)}%).`);
     } catch (err) {
@@ -298,13 +486,32 @@ const LearningDashboardPage: React.FC = () => {
   const handleSelectSubjectDetail = async (subjectName: string) => {
     setSelectedSubjectDetail(subjectName);
     try {
-      await safeUpdateOrCreateDashboard((dashboardToShow as any)?.id || "unique_id_string", { lastSelected: subjectName });
+      // lastSelected is a top-level field, safe to set directly
+      await safeUpdateOrCreateDashboard((dashboardToShow as any)?.id || `unique_${Date.now()}`, { lastSelected: subjectName });
       toast.success(`Lưu lựa chọn môn chi tiết: ${subjectName}`);
     } catch (err) {
       console.error("Lưu lastSelected thất bại", err);
       toast.error("Lưu lựa chọn thất bại.");
     }
   };
+
+  // Filter subjectInsights to avoid showing AI-only subjects unless they appear in real results or importantSubjects
+  const filteredSubjectInsights = useMemo(() => {
+    const raw: any[] = Array.isArray(dashboardToShow?.subjectInsights) ? dashboardToShow!.subjectInsights! : [];
+    const importantSubjectKeys = Object.keys(dashboardToShow?.importantSubjects?.subjects || {}).map((k) => k.toLowerCase());
+    return raw
+      .filter((it: any) => {
+        const name = (it?.subjectName || "").toString().toLowerCase();
+        if (!name) return false;
+        // show if present in actual learning results OR if subject is marked important
+        return subjectsFromResultsSet.has(name) || importantSubjectKeys.includes(name);
+      })
+      .map((it: any) => {
+        // enrich with suggestionPriority (computed fallback if missing)
+        const sp = computeSuggestionPriorityForSubject(it?.subjectName || "");
+        return { ...it, suggestionPriority: sp };
+      });
+  }, [dashboardToShow, subjectsFromResultsSet, learningResults]);
 
   return (
     <div className="ld-container">
@@ -342,85 +549,86 @@ const LearningDashboardPage: React.FC = () => {
             </button>
           </div>
 
-<div className={`card ${classNames}`}>
-  {/* begin::Header */}
-  <div className="card-header align-items-center border-0 mt-5">
-    <h3 className="card-title align-items-start flex-column">
-      <span className="fw-bolder text-dark fs-3">Lịch sử cập nhật</span>
-      <span className="text-muted mt-2 fw-bold fs-6">Nhật ký hoạt động</span>
-    </h3>
-    <div className="card-toolbar">
-      <button
-        type="button"
-        className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
-        data-kt-menu-trigger="click"
-        data-kt-menu-placement="bottom-end"
-        data-kt-menu-flip="top-end"
-      >
-        <KTSVG
-          path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
-          className="svg-icon-1"
-        />
-      </button>
-      <Dropdown1 />
-    </div>
-  </div>
-  {/* end::Header */}
-
-  {/* begin::Body */}
-  <div className="card-body pt-3">
-    <div className="timeline-label">
-      {dashboards.length === 0 && (
-        <div className="text-muted fs-7">Chưa có dữ liệu.</div>
-      )}
-
-      {dashboards.map((dashboard) => {
-        const dateObj: Date | null = dashboard.createdAt
-          ? "toDate" in (dashboard as any).createdAt
-            ? (dashboard.createdAt as any).toDate()
-            : new Date(dashboard.createdAt as any)
-          : null;
-
-        const dateStr = dateObj
-          ? dateObj.toLocaleDateString("vi-VN", {
-              day: "2-digit",
-              month: "2-digit",
-            })
-          : "N/A";
-
-        return (
-          <div
-            className="timeline-item"
-            key={dashboard.id || Math.random().toString()}
-            onClick={() => handleTimelineClick(dashboard)}
-            style={{ cursor: "pointer" }}
-          >
-            {/* Label (ngày) */}
-            <div className="timeline-label fw-bolder text-gray-800 fs-6">
-              {dateStr}
+          {/* Fixed misuse of classNames (was `className={`card ${classNames}`) */}
+          <div className="card">
+            {/* begin::Header */}
+            <div className="card-header align-items-center border-0 mt-5">
+              <h3 className="card-title align-items-start flex-column">
+                <span className="fw-bolder text-dark fs-3">Lịch sử cập nhật</span>
+                <span className="text-muted mt-2 fw-bold fs-6">Nhật ký hoạt động</span>
+              </h3>
+              <div className="card-toolbar">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+                  data-kt-menu-trigger="click"
+                  data-kt-menu-placement="bottom-end"
+                  data-kt-menu-flip="top-end"
+                >
+                  <KTSVG
+                    path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
+                    className="svg-icon-1"
+                  />
+                </button>
+                <Dropdown1 />
+              </div>
             </div>
+            {/* end::Header */}
 
-            {/* Badge (icon giữa timeline) */}
-            <div className="timeline-badge">
-              <i className="fa fa-genderless text-success fs-1"></i>
-            </div>
+            {/* begin::Body */}
+            <div className="card-body pt-3">
+              <div className="timeline-label">
+                {dashboards.length === 0 && (
+                  <div className="text-muted fs-7">Chưa có dữ liệu.</div>
+                )}
 
-            {/* Content */}
-            <div className="timeline-content d-flex">
-              <span className="fw-bold fs-6 text-dark ps-3">
-                {dashboard.title}
-              </span>
+                {dashboards.map((dashboard, idx) => {
+                  const dateObj: Date | null = dashboard.createdAt
+                    ? "toDate" in (dashboard as any).createdAt
+                      ? (dashboard.createdAt as any).toDate()
+                      : new Date(dashboard.createdAt as any)
+                    : null;
+
+                  const dateStr = dateObj
+                    ? dateObj.toLocaleDateString("vi-VN", {
+                        day: "2-digit",
+                        month: "2-digit",
+                      })
+                    : "N/A";
+
+                  // ensure unique key even if dashboard.id duplicates: use id + idx
+                  const key = `${dashboard?.id ?? "dash"}-${idx}`;
+
+                  return (
+                    <div
+                      className="timeline-item"
+                      key={key}
+                      onClick={() => handleTimelineClick(dashboard)}
+                      style={{ cursor: "pointer" }}
+                    >
+                      {/* Label (ngày) */}
+                      <div className="timeline-label fw-bolder text-gray-800 fs-6">
+                        {dateStr}
+                      </div>
+
+                      {/* Badge (icon giữa timeline) */}
+                      <div className="timeline-badge">
+                        <i className="fa fa-genderless text-success fs-1"></i>
+                      </div>
+
+                      {/* Content */}
+                      <div className="timeline-content d-flex">
+                        <span className="fw-bold fs-6 text-dark ps-3">
+                          {dashboard.title}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+            {/* end::Body */}
           </div>
-        );
-      })}
-    </div>
-  </div>
-  {/* end::Body */}
-</div>
-
-
-
 
           <div className="ld-card">
             <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Kết quả học tập (Chọn để xem chi tiết)</div>
@@ -428,22 +636,56 @@ const LearningDashboardPage: React.FC = () => {
               <div className="ld-empty">Chưa có kết quả học tập.</div>
             ) : (
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {subjectsFromResults.map((s) => (
-                  <li key={s} style={{ marginBottom: 8 }}>
-                    <button className="subject-button-compact" onClick={() => handleSelectSubjectDetail(s)}>
-                      {/* show compact progress next to subject name */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <div style={{ fontWeight: 700 }}>{s}</div>
-                        {(() => {
-                          const p = computeProgressForSubject(s);
-                          const up = p.delta > 0.05;
-                          const down = p.delta < -0.05;
-                          const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                          const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-                          return <div style={{ fontSize: 12, fontWeight: 900, color }}>{percentText}</div>;
-                        })()}
+                {subjectsFromResults.map((s, idx) => (
+                  // use index fallback to guarantee uniqueness
+                  <li key={`${String(s)}-${idx}`} style={{ marginBottom: 8 }}>
+                    <button
+                      aria-label={`Mở chi tiết môn ${s}`}
+                      className="subject-button-compact"
+                      onClick={() => handleSelectSubjectDetail(s)}
+                      type="button"
+                    >
+                      {/* LEFT: name + percent + status (grouped) */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 140 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ fontWeight: 700 }}>{s}</div>
+
+                            {(() => {
+                              const p = computeProgressForSubject(s);
+                              const up = p.delta > 0.05;
+                              const down = p.delta < -0.05;
+                              const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                              const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+                              // compute suggestionPriority for small badge
+                              const spRaw = computeSuggestionPriorityForSubject(s);
+                              const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
+                              return (
+                                <>
+                                  <div style={{ fontSize: 12, fontWeight: 900, color }}>{percentText}</div>
+                                  <div style={{ marginLeft: 8, fontSize: 12, color: "#7c2d12", fontWeight: 800 }}>Ưu tiên: {spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
+                                </>
+                              );
+                            })()}
+                          </div>
+
+                          {/* compact status bar right under name so it won't be cut */}
+                          <div style={{ marginTop: 8 }}>
+                            <StatusIndicator
+                              subjectName={String(s)}
+                              percent={Math.min(100, Math.max(0, currentAverageFromDashboard(String(s)) * 10))}
+                              showPercent={true}
+                              compact={true}
+                              minVisiblePercent={3} // <-- luôn hiển thị chút bar kể cả 0
+                            />
+                          </div>
+                        </div>
                       </div>
-                      {selectedSubjectDetail === s ? <ChevronUp /> : <ChevronDown />}
+
+                      {/* Right chevron (giữ như cũ) */}
+                      <div style={{ marginLeft: "auto" }}>
+                        {selectedSubjectDetail === s ? <ChevronUp /> : <ChevronDown />}
+                      </div>
                     </button>
 
                     <AnimatePresence>
@@ -453,6 +695,8 @@ const LearningDashboardPage: React.FC = () => {
                             {(() => {
                               const insightItem = (dashboardToShow?.subjectInsights || []).find((it: any) => (it?.subjectName || "").toString().toLowerCase() === (s || "").toLowerCase());
                               if (insightItem) {
+                                const spRaw = computeSuggestionPriorityForSubject(s);
+                                const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
                                 return (
                                   <div>
                                     <p style={{ margin: "6px 0" }}><TrendingUp size={14} /> <strong>{insightItem.trend || "Không có xu hướng"}</strong></p>
@@ -466,10 +710,24 @@ const LearningDashboardPage: React.FC = () => {
                                         <div style={{ color: "#475569" }}>{insightItem.weakness || "Chưa có"}</div>
                                       </div>
                                     </div>
+
                                     <div style={{ marginBottom: 8 }}>
                                       <div style={{ fontWeight: 700 }}>Gợi ý</div>
                                       <div style={{ color: "#475569" }}>{insightItem.suggestion || "Chưa có gợi ý cụ thể."}</div>
                                     </div>
+
+                                    <div style={{ marginTop: 6, display: 'flex', gap: 12, alignItems: 'center' }}>
+                                      <div style={{ fontWeight: 800 }}>Ưu tiên cải thiện</div>
+                                      <div style={{ minWidth: 160 }}>
+                                        <div style={{ background: '#f8fafc', padding: 8, borderRadius: 8 }}>
+                                          <div style={{ fontWeight: 900 }}>{spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
+                                          <div style={{ height: 8, borderRadius: 8, background: '#eef2ff', marginTop: 6, overflow: 'hidden' }}>
+                                            <div className="ld-suggestion-fill" style={{ width: `${spRaw}%`, height: '100%', background: 'linear-gradient(90deg,#fb7185,#f97316)' }} />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
                                   </div>
                                 );
                               } else {
@@ -512,25 +770,26 @@ const LearningDashboardPage: React.FC = () => {
                                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                     {/* show subject name + small progress badge beside it */}
                                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                      {(() => {
-                                        const p = computeProgressForSubject(s);
-                                        const up = p.delta > 0.05;
-                                        const down = p.delta < -0.05;
-                                        const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                                        const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-                                        return (
-                                          <>
-                                            <div style={{ fontWeight: 700, fontSize: 15 }}>{s}</div>
-                                            <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
-                                          </>
-                                        );
-                                      })()}
+                                          {(() => {
+                                            const p = computeProgressForSubject(s);
+                                            const up = p.delta > 0.05;
+                                            const down = p.delta < -0.05;
+                                            const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                                            const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+                                            return (
+                                              <>
+                                                <div style={{ fontWeight: 700, fontSize: 15 }}>{s}</div>
+                                                <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
+                                              </>
+                                            );
+                                          })()}
                                     </div>
 
-                                    {/* single IIFE returning trend + percent (fixed structure) */}
+                                    {/* status indicator in the compact detail */}
                                     {(() => {
-                                      const p = computeProgressForSubject(s);
-                                      return <SubjectTrendCard p={p} />;
+                                      const avg = currentAverageFromDashboard(s);
+                                      // show percent here as well
+                                      return <StatusIndicator subjectName={s} percent={Math.min(100, Math.max(0, avg * 10))} showPercent={true} minVisiblePercent={0} compact={false} />;
                                     })()}
                                   </div>
 
@@ -603,9 +862,9 @@ const LearningDashboardPage: React.FC = () => {
                           <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
                           <Tooltip />
                           <Legend verticalAlign="top" />
-                          <Bar dataKey="Thường xuyên" fill="#4f46e5" />
-                          <Bar dataKey="Giữa kỳ" fill="#22c55e" />
-                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" />
+                          <Bar dataKey="Thường xuyên" fill="#4f46e5" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                          <Bar dataKey="Giữa kỳ" fill="#22c55e" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -636,37 +895,117 @@ const LearningDashboardPage: React.FC = () => {
                 )}
               </div>
 
+              {/* NEW: Separate card for Suggestion Priority showing ALL subjects */}
+              <div className="ld-card">
+                <div className="ld-section-title">📈 Ưu tiên cải thiện (tất cả môn)</div>
+
+                {/* Controls: sort, chart type, color, limit */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Sắp xếp</div>
+                    <select value={prioritySort} onChange={(e) => setPrioritySort(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="desc">Ưu tiên cao → thấp</option>
+                      <option value="asc">Ưu tiên thấp → cao</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Kiểu biểu đồ</div>
+                    <select value={priorityChartType} onChange={(e) => setPriorityChartType(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="vertical">Cột đứng (vertical)</option>
+                      <option value="horizontal">Cột ngang (horizontal)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Màu</div>
+                    <select value={priorityColor} onChange={(e) => setPriorityColor(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="red">Đỏ</option>
+                      <option value="blue">Xanh</option>
+                      <option value="gradient">Gradient (đỏ)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Giới hạn</div>
+                    <input type="number" min={0} value={priorityLimit} onChange={(e) => setPriorityLimit(Number(e.target.value || 0))} style={{ width: 80, padding: 6, borderRadius: 8 }} />
+                    <div style={{ color: '#64748b', fontSize: 13 }}>0 = tất cả</div>
+                  </div>
+                </div>
+
+                {allSubjectsWithPriority && allSubjectsWithPriority.length > 0 ? (
+                  <div style={{ height: 320 }}>
+                    <ResponsiveContainer width="100%" height={320}>
+                      {priorityChartType === 'vertical' ? (
+                        <BarChart data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 0, bottom: 60 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="subject" tick={{ fontSize: 12 }} interval={0} angle={-35} textAnchor="end" />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                          <Tooltip formatter={(value: any) => `${value}%`} />
+                          <Legend />
+                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                        </BarChart>
+                      ) : (
+                        // horizontal layout: subject on Y axis, numeric on X
+                        <BarChart layout="vertical" data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 80, bottom: 6 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                          <YAxis dataKey="subject" type="category" width={140} tick={{ fontSize: 12 }} />
+                          <Tooltip formatter={(value: any) => `${value}%`} />
+                          <Legend />
+                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="ld-empty">Không có môn để hiển thị ưu tiên cải thiện.</div>
+                )}
+              </div>
+
               <div className="ld-card">
                 <div className="ld-section-title">📚 Đánh giá kết quả & Đề xuất kế hoạch từng môn </div>
 
-                {dashboardToShow.subjectInsights && dashboardToShow.subjectInsights.length > 0 ? (
-                  dashboardToShow.subjectInsights.map((item: any, idx: number) => {
+                {filteredSubjectInsights && filteredSubjectInsights.length > 0 ? (
+                  filteredSubjectInsights.map((item: any, idx: number) => {
                     const expanded = expandedSubjects.has(idx);
                     const leftMarkStyle = { background: colorFromString(item?.subjectName || String(idx)) };
+
+                    // make key unique even if item.id duplicates by adding idx
+                    const key = `${String(item?.id ?? item?.subjectName ?? "insight")}-${idx}`;
+
+                    const sub = (item?.subjectName || "").toString();
+                    const avg = currentAverageFromDashboard(sub);
+                    const p = computeProgressForSubject(sub);
+                    const up = p.delta > 0.05;
+                    const down = p.delta < -0.05;
+                    const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
+                    const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
+
+                    // suggestionPriority is guaranteed (0..100) from filteredSubjectInsights mapping
+                    const spRaw = item?.suggestionPriority ?? computeSuggestionPriorityForSubject(sub);
+                    const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
+
                     return (
-                      <div key={idx} className={`ld-accordion ${expanded ? "ld-accordion--open" : ""}`}>
+                      <div key={key} className={`ld-accordion ${expanded ? "ld-accordion--open" : ""}`}>
                         <div className="ld-accordion-head" onClick={() => toggleSubject(idx, item?.subjectName)} role="button" aria-expanded={expanded} tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") toggleSubject(idx, item?.subjectName); }}>
                           <div className="ld-leftmark" style={leftMarkStyle as any} />
                           <div className="ld-acc-main">
                             {/* show subject name with small progress badge next to it */}
                             <div className="ld-acc-title">
-                              {(() => {
-                                const sub = item?.subjectName || "";
-                                const p = computeProgressForSubject(sub);
-                                const up = p.delta > 0.05;
-                                const down = p.delta < -0.05;
-                                const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                                const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-                                return (
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <div style={{ fontSize: 16, fontWeight: 700 }}>{sub}</div>
                                     <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
-                                  </div>
-                                );
-                              })()}
+                                    <div style={{ fontSize: 12, fontWeight: 800, color: '#7c2d12', marginLeft: 6 }}>Ưu tiên: {spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
+                              </div>
                             </div>
                             <div className="ld-acc-short">{getShortDesc(item)}</div>
                           </div>
+
+                          {/* Status (horizontal) */}
+                          {/* FIX: use average scaled to 0..100 for the status bar (not percent change) */}
+                          <StatusIndicator subjectName={sub} percent={Math.min(100, Math.max(0, avg * 10))} showPercent={true} minVisiblePercent={0} compact={false} />
+
                           <div className="ld-acc-right">
                             <div className="ld-acc-hint">{item?.trend ? "Xu hướng" : ""}</div>
                             <div className={`ld-chevron ${expanded ? "ld-chevron--open" : ""}`}>▶</div>
@@ -703,6 +1042,20 @@ const LearningDashboardPage: React.FC = () => {
                               <button className="ld-btn" onClick={() => toast.info(`Mở đề xuất hành động cho ${item?.subjectName}`)}>Gợi ý hành động</button>
                               <button className="ld-btn ld-btn--ghost" onClick={() => toast.info(`Sao chép tóm tắt ${item?.subjectName}`)}>Sao chép tóm tắt</button>
                             </div>
+
+                            {/* show suggestion priority small bar */}
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Mức độ ưu tiên đề xuất</div>
+                              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                                <div style={{ minWidth: 48, fontWeight: 900 }}>{spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ height: 10, background: '#eef2ff', borderRadius: 8, overflow: 'hidden' }}>
+                                    <div className="ld-suggestion-fill" style={{ width: `${spRaw}%`, height: '100%', background: 'linear-gradient(90deg,#fb7185,#f97316)' }} />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
                           </div>
                         )}
                       </div>
@@ -775,16 +1128,6 @@ const LearningDashboardPage: React.FC = () => {
 .timeline-content span:first-child { font-weight: 700; color: #062173; }
 timeline-content span:last-child { color: #64748b; font-size: 12px; }
 
-
-.ld-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: #34d399;
-  margin-top: 4px;
-  flex-shrink: 0;
-}
-
 .ld-timeline-item-content {
   display: flex;
   flex-direction: column;
@@ -805,7 +1148,7 @@ timeline-content span:last-child { color: #64748b; font-size: 12px; }
 }
 
 /* Compact subject button (left list) */
-.subject-button-compact { width: 100%; text-align: left; padding: 10px 12px; background: #f8fafc; border: none; outline: none; cursor: pointer; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+.subject-button-compact { width: 100%; text-align: left; padding: 10px 12px; background: #f8fafc; border: none; outline: none; cursor: pointer; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; overflow: visible; }
 
 /* Key subjects */
 .ld-keyrow { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
@@ -836,7 +1179,7 @@ timeline-content span:last-child { color: #64748b; font-size: 12px; }
 .ld-accordion--open { transform: translateY(-2px); border: 1px solid rgba(79,70,229,0.14); background: linear-gradient(180deg, rgba(255,255,255,1), rgba(249,250,251,1)); box-shadow: 0 10px 30px rgba(2,6,23,0.06); }
 .ld-accordion-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; }
 .ld-leftmark { width: 8px; height: 48px; border-radius: 8px; margin-right: 4px; flex-shrink: 0; }
-.ld-acc-main { flex: 1; min-width: 0; }
+.ld-acc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .ld-acc-title { font-size: 16px; font-weight: 700; margin: 0; color: #07113a; display: flex; align-items: center; gap: 8px; }
 .ld-acc-short { margin-top: 4px; font-size: 13px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
 .ld-acc-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
@@ -857,10 +1200,50 @@ timeline-content span:last-child { color: #64748b; font-size: 12px; }
 
 .ld-actions { display: flex; gap: 8px; margin-top: 8px; }
 
-/* subject detail */
+ /* subject detail */
 .ld-subject-detail { margin-top: 8px; }
 
-@media (max-width: 900px) { .ld-grid { flex-direction: column; } }
+/* Status cell (horizontal) */
+.ld-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: 12px;
+  min-width: 170px;
+  justify-content: flex-end;
+}
+.ld-status-bar {
+  width: 120px;
+  height: 8px;
+  background: #eef2ff;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ld-status-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .45s ease;
+}
+.ld-status-percent {
+  width: 48px;
+  text-align: right;
+  font-weight: 700;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+/* suggestion fill */
+.ld-suggestion-fill {
+  height: 100%;
+  border-radius: 8px;
+  transition: width 700ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* responsive tweaks */
+@media (max-width: 900px) {
+  .ld-grid { flex-direction: column; }
+  .ld-status-cell { min-width: 120px; }
+}
       `}</style>
     </div>
   );

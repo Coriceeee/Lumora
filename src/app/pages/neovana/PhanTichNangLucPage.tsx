@@ -1,390 +1,523 @@
-import React, { useEffect, useState } from "react";
+// src/pages/neovana/PhanTichNangLucPage.tsx
+import React, { useEffect, useMemo, useState } from "react";
+import type { GetServerSideProps, GetServerSidePropsContext } from "next";
 import { motion } from "framer-motion";
-import { toast } from "react-toastify";
-import * as Recharts from "recharts";
+import { Play, Activity } from "lucide-react";
 
-import { getAllLearningResults, getGeminiAnalysis } from "../../../services/learningResultService";
-import { getAllSubjects } from "../../../services/subjectService";
-import { LearningResult } from "../../../types/LearningResult";
-import { Subject } from "../../../types/Subject";
-import { getAllScoreTypes } from "../../../services/scoreTypeService";
+import { getLearningResultsByUser, getGeminiAnalysis } from "../../../services/learningResultService";
 
-const {
-  ResponsiveContainer,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} = Recharts as unknown as {
-  ResponsiveContainer: React.FC<any>;
-  RadarChart: React.FC<any>;
-  Radar: React.FC<any>;
-  PolarGrid: React.FC<any>;
-  PolarAngleAxis: React.FC<any>;
-  PolarRadiusAxis: React.FC<any>;
-  LineChart: React.FC<any>;
-  Line: React.FC<any>;
-  XAxis: React.FC<any>;
-  YAxis: React.FC<any>;
-  CartesianGrid: React.FC<any>;
-  Tooltip: React.FC<any>;
+// -------------------- Types --------------------
+type CompScore = { comp_id: string; comp_name: string; score: number };
+type TimelinePoint = { date: string; comp_id: string; comp_name: string; score: number };
+type CareerRec = { career_id: string; career_name: string; similarity: number; missing_gaps?: { comp_id: string; gap: number }[]; reason?: string };
+type SkillEntry = { id: string; name: string; current: number; target?: number };
+type CertificateEntry = { name: string; impact: number };
+
+type PageProps = {
+  radarData?: CompScore[];
+  timelineData?: TimelinePoint[];
+  careerRecs?: CareerRec[];
+  gptNotes?: string;
+  skills?: SkillEntry[];
+  certificates?: CertificateEntry[];
+  suggestedCertificates?: string[];
 };
 
-type SubjectInsight = {
-  subjectName: string;
-  trend: string;
-  strength: string;
-  weakness: string;
-  suggestion: string;
-};
-
-type GeminiResponse = {
-  subjectInsights: SubjectInsight[];
-  radarChartData: { subject: string; score: number }[];
-  trendChartData: TrendDataPoint[];
-  overallSummary: string;
-};
-
-type TrendDataPoint = {
-  name: string;
-  [key: string]: number | string;
-};
-
-// Môn bắt buộc
-const mandatorySubjects = ["Toán", "Văn"];
-
-// Lọc kết quả học tập theo tổ hợp môn
-function filterCombinationResults(
-  results: LearningResult[],
-  subjects: { id: string; name: string }[],
-  chosenSubjects: string[]
-) {
-  const chosenIds = subjects
-    .filter((s) => chosenSubjects.some((name) => s.name.includes(name)))
-    .map((s) => s.id);
-
-  return results.filter((r) => chosenIds.includes(r.subjectId));
+// -------------------- Helpers --------------------
+function normalizeScore(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  if (n <= 10) return Math.round(Math.max(0, Math.min(10, n)) * 10);
+  return Math.round(Math.max(0, Math.min(100, n)));
 }
 
-// Tạo dữ liệu radar chart: trung bình điểm từng môn
-function getRadarData(
-  results: LearningResult[],
-  subjects: { id: string; name: string }[]
-): { subject: string; score: number }[] {
-  return subjects.map((subj) => {
-    const subjectResults = results.filter((r) => r.subjectId === subj.id);
-    const avgScore =
-      subjectResults.reduce((sum, r) => sum + (r.score ?? 0), 0) /
-      (subjectResults.length || 1);
-    return {
-      subject: subj.name,
-      score: Number(avgScore.toFixed(2)),
-    };
-  });
-}
+const CAREER_AXES = [
+  "Communication",
+  "Critical Thinking",
+  "Problem Solving",
+  "Technical Skill",
+  "Creativity",
+  "Leadership",
+];
 
-// Hàm lấy điểm trung bình theo 3 loại điểm kttx, giuaki, cuoiki
-async function formatTrendDataByScoreType(
-  results: LearningResult[],
-  subjects: { id: string; name: string }[]
-): Promise<TrendDataPoint[]> {
+function mapToCareerAxes(radar: CompScore[]) {
+  const accum: Record<string, { sum: number; count: number }> = {};
+  CAREER_AXES.forEach((a) => (accum[a] = { sum: 0, count: 0 }));
 
-  const scoreTypes = await getAllScoreTypes();
+  const keywordMap: Record<string, string> = {
+    comm: "Communication",
+    speak: "Communication",
+    present: "Communication",
+    write: "Communication",
+    crit: "Critical Thinking",
+    logic: "Critical Thinking",
+    analyze: "Critical Thinking",
+    problem: "Problem Solving",
+    solve: "Problem Solving",
+    debug: "Problem Solving",
+    code: "Technical Skill",
+    program: "Technical Skill",
+    data: "Technical Skill",
+    tech: "Technical Skill",
+    digital: "Technical Skill",
+    design: "Creativity",
+    creative: "Creativity",
+    ux: "Creativity",
+    lead: "Leadership",
+    manage: "Leadership",
+    team: "Leadership",
+    project: "Leadership",
+  };
 
-  return scoreTypes.map((scoreType) => {
-    const dataPoint: TrendDataPoint = {
-      name: scoreType.name
-    };
-
-    subjects.forEach((subject) => {
-      const scoresForSubjectAndType = results
-        .filter((r) => r.subjectId === subject.id && r.scoreTypeId === scoreType.id)
-        .map((r) => (r as any)["score"])
-        .filter((score) => typeof score === "number" && !isNaN(score)) as number[];
-
-      const avgScore =
-        scoresForSubjectAndType.reduce((sum, val) => sum + val, 0) /
-        (scoresForSubjectAndType.length || 1);
-
-      dataPoint[subject.name] = Number(avgScore.toFixed(2));
+  radar.forEach((r) => {
+    const key = (r.comp_name || r.comp_id || "").toLowerCase();
+    let matched = false;
+    Object.keys(keywordMap).forEach((k) => {
+      if (key.includes(k)) {
+        const axis = keywordMap[k];
+        accum[axis].sum += r.score || 0;
+        accum[axis].count += 1;
+        matched = true;
+      }
     });
+    if (!matched) {
+      accum["Technical Skill"].sum += r.score || 0;
+      accum["Technical Skill"].count += 1;
+    }
+  });
 
-    return dataPoint;
+  return CAREER_AXES.map((a) => {
+    const { sum, count } = accum[a];
+    const avg = count > 0 ? Math.round(sum / count) : 0;
+    return { axis: a, value: Math.max(0, Math.min(100, avg)) };
   });
 }
 
-const PhanTichNangLucPage: React.FC = () => {
-  const [customCombinations, setCustomCombinations] = useState<Record<string, string[]>>({});
-  const [selectedCombination, setSelectedCombination] = useState<string>("");
-  const [customSubject1, setCustomSubject1] = useState("");
-  const [customSubject2, setCustomSubject2] = useState("");
-  const [allSubjectsState, setAllSubjectsState] = useState<{ id: string; name: string }[]>([]);
+// -------------------- Small UI blocks --------------------
+const Card: React.FC<{ className?: string; children?: React.ReactNode }> = ({ children, className = "" }) => (
+  <div className={`bg-[#0f111a] rounded-2xl p-4 shadow-sm border border-[#20232b] ${className}`}>{children}</div>
+);
+const SectionTitle: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
+  <div className="flex items-center gap-3 mb-3">
+    <Activity size={18} />
+    <h3 className="text-white font-semibold text-lg">{children}</h3>
+  </div>
+);
 
-  const [insights, setInsights] = useState<SubjectInsight[]>([]);
-  const [selected, setSelected] = useState<SubjectInsight | null>(null);
-  const [radarData, setRadarData] = useState<{ subject: string; score: number }[]>([]);
-  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
-  const [aiSummary, setAiSummary] = useState("");
-  const [loading, setLoading] = useState(true);
+// -------------------- Custom charts (no Recharts) --------------------
+// Polar spider (radar-like) implemented with SVG polygons
+const PolarSpider: React.FC<{ data: { subject: string; value: number }[]; size?: number }> = ({ data, size = 320 }) => {
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = size * 0.38;
+  const count = data.length || 6;
+  const angle = (i: number) => (Math.PI * 2 * i) / count - Math.PI / 2;
+  const polygonPoints = data.map((d, i) => {
+    const r = (d.value / 100) * radius;
+    const x = cx + r * Math.cos(angle(i));
+    const y = cy + r * Math.sin(angle(i));
+    return `${x},${y}`;
+  }).join(' ');
 
-  // Danh sách tổ hợp mặc định
-  const defaultCombinations: Record<string, string[]> = {
-    A00: ["Toán", "Lý", "Hóa"],
-    A01: ["Toán", "Lý", "Anh"],
-    B00: ["Toán", "Hóa", "Sinh"],
-    C00: ["Văn", "Sử", "Địa"],
-    D01: ["Toán", "Văn", "Anh"],
-    D07: ["Toán", "Hóa", "Anh"],
-  };
-
-  // Kết hợp tổ hợp mặc định + tổ hợp do người dùng tạo
-  const allCombinations = { ...defaultCombinations, ...customCombinations };
-
-  useEffect(() => {
-    const fetchSubjects = async () => {
-      try {
-        const subjects = await getAllSubjects();
-        const safeSubjects = subjects
-          .filter((s): s is Subject & { id: string } => typeof s.id === "string")
-          .map((s) => ({ id: s.id, name: s.name }));
-        setAllSubjectsState(safeSubjects);
-      } catch (err) {
-        toast.error("Không thể tải danh sách môn.");
-      }
-    };
-    fetchSubjects();
-  }, []);
-
-  useEffect(() => {
-    const fetchAnalysis = async () => {
-      if (!selectedCombination || !allCombinations[selectedCombination]) return;
-
-      setLoading(true);
-      try {
-        const [results] = await Promise.all([getAllLearningResults()]);
-
-        if (results.length === 0) {
-          toast.info("Chưa có dữ liệu học tập để phân tích.");
-          setLoading(false);
-          return;
-        }
-
-        const chosenSubjects = [...mandatorySubjects, ...allCombinations[selectedCombination]];
-
-        const filteredResults = filterCombinationResults(results, allSubjectsState, chosenSubjects);
-
-        const filteredSubjects = allSubjectsState.filter((s) =>
-          filteredResults.some((r) => r.subjectId === s.id)
-        );
-
-        const radar = getRadarData(filteredResults, filteredSubjects);
-        const trend = await formatTrendDataByScoreType(filteredResults, filteredSubjects);
-
-        setRadarData(radar);
-        setTrendData(trend);
-
-        const analysis: GeminiResponse = await getGeminiAnalysis(filteredResults);
-
-        setInsights(analysis.subjectInsights);
-        setAiSummary(analysis.overallSummary);
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể tải dữ liệu phân tích từ AI.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnalysis();
-  }, [selectedCombination, customCombinations, allSubjectsState]);
-
-  const handleAddCombination = () => {
-    if (!customSubject1 || !customSubject2) {
-      toast.error("Vui lòng chọn đủ 2 môn tự chọn.");
-      return;
-    }
-    if (customSubject1 === customSubject2) {
-      toast.error("Hai môn tự chọn không được trùng nhau.");
-      return;
-    }
-
-    const name = `Tổ hợp ${mandatorySubjects.join(", ")} + ${customSubject1}, ${customSubject2}`;
-    setCustomCombinations((prev) => ({
-      ...prev,
-      [name]: [customSubject1, customSubject2],
-    }));
-    setSelectedCombination(name);
-    setCustomSubject1("");
-    setCustomSubject2("");
-  };
-
-  const lineColors = ["#2563eb", "#ff6347", "#22c55e", "#f59e0b", "#8b5cf6"];
-  const subjectsInTrend = trendData.length > 0
-    ? Object.keys(trendData[0]).filter((k) => k !== "name")
-    : [];
+  const rings = [0.25, 0.5, 0.75, 1].map((f) => {
+    const points = Array.from({ length: count }).map((_, i) => {
+      const r = radius * f;
+      const x = cx + r * Math.cos(angle(i));
+      const y = cy + r * Math.sin(angle(i));
+      return `${x},${y}`;
+    }).join(' ');
+    return <polygon key={f} points={points} fill="none" stroke="#1f2937" strokeWidth={1} />;
+  });
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <h2 className="text-3xl font-bold text-blue-700 mb-6">📊 Phân Tích Năng Lực Học Tập</h2>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rounded-lg">
+      <defs>
+        <linearGradient id="gradRadar" x1="0" x2="1">
+          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.7" />
+          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.45" />
+        </linearGradient>
+      </defs>
 
-      {/* Form tạo tổ hợp */}
-      <div className="mb-6 space-y-3">
-        <p className="font-semibold">Toán & Văn là môn bắt buộc</p>
-        <div className="flex gap-3">
-          <select
-            value={customSubject1}
-            onChange={(e) => setCustomSubject1(e.target.value)}
-            className="border px-3 py-2 rounded"
-          >
-            <option value="">-- Chọn môn 1 --</option>
-            {allSubjectsState
-              .filter((s) => !mandatorySubjects.some((m) => s.name.includes(m)))
-              .map((s) => (
-                <option key={s.id} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-          </select>
-          <select
-            value={customSubject2}
-            onChange={(e) => setCustomSubject2(e.target.value)}
-            className="border px-3 py-2 rounded"
-          >
-            <option value="">-- Chọn môn 2 --</option>
-            {allSubjectsState
-              .filter((s) => !mandatorySubjects.some((m) => s.name.includes(m)))
-              .map((s) => (
-                <option key={s.id} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-          </select>
-          <button
-            onClick={handleAddCombination}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-          >
-            + Thêm tổ hợp
-          </button>
+      {rings}
+
+      {data.map((d, i) => {
+        const x = cx + (radius + 18) * Math.cos(angle(i));
+        const y = cy + (radius + 18) * Math.sin(angle(i));
+        return <text key={d.subject} x={x} y={y} fontSize={12} fill="#cbd5e1" textAnchor="middle">{d.subject}</text>;
+      })}
+
+      <polygon points={polygonPoints} fill="url(#gradRadar)" stroke="#7c3aed" strokeWidth={2} fillOpacity={0.25} />
+
+    </svg>
+  );
+};
+
+// Sparkline for timeline (simple path)
+const Sparkline: React.FC<{ points: { x: string; y: number }[]; height?: number; width?: number }> = ({ points, height = 120, width = 600 }) => {
+  if (!points || points.length === 0) return <div className="text-[#9aa3b2]">Không có dữ liệu.</div>;
+  const maxY = Math.max(...points.map(p => p.y), 100);
+  const minY = Math.min(...points.map(p => p.y), 0);
+  const stepX = width / Math.max(1, points.length - 1);
+  const path = points.map((p, i) => {
+    const x = i * stepX;
+    const y = height - ((p.y - minY) / (maxY - minY || 1)) * height;
+    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+  }).join(' ');
+
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" x2="1">
+          <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+      <path d={path} fill="none" stroke="url(#sparkGrad)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((p, i) => {
+        const x = i * stepX;
+        const y = height - ((p.y - minY) / (maxY - minY || 1)) * height;
+        return <circle key={i} cx={x} cy={y} r={3} fill="#fff" />;
+      })}
+    </svg>
+  );
+};
+
+// Horizontal skill bars (div-based)
+const SkillBars: React.FC<{ skills: { name: string; current: number; target?: number }[] }> = ({ skills }) => {
+  return (
+    <div className="flex flex-col gap-3">
+      {skills.map((s, i) => (
+        <div key={i}>
+          <div className="flex justify-between text-sm text-[#cbd5e1] mb-1"><div>{s.name}</div><div>{s.current}% / {s.target ?? 100}%</div></div>
+          <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${Math.max(0, Math.min(100, s.current))}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700" /></div>
         </div>
-      </div>
-
-      {/* Chọn tổ hợp đã lưu */}
-      <div className="mb-6">
-        <label className="mr-3 font-semibold">Chọn tổ hợp xét tuyển:</label>
-        <select
-          value={selectedCombination}
-          onChange={(e) => setSelectedCombination(e.target.value)}
-          className="border px-3 py-2 rounded"
-        >
-          <option value="">-- Chưa chọn --</option>
-          {Object.keys(allCombinations).map((combo) => (
-            <option key={combo} value={combo}>
-              {combo}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Radar Chart */}
-      <section className="bg-white p-6 rounded-2xl shadow mb-8">
-        <h3 className="text-xl font-semibold mb-4">Tổng quan năng lực</h3>
-        {loading ? (
-          <p className="text-center text-gray-500">Đang tải dữ liệu...</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <RadarChart outerRadius={110} data={radarData}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey="subject" />
-              <PolarRadiusAxis angle={30} domain={[0, 10]} />
-              <Radar name="Học lực" dataKey="score" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.6} />
-            </RadarChart>
-          </ResponsiveContainer>
-        )}
-      </section>
-
-      {/* Line Chart */}
-      <section className="bg-white p-6 rounded-2xl shadow mb-8">
-        <h3 className="text-xl font-semibold mb-4">Biểu đồ xu hướng theo loại điểm</h3>
-        {loading ? (
-          <p className="text-center text-gray-500">Đang tải dữ liệu...</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis domain={[0, 10]} />
-              <Tooltip />
-              {subjectsInTrend.map((s, i) => (
-                <Line
-                  key={s}
-                  type="monotone"
-                  dataKey={s}
-                  stroke={lineColors[i % lineColors.length]}
-                  strokeWidth={2}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </section>
-
-      {/* Insights */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {insights.map((insight, idx) => (
-          <motion.div
-            key={idx}
-            whileHover={{ scale: 1.02 }}
-            onClick={() => setSelected(insight)}
-            className="cursor-pointer bg-gradient-to-r from-blue-100 to-blue-200 p-5 rounded-xl shadow"
-          >
-            <h4 className="font-semibold text-blue-800 text-lg">{insight.subjectName}</h4>
-            <p className="text-sm italic text-gray-600 mt-1">📈 Xu hướng: {insight.trend}</p>
-          </motion.div>
-        ))}
-      </section>
-
-      {selected && (
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white mt-10 p-6 rounded-xl shadow max-w-3xl mx-auto"
-        >
-          <h4 className="text-2xl font-bold text-blue-700 mb-4">{selected.subjectName}</h4>
-          <ul className="space-y-2 text-gray-700">
-            <li>✔ Ưu điểm: {selected.strength}</li>
-            <li>⚠ Nhược điểm: {selected.weakness}</li>
-            <li>📈 Xu hướng: {selected.trend}</li>
-            <li>💡 Gợi ý: {selected.suggestion}</li>
-          </ul>
-          <button
-            onClick={() => setSelected(null)}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Đóng
-          </button>
-        </motion.section>
-      )}
-
-      {aiSummary && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-xl mt-10 max-w-3xl mx-auto"
-        >
-          <p className="text-lg text-gray-800">
-            🧠 <strong>Nhận xét tổng quát:</strong> {aiSummary}
-          </p>
-        </motion.div>
-      )}
+      ))}
     </div>
   );
 };
 
-export default PhanTichNangLucPage;
+// -------------------- Component --------------------
+export default function PhanTichNangLucPage({ radarData = [], timelineData = [], careerRecs = [], gptNotes = "", skills = [], certificates = [], suggestedCertificates = [] }: PageProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const safeRadar = Array.isArray(radarData) ? radarData : [];
+  const safeTimeline = Array.isArray(timelineData) ? timelineData : [];
+  const safeCareer = Array.isArray(careerRecs) ? careerRecs : [];
+  const safeSkills = Array.isArray(skills) ? skills : [];
+  const safeCertificates = Array.isArray(certificates) ? certificates : [];
+
+  const careerAxes = useMemo(() => mapToCareerAxes(safeRadar), [safeRadar]);
+  const radarChartData = useMemo(() => careerAxes.map((c) => ({ subject: c.axis, value: c.value })), [careerAxes]);
+
+  const timelineByComp = useMemo(() => {
+    const map: Record<string, TimelinePoint[]> = {};
+    (safeTimeline || []).forEach(t => {
+      if (!map[t.comp_id]) map[t.comp_id] = [];
+      map[t.comp_id].push(t);
+    });
+    return map;
+  }, [safeTimeline]);
+
+  const compList = useMemo(() => safeRadar.map((r) => ({ id: r.comp_id, name: r.comp_name })), [safeRadar]);
+  const [selectedComp, setSelectedComp] = useState<string | null>(compList[0]?.id ?? null);
+  useEffect(() => { if (!selectedComp && compList[0]) setSelectedComp(compList[0].id); }, [compList, selectedComp]);
+
+  const timelineForSelected = (selectedComp && timelineByComp[selectedComp]) ? timelineByComp[selectedComp].map(p => ({ x: p.date, y: p.score })) : [];
+
+  const rpgNodes = useMemo(() => {
+    const merged = new Map<string, { name: string; score: number }>();
+    safeRadar.forEach(r => merged.set(r.comp_id, { name: r.comp_name, score: r.score }));
+    safeSkills.forEach(s => merged.set(s.id, { name: s.name, score: s.current }));
+    return Array.from(merged.entries()).map(([id, v]) => ({ comp_id: id, comp_name: v.name, score: v.score, level: Math.min(5, Math.max(1, Math.floor((v.score || 0) / 20) + 1)) }));
+  }, [safeRadar, safeSkills]);
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-extrabold text-white">🧭 Phân tích năng lực — phiên bản trực quan mới</h1>
+        <div className="text-sm text-[#9aa3b2]">Thay Recharts bằng visual custom: spider, sparkline, skill bars, map</div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4 mt-4">
+        <Card className="md:col-span-2">
+          <SectionTitle>Radar năng lực nghề nghiệp (visual)</SectionTitle>
+          <div className="flex items-center justify-center p-4">
+            {mounted && radarChartData.length > 0 ? <PolarSpider data={radarChartData} size={360} /> : <div className="text-[#9aa3b2]">Không có dữ liệu radar.</div>}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle>Nghề nghiệp tiềm năng</SectionTitle>
+          <div className="flex flex-col gap-3">
+            {safeCareer.length === 0 ? (
+              <div className="text-[#9aa3b2]">Không có gợi ý nghề nghiệp.</div>
+            ) : (
+              safeCareer.slice(0,5).map((r, idx) => (
+                <div key={r.career_id ?? `c-${idx}`} className="p-3 rounded-xl border border-[#222] flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-white">{r.career_name}</div>
+                      <div className="text-xs text-[#9aa3b2]">Phù hợp: {(Number(r.similarity ?? 0) * 100).toFixed(0)}%</div>
+                    </div>
+                    <button className="px-3 py-1 rounded-lg bg-[#1f2340] border border-[#2b2f40] text-white">Xem lộ trình</button>
+                  </div>
+                  {r.reason && <div className="text-xs text-[#d3bad6]">Lý do: {r.reason}</div>}
+                  {Array.isArray(r.missing_gaps) && r.missing_gaps.length > 0 && (
+                    <div className="text-xs text-[#d3bad6]">Gaps: {r.missing_gaps.map(g => `${g.comp_id}(${g.gap})`).join(', ')}</div>
+                  )}
+                  <div className="pt-2"><div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${(Number(r.similarity ?? 0) * 100)}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div></div>
+                </div>
+              ))
+            )}
+
+            <div>
+              <div className="text-xs text-[#9aa3b2] mb-2">Gợi ý chứng chỉ từ AI</div>
+              {Array.isArray(suggestedCertificates) && suggestedCertificates.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {suggestedCertificates.map((c, i) => (
+                    <div key={i} className="text-sm text-white p-2 rounded-md border border-[#222]">{c}</div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[#9aa3b2]">Không có gợi ý chứng chỉ.</div>
+              )}
+            </div>
+
+          </div>
+        </Card>
+      </div>
+
+      {/* Timeline & selector */}
+      <div className="mt-4 grid md:grid-cols-3 gap-4">
+        <Card className="md:col-span-2">
+          <div className="flex items-center justify-between">
+            <SectionTitle>Timeline phát triển năng lực (sparkline)</SectionTitle>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedComp ?? ""}
+                onChange={(e) => setSelectedComp(e.target.value)}
+                className="bg-[#0f111a] border border-[#222] rounded-lg px-3 py-1 text-sm text-white"
+              >
+                {compList.map((c) => (
+                  <option value={c.id} key={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ height: 260 }} className="p-2">
+            {mounted && timelineForSelected.length > 0 ? (
+              <div className="w-full h-full">
+                <Sparkline points={timelineForSelected} height={200} width={700} />
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-[#9aa3b2]">Không có dữ liệu timeline cho năng lực này.</div>
+            )}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle>Thống kê nhanh</SectionTitle>
+          <div className="flex flex-col gap-3">
+            <div className="text-xs text-[#9aa3b2]">Số năng lực được đo</div>
+            <div className="text-2xl font-bold text-white">{safeRadar.length}</div>
+
+            <div className="text-xs text-[#9aa3b2]">Level trung bình</div>
+            <div className="text-2xl font-bold text-white">{Math.round((safeRadar.reduce((s, r) => s + (r.score || 0), 0) / Math.max(1, safeRadar.length)) / 20) || 1}</div>
+
+            <div className="pt-2">{rpgNodes.slice(0,3).map(node => (
+              <div key={node.comp_id} className="mb-2">
+                <div className="flex justify-between text-sm text-[#9aa3b2]"><div>{node.comp_name}</div><div>{node.score}%</div></div>
+                <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${node.score}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div>
+              </div>
+            ))}</div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Skills table + SkillBars */}
+      <div className="mt-4 grid md:grid-cols-3 gap-4">
+        <Card className="md:col-span-2">
+          <SectionTitle>Bảng kỹ năng (hiện tại → mục tiêu)</SectionTitle>
+          <div className="p-4">
+            {safeSkills.length > 0 ? <SkillBars skills={safeSkills.map(s => ({ name: s.name, current: s.current, target: s.target }))} /> : <div className="text-[#9aa3b2]">Không có dữ liệu kỹ năng.</div>}
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle>Bảng chứng chỉ</SectionTitle>
+          <div className="overflow-auto max-h-60">
+            <table className="w-full table-auto text-sm">
+              <thead>
+                <tr className="text-[#9aa3b2] text-left">
+                  <th className="pb-2">Chứng chỉ</th>
+                  <th className="pb-2">Ảnh hưởng (%)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {safeCertificates.length === 0 ? (
+                  <tr><td colSpan={2} className="text-[#9aa3b2] py-2">Không có chứng chỉ.</td></tr>
+                ) : (
+                  safeCertificates.map((c, i) => (
+                    <tr key={i} className="border-t border-[#111]">
+                      <td className="py-2">{c.name}</td>
+                      <td className="py-2">{c.impact}%</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+
+      {/* RPG Path (gamification) */}
+      <div className="mt-4">
+        <Card>
+          <SectionTitle>🎮 Hành trình RPG định hướng nghề</SectionTitle>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {rpgNodes.map((n) => (
+              <motion.div key={n.comp_id} whileHover={{ scale: 1.02 }} className="p-3 rounded-xl border border-[#222] bg-[#07080b]">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-semibold text-white">{n.comp_name}</div>
+                  <div className="text-sm text-[#9aa3b2]">Lv{n.level}</div>
+                </div>
+                <div className="text-xs text-[#9aa3b2] mb-2">{n.score}%</div>
+                <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${n.score}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div>
+                <div className="mt-3 text-sm text-[#9aa3b2]">Unlocks: {(n.level >= 3) ? "Cơ hội nghề liên quan" : "Cần thêm điểm để unlock"}</div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-4">
+            <svg viewBox="0 0 1000 160" className="w-full h-40 rounded-xl bg-[#06060a] p-4">
+              <polyline points="40,100 180,40 320,100 460,40 600,100 740,40 900,100" fill="none" stroke="#2b2f40" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
+              {[40, 180, 320, 460, 600, 740, 900].map((x, i) => (
+                <g key={i}>
+                  <circle cx={x} cy={i % 2 === 0 ? 100 : 40} r={18} fill="#0b1220" stroke="#333" />
+                  <text x={x} y={(i % 2 === 0 ? 100 : 40) + 5} fontSize={10} textAnchor="middle" fill="#9aa3b2">M{i + 1}</text>
+                </g>
+              ))}
+            </svg>
+          </div>
+        </Card>
+      </div>
+
+      <div className="mt-4">
+        <Card>
+          <SectionTitle>Ghi chú từ GPT</SectionTitle>
+          <pre className="whitespace-pre-wrap text-sm text-[#d1d5db] p-2 rounded-md bg-[#06060a]">{gptNotes || "Không có ghi chú từ GPT."}</pre>
+        </Card>
+      </div>
+
+    </div>
+  );
+}
+
+// -------------------- Server-side data fetch --------------------
+export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx: GetServerSidePropsContext) => {
+  const userId = (ctx.query?.userId as string) || "guest";
+
+  // fallback demo
+  let radarData: CompScore[] = [
+    { comp_id: "communication", comp_name: "Communication", score: 65 },
+    { comp_id: "teamwork", comp_name: "Teamwork", score: 70 },
+    { comp_id: "programming", comp_name: "Programming", score: 60 },
+    { comp_id: "critical", comp_name: "Critical Thinking", score: 55 },
+    { comp_id: "digital", comp_name: "Digital Skills", score: 68 },
+  ];
+
+  let timelineData: TimelinePoint[] = [
+    { date: "2024-09", comp_id: "programming", comp_name: "Programming", score: 48 },
+    { date: "2025-01", comp_id: "programming", comp_name: "Programming", score: 56 },
+    { date: "2025-05", comp_id: "programming", comp_name: "Programming", score: 62 },
+    { date: "2025-08", comp_id: "programming", comp_name: "Programming", score: 65 },
+  ];
+
+  let careerRecs: CareerRec[] = [
+    { career_id: "software_dev", career_name: "Software Developer", similarity: 0.86, reason: "Coding và tư duy giải quyết vấn đề mạnh" },
+    { career_id: "data_analyst", career_name: "Data Analyst", similarity: 0.79, reason: "Tư duy logic, phân tích dữ liệu" },
+    { career_id: "proj_coord", career_name: "Project Coordinator", similarity: 0.72, reason: "Kỹ năng teamwork và communication" },
+  ];
+
+  let gptNotes = "";
+
+  let skills: SkillEntry[] = [
+    { id: "communication", name: "Communication", current: 60, target: 80 },
+    { id: "coding", name: "Coding", current: 75, target: 90 },
+    { id: "critical", name: "Critical Thinking", current: 55, target: 75 },
+  ];
+  let certificates: CertificateEntry[] = [
+    { name: "IELTS", impact: 30 },
+    { name: "MOS Excel", impact: 20 },
+    { name: "Google Data Cert", impact: 50 },
+  ];
+  let suggestedCertificates: string[] = ["Google Data Analytics", "Coursera UX Design", "Agile PM Certificate"];
+
+  try {
+    const results = await getLearningResultsByUser(userId);
+    if (results && results.length > 0) {
+      const ai = await getGeminiAnalysis(results);
+
+      // radar
+      if (Array.isArray(ai?.radarChartData)) {
+        radarData = ai.radarChartData.map((r: any) => ({
+          comp_id: String((r.subject || r.label || r.comp_name || "").toString().toLowerCase().replace(/\s+/g, "_")),
+          comp_name: String(r.subject || r.label || r.comp_name || ""),
+          score: normalizeScore(Number(r.score ?? 0)),
+        }));
+      }
+
+      // timeline / trend
+      if (Array.isArray(ai?.trendChartData)) {
+        const timeline: TimelinePoint[] = [];
+        ai.trendChartData.forEach((row: any) => {
+          const dateLabel = String(row.name || row.period || "");
+          Object.keys(row).forEach((k) => {
+            if (k === "name" || k === "period") return;
+            const rawScore = Number(row[k]);
+            if (!Number.isNaN(rawScore)) {
+              const compId = String(k).toLowerCase().replace(/\s+/g, "_");
+              timeline.push({ date: dateLabel, comp_id: compId, comp_name: String(k), score: normalizeScore(rawScore) });
+            }
+          });
+        });
+        if (timeline.length > 0) timelineData = timeline;
+      }
+
+      // career recs
+      if (Array.isArray(ai?.career_recommendations)) {
+        careerRecs = ai.career_recommendations.map((c: any) => ({
+          career_id: c.career_id ?? String((c.career_name || c.name || "").toLowerCase().replace(/\s+/g, "_")),
+          career_name: c.career_name ?? c.name ?? "Unknown",
+          similarity: Number(c.similarity ?? 0),
+          missing_gaps: Array.isArray(c.missing_gaps) ? c.missing_gaps.map((g: any) => ({ comp_id: g.comp_id, gap: Number(g.gap) })) : undefined,
+          reason: c.reason ?? c.explanation ?? undefined,
+        }));
+      }
+
+      if (Array.isArray(ai?.skills)) {
+        skills = ai.skills.map((s: any) => ({ id: s.id ?? String((s.name || "").toLowerCase().replace(/\s+/g, "_")), name: s.name ?? s.label ?? "", current: normalizeScore(Number(s.current ?? 0)), target: s.target ? normalizeScore(Number(s.target)) : undefined }));
+      }
+
+      if (Array.isArray(ai?.certificates)) {
+        certificates = ai.certificates.map((c: any) => ({ name: c.name ?? c.label ?? "", impact: Number(c.impact ?? 0) }));
+      }
+
+      if (Array.isArray(ai?.suggestedCertificates)) {
+        suggestedCertificates = ai.suggestedCertificates.map((c: any) => String(c));
+      }
+
+      gptNotes = String(ai?.overallSummary || ai?.notes || ai?.note || "");
+    } else {
+      gptNotes = "Không có dữ liệu học tập để phân tích — hiển thị dữ liệu mẫu.";
+    }
+  } catch (err: any) {
+    console.error("getServerSideProps - analysis error:", err);
+    gptNotes = `Lỗi khi phân tích (fallback dữ liệu mẫu): ${err?.message ?? String(err)}`;
+  }
+
+  return {
+    props: { radarData, timelineData, careerRecs, gptNotes, skills, certificates, suggestedCertificates },
+  };
+};

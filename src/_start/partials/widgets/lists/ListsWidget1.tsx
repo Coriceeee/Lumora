@@ -5,6 +5,35 @@ import { Dropdown1 } from "../../content/dropdown/Dropdown1";
 import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
 import { LearningDashboard } from "../../../../types/LearningDashboard";
 
+/**
+ * Safe helper: coerce Firestore Timestamp | Date | string | number into Date | undefined
+ * - If object has a `toDate()` function (Firestore Timestamp), call it.
+ * - If already a Date, return it.
+ * - Otherwise try `new Date(value)` and validate.
+ */
+function asDate(d?: any): Date | undefined {
+  if (!d) return undefined;
+
+  // Firestore-like Timestamp with toDate()
+  if (typeof (d as any)?.toDate === "function") {
+    try {
+      const maybeDate = (d as any).toDate();
+      if (maybeDate instanceof Date && !isNaN(maybeDate.getTime())) return maybeDate;
+    } catch {
+      // fall through to next checks
+    }
+  }
+
+  // Already a Date instance
+  if (d instanceof Date && !isNaN(d.getTime())) return d;
+
+  // Try to parse (ISO string or numeric timestamp)
+  const parsed = new Date(d as any);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  return undefined;
+}
+
 type Props = {
   className: string;
 };
@@ -16,7 +45,7 @@ const ListsWidget1: React.FC<Props> = ({ className }) => {
   useEffect(() => {
     const fetchData = async () => {
       const data = await getLearningDashboardsByUser(userId);
-      setDashboards(data);
+      setDashboards(data || []);
     };
     fetchData();
   }, [userId]);
@@ -52,28 +81,33 @@ const ListsWidget1: React.FC<Props> = ({ className }) => {
       {/* begin::Body */}
       <div className="card-body pt-3">
         <div className="timeline-label">
-          {dashboards.map((dashboard) => (
-            <div className="timeline-item" key={dashboard.id}>
-              <div className="timeline-label fw-bolder text-gray-800 fs-6">
-                {dashboard.createdAt?.toDate
-                  ? new Date(dashboard.createdAt.toDate()).toLocaleDateString("vi-VN", {
-                      day: "2-digit",
-                      month: "2-digit",
-                    })
-                  : "N/A"}
-              </div>
+          {(dashboards || []).map((dashboard) => {
+            const dateObj = asDate((dashboard as any)?.createdAt);
+            const dateStr = dateObj
+              ? dateObj.toLocaleDateString("vi-VN", {
+                  day: "2-digit",
+                  month: "2-digit",
+                })
+              : "N/A";
 
-              <div className="timeline-badge">
-                <i className="fa fa-genderless text-success fs-1"></i>
-              </div>
+            return (
+              <div className="timeline-item" key={dashboard.id}>
+                <div className="timeline-label fw-bolder text-gray-800 fs-6">
+                  {dateStr}
+                </div>
 
-              <div className="timeline-content d-flex">
-                <span className="fw-bolder text-gray-800 ps-3">
-                  {dashboard.title}
-                </span>
+                <div className="timeline-badge">
+                  <i className="fa fa-genderless text-success fs-1"></i>
+                </div>
+
+                <div className="timeline-content d-flex">
+                  <span className="fw-bolder text-gray-800 ps-3">
+                    {dashboard.title}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
