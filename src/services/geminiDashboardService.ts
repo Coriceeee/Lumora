@@ -177,3 +177,59 @@ export async function getGeminiAnalysisFromResults(results: LearningResult[]) {
     throw new Error("Kết quả từ Gemini không phải JSON hợp lệ");
   }
 }
+
+// --- Career Path Mock (gộp từ API career-path.ts) ---
+
+export type CareerSuggestion = {
+  job: string;
+  score: number; // 0–100
+  reason: string;
+  skillsNeeded: string[];
+  path: string[];
+};
+
+/**
+ * Trả về danh sách gợi ý nghề nghiệp (mock data)
+ */
+export async function getCareerSuggestions(interests: string[], skills: string[]): Promise<CareerSuggestion[]> {
+  // Ở đây tạm mock dữ liệu như API cũ
+  const careers: CareerSuggestion[] = [
+    {
+      job: "Kỹ sư Phần mềm",
+      score: 92,
+      reason: "Bạn có kỹ năng logic và khả năng lập trình tốt.",
+      skillsNeeded: ["JavaScript", "React", "Cơ sở dữ liệu"],
+      path: ["Học lập trình", "Tham gia dự án nhỏ", "Thực tập tại công ty IT"],
+    },
+    {
+      job: "Nhà phân tích Dữ liệu",
+      score: 87,
+      reason: "Bạn mạnh về toán học và phân tích số liệu.",
+      skillsNeeded: ["SQL", "Python", "Machine Learning"],
+      path: ["Học Python", "Thực hành phân tích dữ liệu", "Làm dự án thực tế"],
+    },
+    {
+      job: "Thiết kế Đồ họa",
+      score: 80,
+      reason: "Bạn có óc sáng tạo và thẩm mỹ tốt.",
+      skillsNeeded: ["Photoshop", "Illustrator", "UI/UX"],
+      path: ["Học công cụ thiết kế", "Thực hiện portfolio", "Làm freelancer"],
+    },
+    {
+      job: "Giáo viên",
+      score: 75,
+      reason: "Bạn kiên nhẫn, thích chia sẻ kiến thức.",
+      skillsNeeded: ["Kỹ năng sư phạm", "Quản lý lớp học"],
+      path: ["Học ngành sư phạm", "Dạy thử", "Tham gia giảng dạy chính thức"],
+    },
+    {
+      job: "Bác sĩ",
+      score: 70,
+      reason: "Bạn quan tâm sức khỏe cộng đồng, chăm chỉ và kỷ luật.",
+      skillsNeeded: ["Kiến thức y khoa", "Giao tiếp với bệnh nhân"],
+      path: ["Học y khoa", "Thực tập bệnh viện", "Chuyên khoa sâu"],
+    },
+  ];
+
+  return careers;
+}

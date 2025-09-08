@@ -1,523 +1,465 @@
-// src/pages/neovana/PhanTichNangLucPage.tsx
-import React, { useEffect, useMemo, useState } from "react";
-import type { GetServerSideProps, GetServerSidePropsContext } from "next";
+// src/app/pages/neovana/PhanTichNangLucPage.tsx
+import React, { useEffect, useRef, useState } from "react";
+import * as d3 from "d3";
 import { motion } from "framer-motion";
-import { Play, Activity } from "lucide-react";
 
-import { getLearningResultsByUser, getGeminiAnalysis } from "../../../services/learningResultService";
+/**
+ * PhanTichNangLucPage - full file
+ * - Nodes spread out more (stronger repulsion + larger collision padding)
+ * - Nodes clamped inside bounds (no overflow)
+ * - Sparkline safe
+ * - Inline CSS included
+ */
 
-// -------------------- Types --------------------
-type CompScore = { comp_id: string; comp_name: string; score: number };
-type TimelinePoint = { date: string; comp_id: string; comp_name: string; score: number };
-type CareerRec = { career_id: string; career_name: string; similarity: number; missing_gaps?: { comp_id: string; gap: number }[]; reason?: string };
-type SkillEntry = { id: string; name: string; current: number; target?: number };
-type CertificateEntry = { name: string; impact: number };
-
-type PageProps = {
-  radarData?: CompScore[];
-  timelineData?: TimelinePoint[];
-  careerRecs?: CareerRec[];
-  gptNotes?: string;
-  skills?: SkillEntry[];
-  certificates?: CertificateEntry[];
-  suggestedCertificates?: string[];
-};
-
-// -------------------- Helpers --------------------
-function normalizeScore(n: number) {
-  if (!Number.isFinite(n)) return 0;
-  if (n <= 10) return Math.round(Math.max(0, Math.min(10, n)) * 10);
-  return Math.round(Math.max(0, Math.min(100, n)));
+/* ---------------- Types ---------------- */
+interface Course {
+  title: string;
+  weeks: number;
+  matching?: number;
 }
 
-const CAREER_AXES = [
-  "Communication",
-  "Critical Thinking",
-  "Problem Solving",
-  "Technical Skill",
-  "Creativity",
-  "Leadership",
-];
+interface Skill {
+  id: string;
+  name: string;
+  score: number; // 0-100
+  confidence: number; // 0-1
+  sources?: string[];
+  history?: number[]; // array of past scores
+  courses?: Course[];
+  radius?: number;
+  x?: number;
+  y?: number;
+}
 
-function mapToCareerAxes(radar: CompScore[]) {
-  const accum: Record<string, { sum: number; count: number }> = {};
-  CAREER_AXES.forEach((a) => (accum[a] = { sum: 0, count: 0 }));
+interface Goal {
+  id: string;
+  title: string;
+  relatedSkills: string[]; // skill ids or names
+}
 
-  const keywordMap: Record<string, string> = {
-    comm: "Communication",
-    speak: "Communication",
-    present: "Communication",
-    write: "Communication",
-    crit: "Critical Thinking",
-    logic: "Critical Thinking",
-    analyze: "Critical Thinking",
-    problem: "Problem Solving",
-    solve: "Problem Solving",
-    debug: "Problem Solving",
-    code: "Technical Skill",
-    program: "Technical Skill",
-    data: "Technical Skill",
-    tech: "Technical Skill",
-    digital: "Technical Skill",
-    design: "Creativity",
-    creative: "Creativity",
-    ux: "Creativity",
-    lead: "Leadership",
-    manage: "Leadership",
-    team: "Leadership",
-    project: "Leadership",
+interface AiAnalysis {
+  summary: string;
+  weeks: number;
+  needed: number;
+}
+
+/* ------------- Helpers -------------- */
+function generateNodesFromSkills(skills: Skill[], width: number, height: number): Skill[] {
+  const maxScore = 100;
+  return skills.map((s) => ({
+    ...s,
+    radius: 28 + (s.score / maxScore) * 40,
+    x: Math.random() * width,
+    y: Math.random() * height,
+  }));
+}
+
+function aiGapAnalysisLocal(skill: Skill, goal: Goal | null): AiAnalysis {
+  const wants = (goal?.relatedSkills || []).includes(skill.name) || (goal?.relatedSkills || []).includes(skill.id);
+  const needed = wants ? Math.max(0, 70 - skill.score) : Math.max(0, 60 - skill.score);
+  return {
+    summary: wants
+      ? `Để đạt mục tiêu, cần tăng ${skill.name} thêm ${needed} điểm (khoảng ${Math.ceil(needed / 5)} tuần với tiến độ 3 buổi/tuần).`
+      : `Kỹ năng ${skill.name} không nằm trong nhóm mục tiêu chính nhưng có thể cải thiện thêm ${needed} điểm.`,
+    weeks: Math.ceil(needed / 5),
+    needed,
   };
-
-  radar.forEach((r) => {
-    const key = (r.comp_name || r.comp_id || "").toLowerCase();
-    let matched = false;
-    Object.keys(keywordMap).forEach((k) => {
-      if (key.includes(k)) {
-        const axis = keywordMap[k];
-        accum[axis].sum += r.score || 0;
-        accum[axis].count += 1;
-        matched = true;
-      }
-    });
-    if (!matched) {
-      accum["Technical Skill"].sum += r.score || 0;
-      accum["Technical Skill"].count += 1;
-    }
-  });
-
-  return CAREER_AXES.map((a) => {
-    const { sum, count } = accum[a];
-    const avg = count > 0 ? Math.round(sum / count) : 0;
-    return { axis: a, value: Math.max(0, Math.min(100, avg)) };
-  });
 }
 
-// -------------------- Small UI blocks --------------------
-const Card: React.FC<{ className?: string; children?: React.ReactNode }> = ({ children, className = "" }) => (
-  <div className={`bg-[#0f111a] rounded-2xl p-4 shadow-sm border border-[#20232b] ${className}`}>{children}</div>
-);
-const SectionTitle: React.FC<{ children?: React.ReactNode }> = ({ children }) => (
-  <div className="flex items-center gap-3 mb-3">
-    <Activity size={18} />
-    <h3 className="text-white font-semibold text-lg">{children}</h3>
-  </div>
-);
+/* ------------- Sparkline ------------- */
+const Sparkline: React.FC<{ values?: number[] }> = ({ values = [] }) => {
+  const w = 120;
+  const h = 28;
+  if (!values || values.length === 0) return <svg width={w} height={h} />;
 
-// -------------------- Custom charts (no Recharts) --------------------
-// Polar spider (radar-like) implemented with SVG polygons
-const PolarSpider: React.FC<{ data: { subject: string; value: number }[]; size?: number }> = ({ data, size = 320 }) => {
-  const cx = size / 2;
-  const cy = size / 2;
-  const radius = size * 0.38;
-  const count = data.length || 6;
-  const angle = (i: number) => (Math.PI * 2 * i) / count - Math.PI / 2;
-  const polygonPoints = data.map((d, i) => {
-    const r = (d.value / 100) * radius;
-    const x = cx + r * Math.cos(angle(i));
-    const y = cy + r * Math.sin(angle(i));
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const len = values.length;
+
+  // handle single value or all-equal case safely
+  const points = values.map((v, i) => {
+    let x: number;
+    if (len === 1) {
+      x = w / 2;
+    } else {
+      x = (i / (len - 1)) * w;
+    }
+    const denom = (max - min) || 1;
+    const y = h - ((v - min) / denom) * h;
     return `${x},${y}`;
-  }).join(' ');
-
-  const rings = [0.25, 0.5, 0.75, 1].map((f) => {
-    const points = Array.from({ length: count }).map((_, i) => {
-      const r = radius * f;
-      const x = cx + r * Math.cos(angle(i));
-      const y = cy + r * Math.sin(angle(i));
-      return `${x},${y}`;
-    }).join(' ');
-    return <polygon key={f} points={points} fill="none" stroke="#1f2937" strokeWidth={1} />;
   });
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rounded-lg">
-      <defs>
-        <linearGradient id="gradRadar" x1="0" x2="1">
-          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.7" />
-          <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.45" />
-        </linearGradient>
-      </defs>
-
-      {rings}
-
-      {data.map((d, i) => {
-        const x = cx + (radius + 18) * Math.cos(angle(i));
-        const y = cy + (radius + 18) * Math.sin(angle(i));
-        return <text key={d.subject} x={x} y={y} fontSize={12} fill="#cbd5e1" textAnchor="middle">{d.subject}</text>;
-      })}
-
-      <polygon points={polygonPoints} fill="url(#gradRadar)" stroke="#7c3aed" strokeWidth={2} fillOpacity={0.25} />
-
+    <svg width={w} height={h}>
+      <polyline fill="none" stroke="#374151" strokeWidth={1.6} points={points.join(" ")} />
     </svg>
   );
 };
 
-// Sparkline for timeline (simple path)
-const Sparkline: React.FC<{ points: { x: string; y: number }[]; height?: number; width?: number }> = ({ points, height = 120, width = 600 }) => {
-  if (!points || points.length === 0) return <div className="text-[#9aa3b2]">Không có dữ liệu.</div>;
-  const maxY = Math.max(...points.map(p => p.y), 100);
-  const minY = Math.min(...points.map(p => p.y), 0);
-  const stepX = width / Math.max(1, points.length - 1);
-  const path = points.map((p, i) => {
-    const x = i * stepX;
-    const y = height - ((p.y - minY) / (maxY - minY || 1)) * height;
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-  }).join(' ');
+/* ------------- SkillsGraph (spread-out tuning) ------------- */
+const SkillsGraph: React.FC<{
+  skills: Skill[];
+  selected: Skill | null;
+  onSelect: (s: Skill) => void;
+  width?: number;
+  height?: number;
+}> = ({ skills, selected, onSelect, width = 900, height = 560 }) => {
+  const [nodes, setNodes] = useState<Skill[]>(() => generateNodesFromSkills(skills, width, height));
+  const simRef = useRef<d3.Simulation<any, undefined> | null>(null);
+
+  useEffect(() => {
+    // build sim nodes with safe defaults
+    const simNodes = skills.map((s) => ({
+      ...s,
+      radius: s.radius ?? (28 + (s.score / 100) * 40),
+      x: s.x ?? Math.random() * width,
+      y: s.y ?? Math.random() * height,
+    })) as any[];
+
+    setNodes(simNodes.map((n) => ({ ...n })));
+
+    // TUNING: make nodes spread out more
+    // - chargeStrength: negative -> repulsion; increased magnitude = more spread
+    // - collisionPadding: add extra padding so circles don't cluster
+    // - forceX/forceY: mild, so nodes are not pulled too strongly to center
+    // - velocityDecay decreased a bit to allow more movement smoothing
+    const chargeStrength = -220; // was -80, now larger magnitude to push nodes apart
+    const collisionPadding = 18; // was ~6, increase to create more spacing
+    const forceXYStrength = 0.01; // mild pull to center (small)
+    const alphaDecay = 0.03;
+    const velocityDecay = 0.15;
+
+    const sim = d3
+      .forceSimulation(simNodes)
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("x", d3.forceX().x(width / 2).strength(forceXYStrength))
+      .force("y", d3.forceY().y(height / 2).strength(forceXYStrength))
+      .force("charge", d3.forceManyBody().strength(chargeStrength))
+      .force("collision", d3.forceCollide().radius((d: any) => (d.radius ?? 30) + collisionPadding))
+      .alphaDecay(alphaDecay)
+      .velocityDecay(velocityDecay)
+      .on("tick", () => {
+        // clamp each node to remain inside the visible rect considering its radius
+        for (const n of simNodes) {
+          const r = typeof n.radius === "number" && Number.isFinite(n.radius) ? n.radius : 30;
+          // ensure x/y are numbers
+          n.x = typeof n.x === "number" && Number.isFinite(n.x) ? n.x : width / 2;
+          n.y = typeof n.y === "number" && Number.isFinite(n.y) ? n.y : height / 2;
+
+          // clamp
+          n.x = Math.max(r, Math.min(width - r, n.x));
+          n.y = Math.max(r, Math.min(height - r, n.y));
+        }
+
+        // trigger react re-render with shallow copy
+        setNodes(simNodes.map((n) => ({ ...n })));
+      });
+
+    // kick the simulation a bit so nodes spread quickly
+    sim.alpha(0.9).restart();
+
+    simRef.current = sim;
+
+    return () => {
+      if (simRef.current) {
+        simRef.current.stop();
+        simRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [skills, width, height]);
 
   return (
-    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="sparkGrad" x1="0" x2="1">
-          <stop offset="0%" stopColor="#60a5fa" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.9" />
-        </linearGradient>
-      </defs>
-      <path d={path} fill="none" stroke="url(#sparkGrad)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => {
-        const x = i * stepX;
-        const y = height - ((p.y - minY) / (maxY - minY || 1)) * height;
-        return <circle key={i} cx={x} cy={y} r={3} fill="#fff" />;
-      })}
-    </svg>
-  );
-};
+    // keep container clipped to avoid circles overflowing card
+    <div className="border rounded-lg bg-white shadow-sm p-3" style={{ overflow: "hidden" }}>
+      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <clipPath id="bounds">
+            <rect x={0} y={0} width={width} height={height} rx={12} ry={12} />
+          </clipPath>
 
-// Horizontal skill bars (div-based)
-const SkillBars: React.FC<{ skills: { name: string; current: number; target?: number }[] }> = ({ skills }) => {
-  return (
-    <div className="flex flex-col gap-3">
-      {skills.map((s, i) => (
-        <div key={i}>
-          <div className="flex justify-between text-sm text-[#cbd5e1] mb-1"><div>{s.name}</div><div>{s.current}% / {s.target ?? 100}%</div></div>
-          <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${Math.max(0, Math.min(100, s.current))}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700" /></div>
-        </div>
-      ))}
+          <linearGradient id="grad" x1="0" x2="1">
+            <stop offset="0%" stopColor="#60a5fa" />
+            <stop offset="100%" stopColor="#7c3aed" />
+          </linearGradient>
+          <linearGradient id="gradSel" x1="0" x2="1">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#06b6d4" />
+          </linearGradient>
+        </defs>
+
+        {/* Apply clipPath to group containing nodes */}
+        <g clipPath="url(#bounds)">
+          {nodes.map((n) => {
+            const rx = typeof n.x === "number" && Number.isFinite(n.x) ? n.x : width / 2;
+            const ry = typeof n.y === "number" && Number.isFinite(n.y) ? n.y : height / 2;
+            const r = typeof n.radius === "number" && Number.isFinite(n.radius) ? n.radius : 30;
+
+            return (
+              <g
+                key={n.id}
+                transform={`translate(${rx}, ${ry})`}
+                style={{ cursor: "pointer" }}
+                onClick={() => onSelect(n)}
+              >
+                <circle
+                  r={r}
+                  fill={selected?.id === n.id ? "url(#gradSel)" : "url(#grad)"}
+                  stroke="#0f172a"
+                  strokeWidth={1}
+                  opacity={0.98}
+                />
+                <text
+                  textAnchor="middle"
+                  y={4}
+                  style={{ fontSize: 12, fontWeight: 700, pointerEvents: "none", fill: "#fff" }}
+                >
+                  {n.name}
+                </text>
+
+                {/* score badge */}
+                <g transform={`translate(${r - 12}, ${-r + 10})`}>
+                  <rect x={-6} y={-6} width={36} height={20} rx={8} fill="#ffffffcc" />
+                  <text x={12} y={9} textAnchor="middle" style={{ fontSize: 10, fontWeight: 700, fill: "#0b1220" }}>
+                    {n.score}
+                  </text>
+                </g>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
     </div>
   );
 };
 
-// -------------------- Component --------------------
-export default function PhanTichNangLucPage({ radarData = [], timelineData = [], careerRecs = [], gptNotes = "", skills = [], certificates = [], suggestedCertificates = [] }: PageProps) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const safeRadar = Array.isArray(radarData) ? radarData : [];
-  const safeTimeline = Array.isArray(timelineData) ? timelineData : [];
-  const safeCareer = Array.isArray(careerRecs) ? careerRecs : [];
-  const safeSkills = Array.isArray(skills) ? skills : [];
-  const safeCertificates = Array.isArray(certificates) ? certificates : [];
-
-  const careerAxes = useMemo(() => mapToCareerAxes(safeRadar), [safeRadar]);
-  const radarChartData = useMemo(() => careerAxes.map((c) => ({ subject: c.axis, value: c.value })), [careerAxes]);
-
-  const timelineByComp = useMemo(() => {
-    const map: Record<string, TimelinePoint[]> = {};
-    (safeTimeline || []).forEach(t => {
-      if (!map[t.comp_id]) map[t.comp_id] = [];
-      map[t.comp_id].push(t);
-    });
-    return map;
-  }, [safeTimeline]);
-
-  const compList = useMemo(() => safeRadar.map((r) => ({ id: r.comp_id, name: r.comp_name })), [safeRadar]);
-  const [selectedComp, setSelectedComp] = useState<string | null>(compList[0]?.id ?? null);
-  useEffect(() => { if (!selectedComp && compList[0]) setSelectedComp(compList[0].id); }, [compList, selectedComp]);
-
-  const timelineForSelected = (selectedComp && timelineByComp[selectedComp]) ? timelineByComp[selectedComp].map(p => ({ x: p.date, y: p.score })) : [];
-
-  const rpgNodes = useMemo(() => {
-    const merged = new Map<string, { name: string; score: number }>();
-    safeRadar.forEach(r => merged.set(r.comp_id, { name: r.comp_name, score: r.score }));
-    safeSkills.forEach(s => merged.set(s.id, { name: s.name, score: s.current }));
-    return Array.from(merged.entries()).map(([id, v]) => ({ comp_id: id, comp_name: v.name, score: v.score, level: Math.min(5, Math.max(1, Math.floor((v.score || 0) / 20) + 1)) }));
-  }, [safeRadar, safeSkills]);
-
+/* ------------- ControlPanel ------------- */
+const ControlPanel: React.FC<{
+  selected: Skill | null;
+  aiAnalysis: AiAnalysis | null;
+  onAnalyze: (s: Skill) => Promise<void>;
+  onAddCourse: (c: Course) => void;
+  goal: Goal | null;
+}> = ({ selected, aiAnalysis, onAnalyze, onAddCourse, goal }) => {
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-white">🧭 Phân tích năng lực — phiên bản trực quan mới</h1>
-        <div className="text-sm text-[#9aa3b2]">Thay Recharts bằng visual custom: spider, sparkline, skill bars, map</div>
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-4 mt-4">
-        <Card className="md:col-span-2">
-          <SectionTitle>Radar năng lực nghề nghiệp (visual)</SectionTitle>
-          <div className="flex items-center justify-center p-4">
-            {mounted && radarChartData.length > 0 ? <PolarSpider data={radarChartData} size={360} /> : <div className="text-[#9aa3b2]">Không có dữ liệu radar.</div>}
-          </div>
-        </Card>
-
-        <Card>
-          <SectionTitle>Nghề nghiệp tiềm năng</SectionTitle>
-          <div className="flex flex-col gap-3">
-            {safeCareer.length === 0 ? (
-              <div className="text-[#9aa3b2]">Không có gợi ý nghề nghiệp.</div>
-            ) : (
-              safeCareer.slice(0,5).map((r, idx) => (
-                <div key={r.career_id ?? `c-${idx}`} className="p-3 rounded-xl border border-[#222] flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold text-white">{r.career_name}</div>
-                      <div className="text-xs text-[#9aa3b2]">Phù hợp: {(Number(r.similarity ?? 0) * 100).toFixed(0)}%</div>
-                    </div>
-                    <button className="px-3 py-1 rounded-lg bg-[#1f2340] border border-[#2b2f40] text-white">Xem lộ trình</button>
-                  </div>
-                  {r.reason && <div className="text-xs text-[#d3bad6]">Lý do: {r.reason}</div>}
-                  {Array.isArray(r.missing_gaps) && r.missing_gaps.length > 0 && (
-                    <div className="text-xs text-[#d3bad6]">Gaps: {r.missing_gaps.map(g => `${g.comp_id}(${g.gap})`).join(', ')}</div>
-                  )}
-                  <div className="pt-2"><div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${(Number(r.similarity ?? 0) * 100)}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div></div>
-                </div>
-              ))
-            )}
-
+    <div className="w-80 flex-shrink-0">
+      <div className="space-y-4">
+        <div className="p-3 bg-white rounded-lg shadow">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs text-[#9aa3b2] mb-2">Gợi ý chứng chỉ từ AI</div>
-              {Array.isArray(suggestedCertificates) && suggestedCertificates.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {suggestedCertificates.map((c, i) => (
-                    <div key={i} className="text-sm text-white p-2 rounded-md border border-[#222]">{c}</div>
+              <h4 className="font-semibold">Mục tiêu: <span className="text-indigo-600">{goal?.title ?? "Chưa đặt"}</span></h4>
+              <p className="text-xs text-gray-500">Ưu tiên: {goal?.relatedSkills.length ?? 0} kỹ năng</p>
+            </div>
+            <button className="btn btn-xs btn-ghost">Chỉnh sửa</button>
+          </div>
+
+          <div className="mt-3">
+            <div className="text-sm text-gray-600">Thanh tiến độ đến mục tiêu hiện tại</div>
+            <div className="w-full bg-gray-100 rounded-full h-2 mt-2 overflow-hidden">
+              <div className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-rose-500" style={{ width: "42%" }} />
+            </div>
+            <div className="mt-2 text-xs text-gray-500">42% đến {goal?.title ?? "..."}</div>
+          </div>
+        </div>
+
+        <div className="p-3 bg-white rounded-lg shadow">
+          <h5 className="font-medium mb-2">Chi tiết kỹ năng</h5>
+
+          {selected ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-semibold">{selected.name}</div>
+                  <div className="text-xs text-gray-500">Score: <span className="font-medium">{selected.score}/100</span></div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-gray-400">Nguồn</div>
+                  <div className="text-sm">{selected.sources?.slice(0, 2).join(", ") || "N/A"}</div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-2 rounded text-xs">
+                <strong>Trend:</strong>
+                <div className="mt-2"><Sparkline values={selected.history ?? []} /></div>
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => onAnalyze(selected)} className="flex-1 btn btn-sm bg-indigo-600 text-white">Phân tích khoảng cách</button>
+                <button onClick={() => { /* local quick */ alert("Đã thực hiện phân tích nhanh (local)") }} className="flex-1 btn btn-sm btn-outline">Nhanh</button>
+              </div>
+
+              {aiAnalysis && (
+                <div className="p-2 bg-white border rounded text-sm">
+                  <div className="font-medium text-sm">Đề xuất AI</div>
+                  <div className="text-gray-600 text-sm mt-1">{aiAnalysis.summary}</div>
+                  <div className="mt-2 flex gap-2">
+                    <button className="btn btn-xs btn-primary" onClick={() => alert("Chấp nhận lộ trình nhanh (mock)")}>Ưu tiên 4 tuần</button>
+                    <button className="btn btn-xs" onClick={() => alert("Xem lộ trình 12 tuần (mock)")}>Xem lộ trình 12 tuần</button>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <div className="text-xs text-gray-500">Gợi ý khoá học</div>
+                <div className="mt-2 space-y-2">
+                  {selected.courses?.map((c, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                      <div>
+                        <div className="text-sm font-medium">{c.title}</div>
+                        <div className="text-xs text-gray-500">Matching: {c.matching ?? 0}% • {c.weeks} tuần</div>
+                      </div>
+                      <div>
+                        <button onClick={() => onAddCourse(c)} className="btn btn-xs btn-outline">Thêm</button>
+                      </div>
+                    </div>
                   ))}
                 </div>
-              ) : (
-                <div className="text-[#9aa3b2]">Không có gợi ý chứng chỉ.</div>
-              )}
-            </div>
-
-          </div>
-        </Card>
-      </div>
-
-      {/* Timeline & selector */}
-      <div className="mt-4 grid md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2">
-          <div className="flex items-center justify-between">
-            <SectionTitle>Timeline phát triển năng lực (sparkline)</SectionTitle>
-            <div className="flex items-center gap-2">
-              <select
-                value={selectedComp ?? ""}
-                onChange={(e) => setSelectedComp(e.target.value)}
-                className="bg-[#0f111a] border border-[#222] rounded-lg px-3 py-1 text-sm text-white"
-              >
-                {compList.map((c) => (
-                  <option value={c.id} key={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ height: 260 }} className="p-2">
-            {mounted && timelineForSelected.length > 0 ? (
-              <div className="w-full h-full">
-                <Sparkline points={timelineForSelected} height={200} width={700} />
               </div>
-            ) : (
-              <div className="h-full flex items-center justify-center text-[#9aa3b2]">Không có dữ liệu timeline cho năng lực này.</div>
-            )}
-          </div>
-        </Card>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">Chưa có kỹ năng được chọn. Click một đảo (bên trái) để xem chi tiết.</div>
+          )}
+        </div>
 
-        <Card>
-          <SectionTitle>Thống kê nhanh</SectionTitle>
-          <div className="flex flex-col gap-3">
-            <div className="text-xs text-[#9aa3b2]">Số năng lực được đo</div>
-            <div className="text-2xl font-bold text-white">{safeRadar.length}</div>
-
-            <div className="text-xs text-[#9aa3b2]">Level trung bình</div>
-            <div className="text-2xl font-bold text-white">{Math.round((safeRadar.reduce((s, r) => s + (r.score || 0), 0) / Math.max(1, safeRadar.length)) / 20) || 1}</div>
-
-            <div className="pt-2">{rpgNodes.slice(0,3).map(node => (
-              <div key={node.comp_id} className="mb-2">
-                <div className="flex justify-between text-sm text-[#9aa3b2]"><div>{node.comp_name}</div><div>{node.score}%</div></div>
-                <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${node.score}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div>
-              </div>
-            ))}</div>
-          </div>
-        </Card>
+        <div className="p-3 bg-white rounded-lg shadow text-sm">
+          <div className="font-medium mb-2">Đề xuất ưu tiên</div>
+          <ol className="list-decimal list-inside text-gray-700 space-y-2">
+            <li>Khoá “Phân tích dữ liệu cơ bản” — Matching 87% (4 tuần)</li>
+            <li>Lộ trình viết học thuật — Matching 73% (8 tuần)</li>
+            <li>IELTS Listening Booster — Matching 80% (8 tuần)</li>
+          </ol>
+        </div>
       </div>
-
-      {/* Skills table + SkillBars */}
-      <div className="mt-4 grid md:grid-cols-3 gap-4">
-        <Card className="md:col-span-2">
-          <SectionTitle>Bảng kỹ năng (hiện tại → mục tiêu)</SectionTitle>
-          <div className="p-4">
-            {safeSkills.length > 0 ? <SkillBars skills={safeSkills.map(s => ({ name: s.name, current: s.current, target: s.target }))} /> : <div className="text-[#9aa3b2]">Không có dữ liệu kỹ năng.</div>}
-          </div>
-        </Card>
-
-        <Card>
-          <SectionTitle>Bảng chứng chỉ</SectionTitle>
-          <div className="overflow-auto max-h-60">
-            <table className="w-full table-auto text-sm">
-              <thead>
-                <tr className="text-[#9aa3b2] text-left">
-                  <th className="pb-2">Chứng chỉ</th>
-                  <th className="pb-2">Ảnh hưởng (%)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {safeCertificates.length === 0 ? (
-                  <tr><td colSpan={2} className="text-[#9aa3b2] py-2">Không có chứng chỉ.</td></tr>
-                ) : (
-                  safeCertificates.map((c, i) => (
-                    <tr key={i} className="border-t border-[#111]">
-                      <td className="py-2">{c.name}</td>
-                      <td className="py-2">{c.impact}%</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-
-      {/* RPG Path (gamification) */}
-      <div className="mt-4">
-        <Card>
-          <SectionTitle>🎮 Hành trình RPG định hướng nghề</SectionTitle>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {rpgNodes.map((n) => (
-              <motion.div key={n.comp_id} whileHover={{ scale: 1.02 }} className="p-3 rounded-xl border border-[#222] bg-[#07080b]">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-semibold text-white">{n.comp_name}</div>
-                  <div className="text-sm text-[#9aa3b2]">Lv{n.level}</div>
-                </div>
-                <div className="text-xs text-[#9aa3b2] mb-2">{n.score}%</div>
-                <div className="w-full bg-[#0b1220] rounded-full h-3 overflow-hidden border border-[#222]"><div style={{ width: `${n.score}%` }} className="h-3 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" /></div>
-                <div className="mt-3 text-sm text-[#9aa3b2]">Unlocks: {(n.level >= 3) ? "Cơ hội nghề liên quan" : "Cần thêm điểm để unlock"}</div>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            <svg viewBox="0 0 1000 160" className="w-full h-40 rounded-xl bg-[#06060a] p-4">
-              <polyline points="40,100 180,40 320,100 460,40 600,100 740,40 900,100" fill="none" stroke="#2b2f40" strokeWidth={6} strokeLinecap="round" strokeLinejoin="round" />
-              {[40, 180, 320, 460, 600, 740, 900].map((x, i) => (
-                <g key={i}>
-                  <circle cx={x} cy={i % 2 === 0 ? 100 : 40} r={18} fill="#0b1220" stroke="#333" />
-                  <text x={x} y={(i % 2 === 0 ? 100 : 40) + 5} fontSize={10} textAnchor="middle" fill="#9aa3b2">M{i + 1}</text>
-                </g>
-              ))}
-            </svg>
-          </div>
-        </Card>
-      </div>
-
-      <div className="mt-4">
-        <Card>
-          <SectionTitle>Ghi chú từ GPT</SectionTitle>
-          <pre className="whitespace-pre-wrap text-sm text-[#d1d5db] p-2 rounded-md bg-[#06060a]">{gptNotes || "Không có ghi chú từ GPT."}</pre>
-        </Card>
-      </div>
-
     </div>
   );
-}
+};
 
-// -------------------- Server-side data fetch --------------------
-export const getServerSideProps: GetServerSideProps<PageProps> = async (ctx: GetServerSidePropsContext) => {
-  const userId = (ctx.query?.userId as string) || "guest";
-
-  // fallback demo
-  let radarData: CompScore[] = [
-    { comp_id: "communication", comp_name: "Communication", score: 65 },
-    { comp_id: "teamwork", comp_name: "Teamwork", score: 70 },
-    { comp_id: "programming", comp_name: "Programming", score: 60 },
-    { comp_id: "critical", comp_name: "Critical Thinking", score: 55 },
-    { comp_id: "digital", comp_name: "Digital Skills", score: 68 },
+/* ------------- Main Page ------------- */
+const PhanTichNangLucPage: React.FC = () => {
+  // dummy data (replace with real)
+  const dummySkills: Skill[] = [
+    { id: "analysis", name: "Phân tích", score: 42, confidence: 0.72, history: [30, 35, 40, 42], courses: [{ title: "Phân tích dữ liệu cơ bản", weeks: 4, matching: 87 }] },
+    { id: "writing", name: "Viết học thuật", score: 45, confidence: 0.65, history: [50, 48, 46, 45], courses: [{ title: "Luyện viết học thuật", weeks: 8, matching: 73 }] },
+    { id: "listening", name: "Lắng nghe", score: 40, confidence: 0.6, history: [35, 38, 39, 40], courses: [{ title: "IELTS Listening Booster", weeks: 8, matching: 80 }] },
+    { id: "projects", name: "Làm dự án", score: 78, confidence: 0.9, history: [65, 70, 75, 78], courses: [{ title: "Quản lý dự án nhỏ", weeks: 6, matching: 60 }] },
+    { id: "communication", name: "Giao tiếp", score: 70, confidence: 0.85, history: [60, 66, 68, 70], courses: [{ title: "Thuyết trình hiệu quả", weeks: 4, matching: 70 }] },
+    { id: "selflearning", name: "Tự học", score: 66, confidence: 0.8, history: [50, 55, 60, 66], courses: [{ title: "Kỹ năng học chủ động", weeks: 4, matching: 75 }] },
+    { id: "logic", name: "Toán tư duy", score: 60, confidence: 0.7, history: [55, 58, 59, 60], courses: [{ title: "Toán tư duy cơ bản", weeks: 6, matching: 65 }] },
   ];
 
-  let timelineData: TimelinePoint[] = [
-    { date: "2024-09", comp_id: "programming", comp_name: "Programming", score: 48 },
-    { date: "2025-01", comp_id: "programming", comp_name: "Programming", score: 56 },
-    { date: "2025-05", comp_id: "programming", comp_name: "Programming", score: 62 },
-    { date: "2025-08", comp_id: "programming", comp_name: "Programming", score: 65 },
-  ];
+  const dummyGoal: Goal = { id: "g1", title: "IELTS 6.5", relatedSkills: ["listening", "writing", "reading", "speaking"] };
 
-  let careerRecs: CareerRec[] = [
-    { career_id: "software_dev", career_name: "Software Developer", similarity: 0.86, reason: "Coding và tư duy giải quyết vấn đề mạnh" },
-    { career_id: "data_analyst", career_name: "Data Analyst", similarity: 0.79, reason: "Tư duy logic, phân tích dữ liệu" },
-    { career_id: "proj_coord", career_name: "Project Coordinator", similarity: 0.72, reason: "Kỹ năng teamwork và communication" },
-  ];
+  const [skills] = useState<Skill[]>(() => generateNodesFromSkills(dummySkills, 900, 560));
+  const [selected, setSelected] = useState<Skill | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
 
-  let gptNotes = "";
+  // analyze (local + optional server call)
+  async function analyzeGap(skill: Skill) {
+    const local = aiGapAnalysisLocal(skill, dummyGoal);
+    setAiAnalysis(local);
 
-  let skills: SkillEntry[] = [
-    { id: "communication", name: "Communication", current: 60, target: 80 },
-    { id: "coding", name: "Coding", current: 75, target: 90 },
-    { id: "critical", name: "Critical Thinking", current: 55, target: 75 },
-  ];
-  let certificates: CertificateEntry[] = [
-    { name: "IELTS", impact: 30 },
-    { name: "MOS Excel", impact: 20 },
-    { name: "Google Data Cert", impact: 50 },
-  ];
-  let suggestedCertificates: string[] = ["Google Data Analytics", "Coursera UX Design", "Agile PM Certificate"];
-
-  try {
-    const results = await getLearningResultsByUser(userId);
-    if (results && results.length > 0) {
-      const ai = await getGeminiAnalysis(results);
-
-      // radar
-      if (Array.isArray(ai?.radarChartData)) {
-        radarData = ai.radarChartData.map((r: any) => ({
-          comp_id: String((r.subject || r.label || r.comp_name || "").toString().toLowerCase().replace(/\s+/g, "_")),
-          comp_name: String(r.subject || r.label || r.comp_name || ""),
-          score: normalizeScore(Number(r.score ?? 0)),
-        }));
+    // optional: call your server route for richer AI explanation
+    try {
+      const res = await fetch("/api/gemini-analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skillId: skill.id, skillName: skill.name, currentScore: skill.score, goal: dummyGoal }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAiAnalysis(data as AiAnalysis);
       }
-
-      // timeline / trend
-      if (Array.isArray(ai?.trendChartData)) {
-        const timeline: TimelinePoint[] = [];
-        ai.trendChartData.forEach((row: any) => {
-          const dateLabel = String(row.name || row.period || "");
-          Object.keys(row).forEach((k) => {
-            if (k === "name" || k === "period") return;
-            const rawScore = Number(row[k]);
-            if (!Number.isNaN(rawScore)) {
-              const compId = String(k).toLowerCase().replace(/\s+/g, "_");
-              timeline.push({ date: dateLabel, comp_id: compId, comp_name: String(k), score: normalizeScore(rawScore) });
-            }
-          });
-        });
-        if (timeline.length > 0) timelineData = timeline;
-      }
-
-      // career recs
-      if (Array.isArray(ai?.career_recommendations)) {
-        careerRecs = ai.career_recommendations.map((c: any) => ({
-          career_id: c.career_id ?? String((c.career_name || c.name || "").toLowerCase().replace(/\s+/g, "_")),
-          career_name: c.career_name ?? c.name ?? "Unknown",
-          similarity: Number(c.similarity ?? 0),
-          missing_gaps: Array.isArray(c.missing_gaps) ? c.missing_gaps.map((g: any) => ({ comp_id: g.comp_id, gap: Number(g.gap) })) : undefined,
-          reason: c.reason ?? c.explanation ?? undefined,
-        }));
-      }
-
-      if (Array.isArray(ai?.skills)) {
-        skills = ai.skills.map((s: any) => ({ id: s.id ?? String((s.name || "").toLowerCase().replace(/\s+/g, "_")), name: s.name ?? s.label ?? "", current: normalizeScore(Number(s.current ?? 0)), target: s.target ? normalizeScore(Number(s.target)) : undefined }));
-      }
-
-      if (Array.isArray(ai?.certificates)) {
-        certificates = ai.certificates.map((c: any) => ({ name: c.name ?? c.label ?? "", impact: Number(c.impact ?? 0) }));
-      }
-
-      if (Array.isArray(ai?.suggestedCertificates)) {
-        suggestedCertificates = ai.suggestedCertificates.map((c: any) => String(c));
-      }
-
-      gptNotes = String(ai?.overallSummary || ai?.notes || ai?.note || "");
-    } else {
-      gptNotes = "Không có dữ liệu học tập để phân tích — hiển thị dữ liệu mẫu.";
+    } catch (err) {
+      // ignore network errors; local analysis remains
+      console.warn("AI analyze failed:", err);
     }
-  } catch (err: any) {
-    console.error("getServerSideProps - analysis error:", err);
-    gptNotes = `Lỗi khi phân tích (fallback dữ liệu mẫu): ${err?.message ?? String(err)}`;
   }
 
-  return {
-    props: { radarData, timelineData, careerRecs, gptNotes, skills, certificates, suggestedCertificates },
-  };
+  function handleAddCourse(course: Course) {
+    // mock: add to schedule / lộ trình — bạn có thể dispatch action hoặc call API ở đây
+    alert(`Đã thêm khoá "${course.title}" vào lộ trình (ước tính ${course.weeks} tuần)`);
+  }
+
+  const overall = Math.round((dummySkills.reduce((s, k) => s + k.score, 0) / dummySkills.length) * 10) / 10;
+
+  /* Inline CSS (basic styles used by the component) */
+  const pageStyles = `
+    /* basic reset for our small component */
+    .border { border: 1px solid #e6e6e6; }
+    .rounded-lg { border-radius: 12px; }
+    .rounded { border-radius: 8px; }
+    .shadow-sm { box-shadow: 0 1px 4px rgba(12,14,20,0.06); }
+    .p-3 { padding: 12px; }
+    .p-2 { padding: 8px; }
+    .p-4 { padding: 16px; }
+    .mb-3 { margin-bottom: 12px; }
+    .mt-2 { margin-top: 8px; }
+    .mt-3 { margin-top: 12px; }
+    .text-sm { font-size: 13px; }
+    .text-xs { font-size: 12px; }
+    .font-medium { font-weight: 600; }
+    .font-semibold { font-weight: 700; }
+    .text-gray-500 { color: #6b7280; }
+    .text-gray-600 { color: #4b5563; }
+    .text-gray-400 { color: #9ca3af; }
+    .bg-white { background: #ffffff; }
+    .bg-gray-50 { background: #f9fafb; }
+    .bg-gray-100 { background: #f3f4f6; }
+    .w-full { width: 100%; }
+    .w-80 { width: 320px; }
+    .flex { display: flex; }
+    .flex-1 { flex: 1; }
+    .flex-shrink-0 { flex-shrink: 0; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-2 { gap: 8px; }
+    .gap-3 { gap: 12px; }
+    .space-y-4 > * + * { margin-top: 12px; }
+    .list-decimal { list-style-type: decimal; padding-left: 1rem; }
+
+    /* button */
+    .btn { display: inline-flex; align-items:center; justify-content:center; border-radius: 8px; padding: 6px 10px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; }
+    .btn:active { transform: translateY(1px); }
+    .btn-xs { padding: 4px 8px; font-size: 12px; }
+    .btn-sm { padding: 6px 10px; font-size: 13px; }
+    .btn-ghost { background: transparent; border: 1px dashed #d1d5db; }
+    .btn-outline { background: transparent; border: 1px solid #cbd5e1; }
+    .btn-primary { background: #2563eb; color: white; border: none; }
+    .bg-gradient-to-r { background: linear-gradient(90deg, #f59e0b, #f43f5e); }
+
+    /* small helpers */
+    .text-indigo-600 { color: #4f46e5; }
+    .from-emerald-400 { background: linear-gradient(90deg,#34d399,#0ea5a6); }
+    .to-sky-500 { /* handled by inline since we used gradient above */ }
+    .min-h-\\[520px\\] { min-height: 520px; } /* used in JSX style attr but keep for completeness */
+  `;
+
+  return (
+    <div className="flex gap-6 p-4 h-[90vh] min-h-[520px]">
+      {/* inject styles */}
+      <style dangerouslySetInnerHTML={{ __html: pageStyles }} />
+
+      {/* Left: Graph (70%) */}
+      <div className="flex-1" style={{ width: "70%" }}>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-2xl font-semibold">Phân tích năng lực — Gương soi năng lực hiện tại</h3>
+            <p className="text-sm text-gray-500">Tổng điểm: <span className="font-medium">{overall}/100</span></p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-56 bg-gray-100 rounded-full h-3 overflow-hidden" style={{ width: 224 }}>
+              <div className="h-3 rounded-full" style={{ width: `${Math.min(100, overall)}%`, background: "linear-gradient(90deg,#10b981,#0ea5e9)" }} />
+            </div>
+          </div>
+        </div>
+
+        <SkillsGraph skills={skills} selected={selected} onSelect={(s) => { setSelected(s); setAiAnalysis(null); }} />
+      </div>
+
+      {/* Right: Panel (30%) */}
+      <ControlPanel selected={selected} aiAnalysis={aiAnalysis} onAnalyze={async (s) => await analyzeGap(s)} onAddCourse={handleAddCourse} goal={dummyGoal} />
+    </div>
+  );
 };
+
+export default PhanTichNangLucPage;

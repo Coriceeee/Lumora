@@ -366,11 +366,27 @@ const LearningDashboardPage: React.FC = () => {
     const resultsSubjects = Array.from(new Set((learningResults || []).map((r: any) => r.subjectName).filter(Boolean)));
     resultsSubjects.forEach((s: any) => set.add((s||"").toString()));
 
-    const arr = Array.from(set).map((sub) => ({ subject: sub, suggestionPriority: computeSuggestionPriorityForSubject(sub) }));
-    // sort descending so the highest priority (largest %) appears first
-    arr.sort((a, b) => b.suggestionPriority - a.suggestionPriority);
+    // build array with computed priorities
+    let arr = Array.from(set).map((sub) => ({ subject: sub, suggestionPriority: computeSuggestionPriorityForSubject(sub) }));
+
+    // sort according to UI control
+    arr.sort((a, b) => {
+      if (prioritySort === 'asc') {
+        if (a.suggestionPriority !== b.suggestionPriority) return a.suggestionPriority - b.suggestionPriority;
+      } else {
+        if (a.suggestionPriority !== b.suggestionPriority) return b.suggestionPriority - a.suggestionPriority;
+      }
+      // tie-breaker: alphabetical
+      return String(a.subject).localeCompare(String(b.subject));
+    });
+
+    // apply limit if set (>0)
+    if (Number.isFinite(priorityLimit) && priorityLimit > 0) {
+      arr = arr.slice(0, priorityLimit);
+    }
+
     return arr;
-  }, [dashboardToShow, learningResults]);
+  }, [dashboardToShow, learningResults, prioritySort, priorityLimit]);
 
   const toggleSubject = (idx: number, subjectName?: string) => {
     setExpandedSubjects((prev) => {
