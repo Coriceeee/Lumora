@@ -1,4 +1,3 @@
-// FILE: src/app/pages/neovana/components/SubjectsCard.tsx
 import React from "react";
 import { motion } from "framer-motion";
 import { BookOpen } from "lucide-react";
@@ -70,7 +69,6 @@ const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
             <span className="text-sm text-gray-500 italic">
               Ưu tiên: {s.priority} ({s.priorityRatio}%)
             </span>
-            {/* Nếu sau này có scores thì thêm sparkline */}
             <Sparkline values={[s.priorityRatio]} />
           </div>
           <ul className="text-sm text-gray-700 space-y-1">

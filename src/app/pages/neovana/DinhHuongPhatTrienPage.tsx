@@ -1,13 +1,8 @@
-// FILE: src/app/pages/neovana/DinhHuongPhatTrienPage.tsx
 import React, { useEffect, useState } from "react";
 import {
   Box,
   Button,
   Typography,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
 } from "@mui/material";
 import {
   addCareerDashboard,
@@ -23,13 +18,14 @@ import SkillsCard, { Skill } from "./components/SkillsCard";
 import CertificatesCard from "./components/CertificatesCard";
 import SubjectsCard from "./components/SubjectsCard";
 import SummaryCard from "./components/SummaryCard";
+import SuggestionDialog from "./components/SuggestionDialog";
 
 const userId = "user_fake_id_123456";
 
 const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
   const [selected, setSelected] = useState<CareerDashboard | null>(null);
-  const [open, setOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadDashboards = async () => {
     const data = await getCareerDashboardsByUser();
@@ -41,18 +37,21 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     loadDashboards();
   }, []);
 
-  const handleCreate = async () => {
-    const formData = {
-      strengths: "Toán, Lập trình",
-      interests: "AI, STEM",
-      personality: "Logic, phân tích",
-      dreamJob: "Kỹ sư AI",
-    };
+  const handleCreate = () => {
+    setDialogOpen(true);
+  };
+
+  const handleDialogSubmit = async (formData: {
+    strengths: string;
+    interests: string;
+    personality: string;
+    dreamJob: string;
+  }) => {
     const dashboard = await generateCareerDashboard(userId, formData);
     const saved = await addCareerDashboard(dashboard);
     await loadDashboards();
     setSelected(saved);
-    setOpen(true);
+    setDialogOpen(false);
   };
 
   const mapSkills = (skills: SkillToImprove[]): Skill[] =>
@@ -64,48 +63,73 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     }));
 
   return (
-    <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={2}>
-      {/* Bên trái */}
-      <Box flex={1}>
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          onClick={handleCreate}
-        >
-          Tạo Career Dashboard
-        </Button>
-        <Box mt={2}>
-          <Typography variant="h6">Lịch sử Dashboard</Typography>
-          {dashboards.map((d) => (
-            <Button
-              key={d.id}
-              fullWidth
-              variant={selected?.id === d.id ? "contained" : "outlined"}
-              sx={{ mt: 1 }}
-              onClick={() => {
-                setSelected(d);
-                setOpen(true);
-              }}
-            >
-              {d.title || "Dashboard"} (
-              {new Date(d.createdAt).toLocaleDateString()})
-            </Button>
-          ))}
-        </Box>
-      </Box>
+    <>
+      <div className="row g-0 g-xl-5 g-xxl-8">
+        <div className="col-xxl-4">
+          <div className="card mb-5">
+            <div className="card-body">
+              <div className="d-flex bg-light-primary card-rounded flex-grow-1">
+                <div className="py-10 ps-7">
+                  <div className="">
+                    <span className="font-weight-light fs-1 text-gray-800">
+                      <span className="fw-bolder fs-1 text-gray-800">Nhập thông tin</span>
+                    </span>
+                  </div>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={handleCreate}
+                    sx={{
+                      borderRadius: "30px",
+                      backgroundColor: "#A8D8FF",
+                      color: "#fff",
+                      "&:hover": {
+                        backgroundColor: "#7BB9E0",
+                      },
+                      transition: "all 0.3s ease-in-out", // Thêm hiệu ứng
+                    }}
+                  >
+                    Tạo Career Dashboard
+                  </Button>
+                </div>
+                <div
+                  className="position-relative bgi-no-repeat bgi-size-contain bgi-position-y-bottom bgi-position-x-end mt-6 flex-grow-1"
+                  style={{
+                    backgroundImage: `url("/media/misc/illustration-1.png")`,
+                  }}
+                ></div>
+              </div>
+            </div>
+          </div>
 
-      {/* Dialog hiển thị chi tiết Dashboard */}
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {selected?.title || "Chi tiết Career Dashboard"}
-        </DialogTitle>
-        <DialogContent dividers>
+          <div className="card mb-5">
+            <div className="card-body">
+              <Typography variant="h6" sx={{ fontSize: "1.2rem", fontWeight: "600", color: "#4E81A8" }}>
+                Lịch sử Dashboard
+              </Typography>
+              {dashboards.map((d) => (
+                <Button
+                  key={d.id}
+                  fullWidth
+                  variant={selected?.id === d.id ? "contained" : "outlined"}
+                  sx={{
+                    mt: 1,
+                    transition: "background-color 0.3s ease",
+                    "&:hover": {
+                      backgroundColor: "#D1E9FF", // Thêm hiệu ứng khi hover
+                    },
+                  }}
+                  onClick={() => setSelected(d)}
+                >
+                  {d.title || "Dashboard"} ({new Date(d.createdAt).toLocaleDateString()})
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="col-xxl-8 gy-0 gy-xxl-8">
           {selected ? (
             <Box display="flex" flexDirection="column" gap={2}>
               <SummaryCard dashboard={selected} />
@@ -117,14 +141,15 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpen(false)} color="primary">
-            Đóng
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        </div>
+      </div>
+
+      <SuggestionDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSubmit={handleDialogSubmit}
+      />
+    </>
   );
 };
 

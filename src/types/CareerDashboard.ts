@@ -4,7 +4,7 @@ import { ReactElement, JSXElementConstructor, ReactNodeArray, ReactPortal } from
 export interface Career {
   [x: string]: string | number | boolean | {} | ReactElement<any, string | JSXElementConstructor<any>> | ReactNodeArray | ReactPortal | null | undefined;
   name: string;
-  matchPercent: number;
+  matchPercentage: number;
   reason: string;
   preparationSteps: string[];
 }

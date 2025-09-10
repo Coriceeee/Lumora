@@ -501,14 +501,7 @@ const LearningDashboardPage: React.FC = () => {
 
   const handleSelectSubjectDetail = async (subjectName: string) => {
     setSelectedSubjectDetail(subjectName);
-    try {
-      // lastSelected is a top-level field, safe to set directly
-      await safeUpdateOrCreateDashboard((dashboardToShow as any)?.id || `unique_${Date.now()}`, { lastSelected: subjectName });
-      toast.success(`Lưu lựa chọn môn chi tiết: ${subjectName}`);
-    } catch (err) {
-      console.error("Lưu lastSelected thất bại", err);
-      toast.error("Lưu lựa chọn thất bại.");
-    }
+    
   };
 
   // Filter subjectInsights to avoid showing AI-only subjects unless they appear in real results or importantSubjects
@@ -646,7 +639,133 @@ const LearningDashboardPage: React.FC = () => {
             {/* end::Body */}
           </div>
 
-          <div className="ld-card">
+          
+        </div>
+
+        {/* RIGHT */}
+        <div className="ld-right">
+          {dashboardToShow ? (
+            <>
+              <div className="ld-card">
+                <div className="ld-section-title">📊 Đánh giá chung </div>
+                <p className="ld-overview">{dashboardToShow.summary || "Không có mô tả chung."}</p>
+              </div>
+
+              <div className="ld-card">
+                <div className="ld-section-title">🎯 Các môn chủ chốt</div>
+
+                {subjectsData.length > 0 ? (
+                  <div className="ld-infobox">
+                    <div className="ld-chart-wrap">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={subjectsData} margin={{ top: 18, right: 20, left: 0, bottom: 6 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
+                          <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
+                          <Tooltip />
+                          <Legend verticalAlign="top" />
+                          <Bar dataKey="Thường xuyên" fill="#4f46e5" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                          <Bar dataKey="Giữa kỳ" fill="#22c55e" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {anyFallback && (
+                      <div className="ld-fallback-note">
+                        Một số môn chưa có dữ liệu trong phân tích quan trọng. Biểu đồ đang hiển thị từ dữ liệu tổng hợp (fallback) hoặc mặc định 0.
+                      </div>
+                    )}
+
+                    <div className="ld-rows3">
+                      <div className="ld-col">
+                        <div className="ld-col-title">Điểm mạnh</div>
+                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallStrengths || "Chưa có dữ liệu"}</div>
+                      </div>
+                      <div className="ld-col">
+                        <div className="ld-col-title">Điểm yếu</div>
+                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallWeaknesses || "Chưa có dữ liệu"}</div>
+                      </div>
+                      <div className="ld-col">
+                        <div className="ld-col-title">Chiến lược</div>
+                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.learningAdvice || "Chưa có dữ liệu"}</div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="ld-empty italic">Chưa có dữ liệu để hiển thị. Hãy chọn tối đa 3 môn chủ chốt.</p>
+                )}
+              </div>
+
+              {/* NEW: Separate card for Suggestion Priority showing ALL subjects */}
+              <div className="ld-card">
+                <div className="ld-section-title">📈 Ưu tiên cải thiện (tất cả môn)</div>
+
+                {/* Controls: sort, chart type, color, limit */}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Sắp xếp</div>
+                    <select value={prioritySort} onChange={(e) => setPrioritySort(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="desc">Ưu tiên cao → thấp</option>
+                      <option value="asc">Ưu tiên thấp → cao</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Kiểu biểu đồ</div>
+                    <select value={priorityChartType} onChange={(e) => setPriorityChartType(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="vertical">Cột đứng (vertical)</option>
+                      <option value="horizontal">Cột ngang (horizontal)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Màu</div>
+                    <select value={priorityColor} onChange={(e) => setPriorityColor(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
+                      <option value="red">Đỏ</option>
+                      <option value="blue">Xanh</option>
+                      <option value="gradient">Gradient (đỏ)</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700 }}>Giới hạn</div>
+                    <input type="number" min={0} value={priorityLimit} onChange={(e) => setPriorityLimit(Number(e.target.value || 0))} style={{ width: 80, padding: 6, borderRadius: 8 }} />
+                    <div style={{ color: '#64748b', fontSize: 13 }}>0 = tất cả</div>
+                  </div>
+                </div>
+
+                {allSubjectsWithPriority && allSubjectsWithPriority.length > 0 ? (
+                  <div style={{ height: 320 }}>
+                    <ResponsiveContainer width="100%" height={320}>
+                      {priorityChartType === 'vertical' ? (
+                        <BarChart data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 0, bottom: 60 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="subject" tick={{ fontSize: 12 }} interval={0} angle={-35} textAnchor="end" />
+                          <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
+                          <Tooltip formatter={(value: any) => `${value}%`} />
+                          <Legend />
+                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                        </BarChart>
+                      ) : (
+                        // horizontal layout: subject on Y axis, numeric on X
+                        <BarChart layout="vertical" data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 80, bottom: 6 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
+                          <YAxis dataKey="subject" type="category" width={140} tick={{ fontSize: 12 }} />
+                          <Tooltip formatter={(value: any) => `${value}%`} />
+                          <Legend />
+                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="ld-empty">Không có môn để hiển thị ưu tiên cải thiện.</div>
+                )}
+              </div>
+
+<div className="ld-card">
             <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Kết quả học tập (Chọn để xem chi tiết)</div>
             {subjectsFromResults.length === 0 ? (
               <div className="ld-empty">Chưa có kết quả học tập.</div>
@@ -854,233 +973,7 @@ const LearningDashboardPage: React.FC = () => {
               </ul>
             )}
           </div>
-        </div>
-
-        {/* RIGHT */}
-        <div className="ld-right">
-          {dashboardToShow ? (
-            <>
-              <div className="ld-card">
-                <div className="ld-section-title">📊 Đánh giá chung </div>
-                <p className="ld-overview">{dashboardToShow.summary || "Không có mô tả chung."}</p>
-              </div>
-
-              <div className="ld-card">
-                <div className="ld-section-title">🎯 Các môn chủ chốt</div>
-
-                {subjectsData.length > 0 ? (
-                  <div className="ld-infobox">
-                    <div className="ld-chart-wrap">
-                      <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={subjectsData} margin={{ top: 18, right: 20, left: 0, bottom: 6 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
-                          <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
-                          <Tooltip />
-                          <Legend verticalAlign="top" />
-                          <Bar dataKey="Thường xuyên" fill="#4f46e5" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                          <Bar dataKey="Giữa kỳ" fill="#22c55e" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-
-                    {anyFallback && (
-                      <div className="ld-fallback-note">
-                        Một số môn chưa có dữ liệu trong phân tích quan trọng. Biểu đồ đang hiển thị từ dữ liệu tổng hợp (fallback) hoặc mặc định 0.
-                      </div>
-                    )}
-
-                    <div className="ld-rows3">
-                      <div className="ld-col">
-                        <div className="ld-col-title">Điểm mạnh</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallStrengths || "Chưa có dữ liệu"}</div>
-                      </div>
-                      <div className="ld-col">
-                        <div className="ld-col-title">Điểm yếu</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallWeaknesses || "Chưa có dữ liệu"}</div>
-                      </div>
-                      <div className="ld-col">
-                        <div className="ld-col-title">Chiến lược</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.learningAdvice || "Chưa có dữ liệu"}</div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="ld-empty italic">Chưa có dữ liệu để hiển thị. Hãy chọn tối đa 3 môn chủ chốt.</p>
-                )}
-              </div>
-
-              {/* NEW: Separate card for Suggestion Priority showing ALL subjects */}
-              <div className="ld-card">
-                <div className="ld-section-title">📈 Ưu tiên cải thiện (tất cả môn)</div>
-
-                {/* Controls: sort, chart type, color, limit */}
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700 }}>Sắp xếp</div>
-                    <select value={prioritySort} onChange={(e) => setPrioritySort(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
-                      <option value="desc">Ưu tiên cao → thấp</option>
-                      <option value="asc">Ưu tiên thấp → cao</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700 }}>Kiểu biểu đồ</div>
-                    <select value={priorityChartType} onChange={(e) => setPriorityChartType(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
-                      <option value="vertical">Cột đứng (vertical)</option>
-                      <option value="horizontal">Cột ngang (horizontal)</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700 }}>Màu</div>
-                    <select value={priorityColor} onChange={(e) => setPriorityColor(e.target.value as any)} style={{ padding: 6, borderRadius: 8 }}>
-                      <option value="red">Đỏ</option>
-                      <option value="blue">Xanh</option>
-                      <option value="gradient">Gradient (đỏ)</option>
-                    </select>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <div style={{ fontWeight: 700 }}>Giới hạn</div>
-                    <input type="number" min={0} value={priorityLimit} onChange={(e) => setPriorityLimit(Number(e.target.value || 0))} style={{ width: 80, padding: 6, borderRadius: 8 }} />
-                    <div style={{ color: '#64748b', fontSize: 13 }}>0 = tất cả</div>
-                  </div>
-                </div>
-
-                {allSubjectsWithPriority && allSubjectsWithPriority.length > 0 ? (
-                  <div style={{ height: 320 }}>
-                    <ResponsiveContainer width="100%" height={320}>
-                      {priorityChartType === 'vertical' ? (
-                        <BarChart data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 0, bottom: 60 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="subject" tick={{ fontSize: 12 }} interval={0} angle={-35} textAnchor="end" />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} />
-                          <Tooltip formatter={(value: any) => `${value}%`} />
-                          <Legend />
-                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                        </BarChart>
-                      ) : (
-                        // horizontal layout: subject on Y axis, numeric on X
-                        <BarChart layout="vertical" data={allSubjectsWithPriority} margin={{ top: 18, right: 20, left: 80, bottom: 6 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 12 }} />
-                          <YAxis dataKey="subject" type="category" width={140} tick={{ fontSize: 12 }} />
-                          <Tooltip formatter={(value: any) => `${value}%`} />
-                          <Legend />
-                          <Bar dataKey="suggestionPriority" fill={priorityColor === 'red' ? '#ef4444' : priorityColor === 'blue' ? '#2563eb' : '#fb7185'} name="Ưu tiên (%)" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                        </BarChart>
-                      )}
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="ld-empty">Không có môn để hiển thị ưu tiên cải thiện.</div>
-                )}
-              </div>
-
-              <div className="ld-card">
-                <div className="ld-section-title">📚 Đánh giá kết quả & Đề xuất kế hoạch từng môn </div>
-
-                {filteredSubjectInsights && filteredSubjectInsights.length > 0 ? (
-                  filteredSubjectInsights.map((item: any, idx: number) => {
-                    const expanded = expandedSubjects.has(idx);
-                    const leftMarkStyle = { background: colorFromString(item?.subjectName || String(idx)) };
-
-                    // make key unique even if item.id duplicates by adding idx
-                    const key = `${String(item?.id ?? item?.subjectName ?? "insight")}-${idx}`;
-
-                    const sub = (item?.subjectName || "").toString();
-                    const avg = currentAverageFromDashboard(sub);
-                    const p = computeProgressForSubject(sub);
-                    const up = p.delta > 0.05;
-                    const down = p.delta < -0.05;
-                    const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                    const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-
-                    // suggestionPriority is guaranteed (0..100) from filteredSubjectInsights mapping
-                    const spRaw = item?.suggestionPriority ?? computeSuggestionPriorityForSubject(sub);
-                    const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
-
-                    return (
-                      <div key={key} className={`ld-accordion ${expanded ? "ld-accordion--open" : ""}`}>
-                        <div className="ld-accordion-head" onClick={() => toggleSubject(idx, item?.subjectName)} role="button" aria-expanded={expanded} tabIndex={0} onKeyDown={(e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") toggleSubject(idx, item?.subjectName); }}>
-                          <div className="ld-leftmark" style={leftMarkStyle as any} />
-                          <div className="ld-acc-main">
-                            {/* show subject name with small progress badge next to it */}
-                            <div className="ld-acc-title">
-                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <div style={{ fontSize: 16, fontWeight: 700 }}>{sub}</div>
-                                    <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
-                                    <div style={{ fontSize: 12, fontWeight: 800, color: '#7c2d12', marginLeft: 6 }}>Ưu tiên: {spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
-                              </div>
-                            </div>
-                            <div className="ld-acc-short">{getShortDesc(item)}</div>
-                          </div>
-
-                          {/* Status (horizontal) */}
-                          {/* FIX: use average scaled to 0..100 for the status bar (not percent change) */}
-                          <StatusIndicator subjectName={sub} percent={Math.min(100, Math.max(0, avg * 10))} showPercent={true} minVisiblePercent={0} compact={false} />
-
-                          <div className="ld-acc-right">
-                            <div className="ld-acc-hint">{item?.trend ? "Xu hướng" : ""}</div>
-                            <div className={`ld-chevron ${expanded ? "ld-chevron--open" : ""}`}>▶</div>
-                          </div>
-                        </div>
-
-                        {expanded && (
-                          <div className="ld-accordion-body">
-                            <div className="ld-badge-row">
-                              <div className="ld-badge">
-                                <TrendingUp size={14} />
-                                <span className="ld-badge-label">Xu hướng</span>
-                              </div>
-                              <strong className="ld-trend">{item?.trend || "Không có"}</strong>
-                            </div>
-
-                            <div className="ld-two">
-                              <div className="ld-field">
-                                <div className="ld-field-title">Điểm mạnh</div>
-                                <div className="ld-field-text">{item?.strength || "Chưa có"}</div>
-                              </div>
-                              <div className="ld-field">
-                                <div className="ld-field-title">Điểm yếu</div>
-                                <div className="ld-field-text">{item?.weakness || "Chưa có"}</div>
-                              </div>
-                            </div>
-
-                            <div className="ld-field">
-                              <div className="ld-field-title">Gợi ý</div>
-                              <div className="ld-field-text">{item?.suggestion || "Chưa có gợi ý cụ thể."}</div>
-                            </div>
-
-                            <div className="ld-actions">
-                              <button className="ld-btn" onClick={() => toast.info(`Mở đề xuất hành động cho ${item?.subjectName}`)}>Gợi ý hành động</button>
-                              <button className="ld-btn ld-btn--ghost" onClick={() => toast.info(`Sao chép tóm tắt ${item?.subjectName}`)}>Sao chép tóm tắt</button>
-                            </div>
-
-                            {/* show suggestion priority small bar */}
-                            <div style={{ marginTop: 12 }}>
-                              <div style={{ fontWeight: 700, marginBottom: 6 }}>Mức độ ưu tiên đề xuất</div>
-                              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                                <div style={{ minWidth: 48, fontWeight: 900 }}>{spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ height: 10, background: '#eef2ff', borderRadius: 8, overflow: 'hidden' }}>
-                                    <div className="ld-suggestion-fill" style={{ width: `${spRaw}%`, height: '100%', background: 'linear-gradient(90deg,#fb7185,#f97316)' }} />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="ld-empty">Không có dữ liệu phân tích môn học.</p>
-                )}
-              </div>
+             
             </>
           ) : (
             <p className="ld-empty">Chưa có phân tích nào.</p>

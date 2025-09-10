@@ -1,4 +1,3 @@
-// FILE: src/app/pages/neovana/components/SkillsCard.tsx
 import React from "react";
 import { Card, CardContent, Typography } from "@mui/material";
 import {
@@ -37,9 +36,9 @@ export default function SkillsCard({ skills }: Props) {
   }
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
+    <Card sx={{ borderRadius: "12px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}>
+      <CardContent> 
+        <Typography variant="h6" gutterBottom sx={{ fontSize: "1.2rem", color: "#4E81A8" }}>
           Kỹ năng cần cải thiện
         </Typography>
         <ResponsiveContainer width="100%" height={250}>
