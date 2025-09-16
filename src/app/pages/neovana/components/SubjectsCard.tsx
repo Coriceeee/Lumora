@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { BookOpen } from "lucide-react";
 import { SubjectToFocus } from "../../../../types/CareerDashboard";
+import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
 
 export interface SubjectsCardProps {
   subjects: SubjectToFocus[];
@@ -52,7 +53,7 @@ const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
+    <div className="grid gap-4 md:grid-cols-2 p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white shadow-lg hover:shadow-xl transition-all ease-in-out duration-300">
       {subjects.map((s, idx) => (
         <motion.div
           key={idx}

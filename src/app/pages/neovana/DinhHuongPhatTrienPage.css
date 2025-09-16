@@ -1,0 +1,227 @@
+
+:root {
+  --bg: #FAF7F2;
+  --text: #2D2D2D;
+  --text-muted: #5F6368;
+  --heading: #1F1F1F;
+
+  --primary: #FFCBA4;       /* cam đào pastel */
+  --primary-hover: #FFB183; /* hover ấm hơn */
+  --accent-soft: #F7F2EA;   /* nền hover dịu */
+
+  --title-warm: #6A5524;    /* nâu ấm cho heading phụ */
+  --title-gold: #8A6A2E;    /* vàng nâu dịu */
+
+  --border: #E6E0D8;
+  --card: #FFFFFF;
+
+  --radius: 16px;
+  --radius-sm: 10px;
+
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.14);
+
+  --focus-ring: 0 0 0 4px rgba(255, 203, 164, 0.35);
+}
+
+/* Toàn bộ trang */
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+.container {
+  width: 90%;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+/* Thẻ Card */
+.card {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  transition: transform .3s ease, box-shadow .3s ease;
+  margin-bottom: 20px;
+}
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+}
+.card-header {
+  font-size: 1.6rem;
+  color: var(--title-warm);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.card-body { font-size: 1rem; color: var(--text-muted); }
+.card-footer {
+  font-size: 0.9rem;
+  color: #6A6F76;
+  text-align: right;
+}
+
+/* Button Styles (không dùng xanh dương) */
+button {
+  padding: 14px 28px;
+  background-color: var(--primary);
+  color: #3A2A22;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color .25s ease, transform .12s ease, box-shadow .25s ease;
+  box-shadow: 0 8px 20px rgba(17,24,39,.07);
+}
+button:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+button:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
+
+/* Typography Enhancements */
+h1, h2 { font-size: 2rem; color: var(--heading); margin: 0 0 12px; }
+h3, h4 { font-size: 1.4rem; color: var(--text); margin: 0 0 8px; }
+p { font-size: 1rem; line-height: 1.8; }
+
+/* Form Styling */
+input, textarea, select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  color: #4A4F56;
+  background: var(--card);
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus-ring);
+}
+textarea { resize: vertical; }
+label { font-weight: 600; color: var(--text); }
+
+/* Careers Card */
+.career-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  background-color: var(--card);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.career-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+.career-title { font-size: 1.6rem; color: var(--title-warm); font-weight: 700; }
+.career-percentage { margin-top: 12px; }
+.linear-progress {
+  height: 10px;
+  border-radius: 5px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, var(--primary) 0%, #E8D8FF 100%); /* dịu – không xanh */
+}
+.career-description { font-size: 1.1rem; color: var(--text-muted); }
+.career-steps { font-size: 1rem; color: var(--text); }
+
+/* Certificates Card */
+.certificate-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  background-color: var(--card);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.certificate-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+.certificate-title { font-size: 1.4rem; color: #A86D4F; font-weight: 600; }
+.certificate-item {
+  font-size: 1rem;
+  color: #4A4F56;
+  font-weight: 500;
+  border-radius: 8px;
+  padding: 6px 8px;
+  transition: background-color .2s ease;
+}
+.certificate-item:hover { background-color: var(--accent-soft); }
+
+/* Skills Card */
+.skills-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  background-color: var(--card);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.skills-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+.skills-title { font-size: 1.6rem; color: var(--title-warm); font-weight: 700; }
+.pie-chart { width: 100%; height: 250px; }
+.skills-description { font-size: 1.1rem; color: var(--text-muted); }
+.skills-item {
+  font-size: 1.1rem;
+  color: #A86D4F;
+  margin-top: 12px;
+  transition: color .2s ease;
+}
+.skills-item:hover { color: var(--title-warm); }
+
+/* Subjects Card */
+.subjects-card {
+  padding: 24px;
+  border-radius: 18px;
+  background-color: var(--card);
+  box-shadow: var(--shadow);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.subjects-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+.subjects-title { font-size: 1.6rem; color: var(--title-gold); font-weight: 700; }
+.subjects-item {
+  font-size: 1.1rem;
+  color: #6B7280;
+  border-radius: 8px;
+  padding: 6px 8px;
+  transition: background-color .2s ease;
+}
+.subjects-item:hover { background-color: var(--accent-soft); }
+
+/* Suggestion Dialog */
+.dialog-title { font-size: 1.8rem; font-weight: 700; color: var(--heading); }
+.dialog-input {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  width: 100%;
+  font-size: 1.1rem;
+  background: var(--card);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.dialog-input:focus { border-color: var(--primary); box-shadow: var(--focus-ring); }
+.dialog-btn {
+  background-color: var(--primary);
+  color: #3A2A22;
+  padding: 14px 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: background-color .25s ease, transform .2s ease, box-shadow .25s ease;
+  box-shadow: 0 8px 20px rgba(17,24,39,.07);
+}
+.dialog-btn:hover { background-color: var(--primary-hover); transform: translateY(-1px); }
+
+/* Summary Card */
+.summary-card {
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  background-color: var(--card);
+  transition: transform .3s ease, box-shadow .3s ease;
+}
+.summary-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); }
+.summary-title { font-size: 1.6rem; color: var(--title-warm); font-weight: 700; }
+.summary-content { font-size: 1.1rem; color: #2F2F2F; }
+.summary-date { font-size: 1rem; color: #6A6F76; }
+

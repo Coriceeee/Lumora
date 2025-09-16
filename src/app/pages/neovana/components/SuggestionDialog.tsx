@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from "@mui/material";
+import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
 
 interface SuggestionDialogProps {
   open: boolean;
@@ -30,8 +31,8 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({ open, onClose, onSu
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <DialogTitle sx={{ fontSize: "1.3rem", color: "#2C3E50" }}>Nhập thông tin định hướng</DialogTitle>
-        <DialogContent dividers sx={{ backgroundColor: "#F0F7FF", borderRadius: "16px" }}>
+        <DialogTitle className="dialog-title">Nhập thông tin định hướng</DialogTitle>
+        <DialogContent dividers className="dialog-content">
           <TextField
             label="Năng lực / Thế mạnh"
             fullWidth
@@ -40,12 +41,7 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({ open, onClose, onSu
             minRows={2}
             value={strengths}
             onChange={(e) => setStrengths(e.target.value)}
-            sx={{
-              borderRadius: "8px",
-              backgroundColor: "#fff",
-              border: "1px solid #CCD6EB",
-              "&:focus": { borderColor: "#89C4E2" },
-            }}
+            className="dialog-input"
           />
           <TextField
             label="Sở thích"
@@ -55,12 +51,7 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({ open, onClose, onSu
             minRows={2}
             value={interests}
             onChange={(e) => setInterests(e.target.value)}
-            sx={{
-              borderRadius: "8px",
-              backgroundColor: "#fff",
-              border: "1px solid #CCD6EB",
-              "&:focus": { borderColor: "#89C4E2" },
-            }}
+            className="dialog-input"
           />
           <TextField
             label="Tính cách (tóm tắt)"
@@ -68,12 +59,7 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({ open, onClose, onSu
             margin="dense"
             value={personality}
             onChange={(e) => setPersonality(e.target.value)}
-            sx={{
-              borderRadius: "8px",
-              backgroundColor: "#fff",
-              border: "1px solid #CCD6EB",
-              "&:focus": { borderColor: "#89C4E2" },
-            }}
+            className="dialog-input"
           />
           <TextField
             label="Ước mơ / Vị trí mong muốn"
@@ -81,19 +67,14 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({ open, onClose, onSu
             margin="dense"
             value={dreamJob}
             onChange={(e) => setDreamJob(e.target.value)}
-            sx={{
-              borderRadius: "8px",
-              backgroundColor: "#fff",
-              border: "1px solid #CCD6EB",
-              "&:focus": { borderColor: "#89C4E2" },
-            }}
+            className="dialog-input"
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={onClose} color="inherit">
+          <Button onClick={onClose} color="inherit" className="dialog-btn">
             Hủy
           </Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary" sx={{ borderRadius: "30px", backgroundColor: "#A8D8FF", color: "#fff" }}>
+          <Button onClick={handleSubmit} variant="contained" color="primary" className="dialog-btn">
             Đồng ý
           </Button>
         </DialogActions>

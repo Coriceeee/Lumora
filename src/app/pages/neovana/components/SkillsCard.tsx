@@ -1,5 +1,7 @@
 import React from "react";
-import { Card, CardContent, Typography } from "@mui/material";
+import { Card, CardContent, Typography, List,
+  ListItem,
+  ListItemText, } from "@mui/material";
 import {
   PieChart,
   Pie,
@@ -9,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { SkillToImprove } from "@/types/CareerDashboard";
+import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
 
 export interface Skill {
   name: string;
@@ -41,7 +44,7 @@ export default function SkillsCard({ skills }: Props) {
         <Typography variant="h6" gutterBottom sx={{ fontSize: "1.2rem", color: "#4E81A8" }}>
           Kỹ năng cần cải thiện
         </Typography>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={280}>
           <PieChart>
             <Pie
               data={skills}
@@ -60,12 +63,22 @@ export default function SkillsCard({ skills }: Props) {
             <Legend />
           </PieChart>
         </ResponsiveContainer>
-        {skills.map((s, idx) => (
-          <Typography key={idx} variant="body2" sx={{ mt: 1 }}>
-            <strong>{s.name}</strong> — Priority {s.priority}{" "}
-            {s.reason && `(${s.reason})`}
-          </Typography>
-        ))}
+        <List>
+                  {skills.map((s, index) => (
+                    <ListItem key={index}>
+                      <ListItemText
+                        primary={`${s.name}`}
+                        secondary={`Ưu tiên: ${s.priority} | Lý do: ${s.reason}`}
+                        sx={{
+                          fontSize: "1rem",
+                          color: "#6b7280",
+                          fontWeight: "500",
+                        }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+
       </CardContent>
     </Card>
   );

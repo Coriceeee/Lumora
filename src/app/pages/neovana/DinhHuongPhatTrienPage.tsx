@@ -19,6 +19,9 @@ import CertificatesCard from "./components/CertificatesCard";
 import SubjectsCard from "./components/SubjectsCard";
 import SummaryCard from "./components/SummaryCard";
 import SuggestionDialog from "./components/SuggestionDialog";
+import './DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
+import './timeline.css'
+
 
 const userId = "user_fake_id_123456";
 
@@ -80,15 +83,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                     color="primary"
                     fullWidth
                     onClick={handleCreate}
-                    sx={{
-                      borderRadius: "30px",
-                      backgroundColor: "#A8D8FF",
-                      color: "#fff",
-                      "&:hover": {
-                        backgroundColor: "#7BB9E0",
-                      },
-                      transition: "all 0.3s ease-in-out", // Thêm hiệu ứng
-                    }}
+                    className="btn-create-dashboard hover:bg-blue-600 bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md transition-all ease-in-out duration-300"
                   >
                     Tạo Career Dashboard
                   </Button>
@@ -105,44 +100,71 @@ const DinhHuongPhatTrienPage: React.FC = () => {
 
           <div className="card mb-5">
             <div className="card-body">
-              <Typography variant="h6" sx={{ fontSize: "1.2rem", fontWeight: "600", color: "#4E81A8" }}>
+              <Typography variant="h6" className="dashboard-history-title">
                 Lịch sử Dashboard
               </Typography>
-              {dashboards.map((d) => (
-                <Button
-                  key={d.id}
-                  fullWidth
-                  variant={selected?.id === d.id ? "contained" : "outlined"}
-                  sx={{
-                    mt: 1,
-                    transition: "background-color 0.3s ease",
-                    "&:hover": {
-                      backgroundColor: "#D1E9FF", // Thêm hiệu ứng khi hover
-                    },
-                  }}
-                  onClick={() => setSelected(d)}
-                >
-                  {d.title || "Dashboard"} ({new Date(d.createdAt).toLocaleDateString()})
-                </Button>
-              ))}
+
+              <div className="neovana-timeline">
+                {dashboards.map((d) => {
+                  const isSelected = selected?.id === d.id;
+                  return (
+                    <div key={d.id} className="neovana-timeline-item">
+                      <span className="neovana-timeline-dot" />
+                      <button
+                        type="button"
+                        className={`neovana-timeline-btn ${isSelected ? "neovana-timeline-btn--selected" : ""}`}
+                        onClick={() => setSelected(d)}
+                      >
+                        <span className="neovana-timeline-title">{d.title || "Dashboard"}</span>
+                        <span className="neovana-timeline-date">
+                          {new Date(d.createdAt).toLocaleDateString()}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
+
         </div>
 
         <div className="col-xxl-8 gy-0 gy-xxl-8">
           {selected ? (
             <Box display="flex" flexDirection="column" gap={2}>
               <SummaryCard dashboard={selected} />
-              <CareersCard careers={selected.careers} />
-              <SkillsCard skills={mapSkills(selected.skillsToImprove || [])} />
-              <CertificatesCard certificates={selected.certificatesToAdd || []} />
-              <SubjectsCard subjects={selected.subjectsToFocus || []} />
+              <CareersCard careers={selected.careers} />              
+              
             </Box>
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
       </div>
+      <div className="row g-0 g-xl-5 g-xxl-8">
+        <div className="col-xxl-6 p-5">
+          {selected ? (
+            <SkillsCard skills={mapSkills(selected.skillsToImprove || [])} />
+          ) : (
+            <Typography>Chưa có dữ liệu.</Typography>
+          )}
+        </div>
+        <div className="col-xxl-6">
+           {selected ? (
+            <CertificatesCard certificates={selected.certificatesToAdd || []} />
+          ) : (
+            <Typography>Chưa có dữ liệu.</Typography>
+          )}
+        </div>
+      </div>
+      <div className="row g-0 g-xl-5 g-xxl-8">
+        {selected ? (
+            <SubjectsCard subjects={selected.subjectsToFocus || []} />
+          ) : (
+            <Typography>Chưa có dữ liệu.</Typography>
+          )}
+      </div>
+
 
       <SuggestionDialog
         open={dialogOpen}

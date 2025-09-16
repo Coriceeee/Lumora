@@ -1,0 +1,82 @@
+/* ======================
+   Timeline Styles
+   Pastel ấm – không xanh dương
+   ====================== */
+
+/* Container */
+.neovana-timeline {
+  position: relative;
+  padding-left: 28px; /* chừa chỗ cho line & dot */
+  margin-top: 10px;
+}
+
+/* Line */
+.neovana-timeline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 2px;
+  background-color: #E6E0D8; /* be dịu */
+}
+
+/* Item */
+.neovana-timeline-item {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+/* Dot */
+.neovana-timeline-dot {
+  position: absolute;
+  left: 3px;
+  top: 16px; /* canh giữa theo nút */
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border: 2px solid #FFB183; /* cam pastel */
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* Button */
+.neovana-timeline-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background-color: #fff;
+  color: #2D2D2D;
+  border: 1px solid #E6E0D8;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  transition: background-color 0.25s ease, transform 0.2s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.neovana-imeline-btn:hover {
+  background-color: #F7F2EA; /* hover dịu */
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+}
+
+.neovana-timeline-btn--selected {
+  background-color: #FFE7D6; /* chọn */
+  border-color: #FFCBA4;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.14);
+}
+
+/* Nội dung trong nút */
+.neovana-timeline-title {
+  font-weight: 600;
+  color: #1F1F1F;
+  margin-bottom: 2px;
+  margin-left: 10px;
+}
+
+.neovana-timeline-date {
+  font-size: 0.9rem;
+  color: #5F6368;
+}
