@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getAllCertificates,
   addCertificate,
-  deleteCertificate,
+  updateCertificate,
 } from "../../services/certificateService";
 import { Certificate } from "../../types/Certificate";
 
@@ -45,7 +45,7 @@ export default function CertificatesPage() {
     if (!id) return;
     if (!window.confirm("Bạn có chắc muốn xóa chứng chỉ này?")) return;
     try {
-      await deleteCertificate(id);
+      await updateCertificate(id, { deleted: true });
       fetchCertificates();
     } catch (error) {
       alert("Lỗi khi xóa chứng chỉ.");
@@ -190,7 +190,7 @@ export default function CertificatesPage() {
                   el.style.boxShadow =
                     "0 0 15px 2px rgba(106, 17, 203, 0.15), 0 4px 20px rgba(37, 117, 252, 0.15)";
                 }}
-                title={cert.description || "Không có mô tả"}
+                title={String(cert.description || "Không có mô tả")}
               >
                 <div className="card-body d-flex flex-column">
                   <div className="d-flex justify-content-between align-items-center mb-3">

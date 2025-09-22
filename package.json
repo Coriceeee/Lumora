@@ -8,6 +8,7 @@
     "@emotion/styled": "^11.14.1",
     "@fortawesome/fontawesome-free": "^5.15.1",
     "@manaflair/redux-batch": "^1.0.0",
+    "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
     "@popperjs/core": "^2.6.0",
     "@reduxjs/toolkit": "^1.5.0",

@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 import { CertificateToAdd } from "../../../../types/CareerDashboard";
 import ApexCharts from "react-apexcharts"; // Import ApexCharts for donut chart
-import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
 
 interface Props {
   certificates: CertificateToAdd[];

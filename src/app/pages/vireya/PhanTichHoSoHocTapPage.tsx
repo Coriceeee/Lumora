@@ -46,9 +46,7 @@ const {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  AreaChart,
-  Area,
+  Tooltip
 } = Recharts as unknown as any;
 
 // alias for Tooltip when we want a distinct variable name

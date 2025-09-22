@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { BookOpen } from "lucide-react";
 import { SubjectToFocus } from "../../../../types/CareerDashboard";
-import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
+
 
 export interface SubjectsCardProps {
   subjects: SubjectToFocus[];

@@ -2,7 +2,6 @@
 
 import { db } from "../firebase/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { LearningResult } from "../types/LearningResult";
 import { callGeminiForDashboard } from "./geminiDashboardService";
 import { getAllScoreTypes } from "./scoreTypeService";
 import { getAllSubjects } from "./subjectService";

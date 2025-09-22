@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { SkillToImprove } from "@/types/CareerDashboard";
-import '../DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
+
 
 export interface Skill {
   name: string;

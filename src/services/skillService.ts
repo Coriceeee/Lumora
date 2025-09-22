@@ -1,32 +1,36 @@
-import { db } from "../firebase/firebase";
+// src/services/skillService.ts
 import {
-  collection,
-  addDoc,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc,
+  collection, getDocs, query, orderBy, addDoc, doc, updateDoc, deleteDoc,
 } from "firebase/firestore";
-import { Skill } from "../types/Skill";
+import { db } from "../firebase/firebase";
+import type { Skill } from "../types/Skill";
 
-const skillsCollection = collection(db, "skills");
+const COL = "skills";
 
-export const addSkill = async (skill: Skill) => {
-  return await addDoc(skillsCollection, skill);
-};
+export async function getAllSkills(): Promise<Skill[]> {
+  const q = query(collection(db, COL), orderBy("name", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Skill, "id">) }));
+}
 
-export const getAllSkills = async (): Promise<Skill[]> => {
-  const snapshot = await getDocs(skillsCollection);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Skill));
-};
+export async function addSkill(payload: Skill): Promise<string> {
+  const { createdAt, updatedAt, ...rest } = payload;
+  const ref = await addDoc(collection(db, COL), {
+    ...rest,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  });
+  return ref.id;
+}
 
-export const updateSkill = async (id: string, skill: Skill) => {
-  const skillRef = doc(db, "skills", id);
-  const { id: _, ...skillWithoutId } = skill;
-  return await updateDoc(skillRef, skillWithoutId);
-};
+export async function updateSkill(id: string, patch: Partial<Skill>) {
+  await updateDoc(doc(db, COL, id), {
+    ...patch,
+    updatedAt: Date.now(),
+  });
+}
 
-export const deleteSkill = async (id: string) => {
-  const skillRef = doc(db, "skills", id);
-  return await deleteDoc(skillRef);
-};
+// ✅ BỔ SUNG HÀM NÀY
+export async function deleteSkill(id: string) {
+  await deleteDoc(doc(db, COL, id));
+}

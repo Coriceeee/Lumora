@@ -19,7 +19,6 @@ import CertificatesCard from "./components/CertificatesCard";
 import SubjectsCard from "./components/SubjectsCard";
 import SummaryCard from "./components/SummaryCard";
 import SuggestionDialog from "./components/SuggestionDialog";
-import './DinhHuongPhatTrienPage.css';  // Đảm bảo đường dẫn đúng
 import './timeline.css'
 
 

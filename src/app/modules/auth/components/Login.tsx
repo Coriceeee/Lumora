@@ -5,8 +5,22 @@ import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useFormik } from "formik";
 import * as auth from "../redux/AuthRedux";
-import { login } from "../redux/AuthCRUD";
 import { toAbsoluteUrl } from "../../../../_start/helpers";
+
+// Firebase
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  getIdToken,
+} from "firebase/auth";
+import { authFb, db, googleProvider } from "../../../../firebase/firebase";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  updateDoc,
+} from "firebase/firestore";
 
 const loginSchema = Yup.object().shape({
   email: Yup.string()
@@ -21,38 +35,124 @@ const loginSchema = Yup.object().shape({
 });
 
 const initialValues = {
-  email: "admin@demo.com",
-  password: "demo",
+  email: "",
+  password: "",
 };
 
-/*
-  Formik+YUP+Typescript:
-  https://jaredpalmer.com/formik/docs/tutorial#getfieldprops
-  https://medium.com/@maurice.de.beijer/yup-validation-and-typescript-and-formik-6c342578a20e
-*/
+async function ensureUserInFirestore(user: {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  providerId?: string;
+}) {
+  const ref = doc(db, "users", user.uid);
+  const snap = await getDoc(ref);
+
+  // payload cơ bản cho user
+  const baseProfile = {
+    uid: user.uid,
+    email: user.email ?? "",
+    displayName: user.displayName ?? "",
+    photoURL: user.photoURL ?? "",
+    providerId: user.providerId ?? "password",
+    updatedAt: serverTimestamp(),
+  };
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      ...baseProfile,
+      createdAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+      // bạn có thể thêm các trường mặc định ở đây (role, status, v.v.)
+      role: "user",
+      status: "active",
+    });
+  } else {
+    // cập nhật mốc đăng nhập
+    await updateDoc(ref, {
+      ...baseProfile,
+      lastLoginAt: serverTimestamp(),
+    });
+  }
+
+  // trả về dữ liệu tối thiểu (để lưu vào redux nếu muốn)
+  return { ...baseProfile };
+}
 
 export function Login() {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
+
   const formik = useFormik({
     initialValues,
     validationSchema: loginSchema,
-    onSubmit: (values, { setStatus, setSubmitting }) => {
+    onSubmit: async (values, { setStatus, setSubmitting }) => {
+      setStatus(undefined);
       setLoading(true);
-      setTimeout(() => {
-        login(values.email, values.password)
-          .then(({ data: { accessToken } }) => {
-            setLoading(false);
-            dispatch(auth.actions.login(accessToken));
-          })
-          .catch(() => {
-            setLoading(false);
-            setSubmitting(false);
-            setStatus("The login detail is incorrect");
-          });
-      }, 1000);
+
+      try {
+        // 1) Đăng nhập Firebase (email/password)
+        const cred = await signInWithEmailAndPassword(
+          authFb,
+          values.email,
+          values.password
+        );
+
+        const user = cred.user;
+
+        // 2) Đảm bảo user có trong Firestore (tạo mới nếu chưa tồn tại)
+        await ensureUserInFirestore({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          providerId: user.providerData?.[0]?.providerId ?? "password",
+        });
+
+        // 3) Lấy ID token để dùng cho Redux/Auth (giữ tương thích action cũ nhận token)
+        const idToken = await getIdToken(user, true);
+
+        setLoading(false);
+        // Tuỳ action login của bạn; nếu chỉ nhận token thì như sau:
+        dispatch(auth.actions.login(idToken));
+        // Nếu bạn có action lưu profile, có thể dispatch thêm (tùy Redux setup):
+        // dispatch(auth.actions.setUser({ uid: user.uid, email: user.email, ... }))
+
+      } catch (err) {
+        console.error(err);
+        setLoading(false);
+        setSubmitting(false);
+        setStatus("The login detail is incorrect");
+      }
     },
   });
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      const cred = await signInWithPopup(authFb, googleProvider);
+      const user = cred.user;
+
+      await ensureUserInFirestore({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+        providerId: user.providerData?.[0]?.providerId ?? "google.com",
+      });
+
+      const idToken = await getIdToken(user, true);
+
+      setLoading(false);
+      dispatch(auth.actions.login(idToken));
+      // dispatch(auth.actions.setUser({...})) // nếu có
+    } catch (err) {
+      console.error(err);
+      setLoading(false);
+      formik.setStatus("Google sign-in failed");
+    }
+  };
 
   return (
     <form
@@ -63,7 +163,9 @@ export function Login() {
     >
       {/* begin::Title */}
       <div className="pb-lg-15">
-        <h3 className="fw-bolder text-dark display-6">Chào mừng bạn đến với Lumora</h3>
+        <h3 className="fw-bolder text-dark display-6">
+          Chào mừng bạn đến với Lumora
+        </h3>
         <div className="text-muted fw-bold fs-3">
           New Here?{" "}
           <Link
@@ -75,7 +177,7 @@ export function Login() {
           </Link>
         </div>
       </div>
-      {/* begin::Title */}
+      {/* end::Title */}
 
       {formik.status ? (
         <div className="mb-lg-15 alert alert-danger">
@@ -84,13 +186,12 @@ export function Login() {
       ) : (
         <div className="mb-lg-15 alert alert-info">
           <div className="alert-text ">
-            Use credentials <strong>admin@demo.com</strong> and{" "}
-            <strong>demo</strong> to sign in.
+            Đăng nhập bằng email/password hoặc Google.
           </div>
         </div>
       )}
 
-      {/* begin::Form group */}
+      {/* Email */}
       <div className="v-row mb-10 fv-plugins-icon-container">
         <label className="form-label fs-6 fw-bolder text-dark">Email</label>
         <input
@@ -99,9 +200,7 @@ export function Login() {
           className={clsx(
             "form-control form-control-lg form-control-solid",
             { "is-invalid": formik.touched.email && formik.errors.email },
-            {
-              "is-valid": formik.touched.email && !formik.errors.email,
-            }
+            { "is-valid": formik.touched.email && !formik.errors.email }
           )}
           type="email"
           name="email"
@@ -113,9 +212,8 @@ export function Login() {
           </div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group */}
+      {/* Password */}
       <div className="fv-row mb-10 fv-plugins-icon-container">
         <div className="d-flex justify-content-between mt-n5">
           <label className="form-label fs-6 fw-bolder text-dark pt-5">
@@ -137,11 +235,10 @@ export function Login() {
           className={clsx(
             "form-control form-control-lg form-control-solid",
             {
-              "is-invalid": formik.touched.password && formik.errors.password,
+              "is-invalid":
+                formik.touched.password && formik.errors.password,
             },
-            {
-              "is-valid": formik.touched.password && !formik.errors.password,
-            }
+            { "is-valid": formik.touched.password && !formik.errors.password }
           )}
         />
         {formik.touched.password && formik.errors.password && (
@@ -150,27 +247,29 @@ export function Login() {
           </div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Action */}
+      {/* Actions */}
       <div className="pb-lg-0 pb-5">
         <button
           type="submit"
           id="kt_login_signin_form_submit_button"
           className="btn btn-primary fw-bolder fs-6 px-8 py-4 my-3 me-3"
-          disabled={formik.isSubmitting || !formik.isValid}
+          disabled={formik.isSubmitting || !formik.isValid || loading}
         >
           {!loading && <span className="indicator-label">Sign In</span>}
           {loading && (
             <span className="indicator-progress" style={{ display: "block" }}>
-              Please wait...{" "}
+              Please wait...
               <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
             </span>
           )}
         </button>
+
         <button
           type="button"
+          onClick={handleGoogleSignIn}
           className="btn btn-light-primary fw-bolder px-8 py-4 my-3 fs-6 mr-3"
+          disabled={loading}
         >
           <img
             src={toAbsoluteUrl("/media/svg/brand-logos/google-icon.svg")}
@@ -180,7 +279,6 @@ export function Login() {
           Sign in with Google
         </button>
       </div>
-      {/* end::Action */}
     </form>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { shallowEqual, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { BrowserRouter, Route, Switch } from "react-router-dom";
 import { RootState } from "../setup";
 import { ThemeProvider } from "../_start/layout/core";
@@ -13,9 +13,12 @@ type Props = {
 };
 
 const App: React.FC<Props> = ({ basename }) => {
-  const isAuthorized = useSelector<RootState>(
-    ({ auth }) => auth.user,
-    shallowEqual
+  // ✅ Xem là đã đăng nhập nếu có token HOẶC có user trong Redux
+  const isAuthorized = useSelector<RootState, boolean>((state) =>
+    Boolean(
+      state.auth?.accessToken || // nếu bạn lưu ở đây
+      state.auth?.user           // hoặc bạn đã set user
+    )
   );
 
   return (
@@ -28,11 +31,9 @@ const App: React.FC<Props> = ({ basename }) => {
               <PublicRoutes />
             </Route>
           ) : (
-            <>
-              <MasterLayout>
-                <PrivateRoutes />
-              </MasterLayout>
-            </>
+            <MasterLayout>
+              <PrivateRoutes />
+            </MasterLayout>
           )}
         </Switch>
       </ThemeProvider>
