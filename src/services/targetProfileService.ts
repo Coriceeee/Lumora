@@ -1,82 +1,39 @@
-// src/services/targetProfileService.ts
 import {
   collection, query, where, orderBy, limit, getDocs,
 } from "firebase/firestore";
 // Update the import path below to the correct location of your firebase config file
 import { db } from "../firebase/firebase";
-import type { TargetProfile } from "../types/TargetProfile";
+import type { CareerDashboard } from "../types/CareerDashboard";
 
-const COLLECTION = "target_profiles";
+const COLLECTION = "careerDashboards"; // Tên của collection chứa CareerDashboard
 
-/** Lấy danh sách hồ sơ mục tiêu của user + (tùy chọn) preset global */
-export async function getTargetProfilesByUser(
-  userId: string,
-  includeGlobal = true
-): Promise<TargetProfile[]> {
+/** Lấy danh sách các career trong CareerDashboard mới nhất của user */
+export async function getCareersInLatestDashboard(userId: string): Promise<string[]> {
   const colRef = collection(db, COLLECTION);
 
-  const qUser = query(
+  // Truy vấn để lấy CareerDashboard mới nhất của user
+  const q = query(
     colRef,
     where("userId", "==", userId),
-    orderBy("updatedAt", "desc"),
+    orderBy("createdAt", "desc"),
+    limit(1)
   );
-  const result: TargetProfile[] = [];
-  const snapUser = await getDocs(qUser);
-  snapUser.forEach((doc) => {
-    const data = doc.data() as Omit<TargetProfile, "id">;
-    result.push({ id: doc.id, ...data });
-  });
 
-  if (includeGlobal) {
-    const qGlobal = query(
-      colRef,
-      where("isGlobal", "==", true),
-      orderBy("updatedAt", "desc"),
-    );
-    const snapGlobal = await getDocs(qGlobal);
-    snapGlobal.forEach((doc) => {
-      // tránh trùng
-      if (!result.find((r) => r.id === doc.id)) {
-        const data = doc.data() as Omit<TargetProfile, "id">;
-        result.push({ id: doc.id, ...data });
-      }
-    });
+  const snap = await getDocs(q);
+  const result: string[] = [];
+
+  // Nếu tìm thấy CareerDashboard của user
+  if (!snap.empty) {
+    const doc = snap.docs[0];
+    const data = doc.data() as CareerDashboard;
+
+    // Lấy danh sách career từ CareerDashboard
+    if (data.careers && Array.isArray(data.careers)) {
+      data.careers.forEach(career => {
+        result.push(career.name);  // Lấy tên career (có thể thay đổi nếu muốn lấy thêm thông tin)
+      });
+    }
   }
 
   return result;
-}
-
-/** Lấy 1 hồ sơ mặc định: ưu tiên của user, nếu không có thì global (mới nhất) */
-export async function getDefaultTargetProfile(
-  userId: string
-): Promise<TargetProfile | null> {
-  const colRef = collection(db, COLLECTION);
-
-  const qUser = query(
-    colRef,
-    where("userId", "==", userId),
-    orderBy("updatedAt", "desc"),
-    limit(1),
-  );
-  const snapUser = await getDocs(qUser);
-  if (!snapUser.empty) {
-    const doc = snapUser.docs[0];
-    const data = doc.data() as Omit<TargetProfile, "id">;
-    return { id: doc.id, ...data };
-  }
-
-  const qGlobal = query(
-    colRef,
-    where("isGlobal", "==", true),
-    orderBy("updatedAt", "desc"),
-    limit(1),
-  );
-  const snapGlobal = await getDocs(qGlobal);
-  if (!snapGlobal.empty) {
-    const doc = snapGlobal.docs[0];
-    const data = doc.data() as Omit<TargetProfile, "id">;
-    return { id: doc.id, ...data };
-  }
-
-  return null;
 }

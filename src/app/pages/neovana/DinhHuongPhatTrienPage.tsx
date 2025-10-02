@@ -13,12 +13,12 @@ import {
   CareerDashboard,
   SkillToImprove,
 } from "../../../types/CareerDashboard";
-import CareersCard from "./components/CareersCard";
-import SkillsCard, { Skill } from "./components/SkillsCard";
-import CertificatesCard from "./components/CertificatesCard";
-import SubjectsCard from "./components/SubjectsCard";
-import SummaryCard from "./components/SummaryCard";
-import SuggestionDialog from "./components/SuggestionDialog";
+import CareersCard from "./components_dinhhuong/CareersCard";
+import SkillsCard, { Skill } from "./components_dinhhuong/SkillsCard";
+import CertificatesCard from "./components_dinhhuong/CertificatesCard";
+import SubjectsCard from "./components_dinhhuong/SubjectsCard";
+import SummaryCard from "./components_dinhhuong/SummaryCard";
+import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
 import './timeline.css'
 
 
