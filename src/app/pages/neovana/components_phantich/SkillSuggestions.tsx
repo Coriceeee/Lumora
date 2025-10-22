@@ -1,75 +1,77 @@
-// src/app/pages/neovana/components/phantich/SkillEvaluation.tsx
+// src/app/pages/neovana/components_phantich/SkillSuggestions.tsx
 import * as React from "react";
-import {
-  Card, CardHeader, CardContent, Stack,
-  Typography, Chip, LinearProgress
-} from "@mui/material";
-import { ensureArray } from "../utils/ensureArray";
+import { Card, CardHeader, CardContent, Stack, Typography, Chip, Button, Divider } from "@mui/material";
 
-export interface SkillEvalItem {
-  name: string;
-  currentScore: number; // 0–100
-  relevance: number;    // 0–100
-  fitLevel: "Rất phù hợp" | "Phù hợp" | "Trung bình" | "Chưa đạt";
-  comment: string;
+export interface SkillSuggestionItem {
+  skillName: string;
+  priority?: "High" | "Medium" | "Low";
+  detail?: string;
+  type?: string; // để lọc
 }
 
-export default function SkillEvaluation(props: {
-  data: SkillEvalItem[] | SkillEvalItem | null | undefined;
-}) {
-  const list = ensureArray<SkillEvalItem>(props.data);
+type Props = {
+  data?: SkillSuggestionItem[] | SkillSuggestionItem | null;
+  onAdd?: (index: number) => void; // callback khi click "Thêm vào"
+};
+
+export default function SkillSuggestions({ data, onAdd }: Props) {
+  const list = Array.isArray(data) ? data : data ? [data] : [];
+  const [local, setLocal] = React.useState<SkillSuggestionItem[]>(list);
+
+  React.useEffect(() => setLocal(list), [data]);
+
+  const handleAdd = (idx: number) => {
+    if (onAdd) onAdd(idx);
+    setLocal(prev => {
+      const copy = [...prev];
+      if (copy[idx]) copy.splice(idx, 1); // xóa skill vừa thêm
+      return copy;
+    });
+  };
+
+  if (!local.length) {
+    return (
+      <Card sx={{ borderRadius: 3 }}>
+        <CardContent>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>Không có gợi ý kỹ năng.</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card sx={{ borderRadius: 3 }}>
-      <CardHeader title="Đánh giá Kỹ năng" subheader="Mức độ đáp ứng cho mục tiêu" />
+      <CardHeader title="Gợi ý Kỹ năng" subheader="Bổ sung khoảng trống" />
       <CardContent>
-        {list.length === 0 ? (
-          <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            Không có dữ liệu kỹ năng.
-          </Typography>
-        ) : (
-          <Stack spacing={1.5}>
-            {list.map((it: SkillEvalItem, idx: number) => (
-              <Stack key={`${it.name}-${idx}`} spacing={0.75}>
-                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-                  <Typography variant="subtitle2">{it.name}</Typography>
-                  <Chip
-                    size="small"
-                    label={it.fitLevel}
-                    color={
-                      it.fitLevel === "Rất phù hợp" ? "success" :
-                      it.fitLevel === "Phù hợp" ? "primary" :
-                      it.fitLevel === "Trung bình" ? "warning" : "default"
-                    }
-                  />
+        <Stack spacing={1.5}>
+          {local.map((item, idx) => (
+            <Stack key={`${item.skillName}-${idx}`} spacing={0.5}>
+              <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <div>
+                  <Typography variant="subtitle2">{item.skillName}</Typography>
+                  {item.detail && <Typography variant="body2" sx={{ opacity: 0.8 }}>{item.detail}</Typography>}
+                </div>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {item.priority && (
+                    <Chip
+                      size="small"
+                      label={
+                        item.priority === "High" ? "Ưu tiên cao" :
+                        item.priority === "Medium" ? "Ưu tiên trung bình" : "Ưu tiên thấp"
+                      }
+                      color={item.priority === "High" ? "error" :
+                             item.priority === "Medium" ? "warning" : "default"}
+                    />
+                  )}
+                  <Button size="small" variant="outlined" color="primary" onClick={() => handleAdd(idx)}>
+                    Thêm vào
+                  </Button>
                 </Stack>
-
-                <Typography variant="caption">
-                  Mức hiện có: {Math.round(Number(it.currentScore))} / 100
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={Number.isFinite(Number(it.currentScore)) ? Number(it.currentScore) : 0}
-                />
-
-                <Typography variant="caption" sx={{ mt: 0.5 }}>
-                  Liên quan mục tiêu: {Math.round(Number(it.relevance))} / 100
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={Number.isFinite(Number(it.relevance)) ? Number(it.relevance) : 0}
-                  color="secondary"
-                />
-
-                {it.comment && (
-                  <Typography variant="body2" sx={{ mt: 0.5, opacity: 0.85 }}>
-                    {it.comment}
-                  </Typography>
-                )}
               </Stack>
-            ))}
-          </Stack>
-        )}
+              <Divider />
+            </Stack>
+          ))}
+        </Stack>
       </CardContent>
     </Card>
   );

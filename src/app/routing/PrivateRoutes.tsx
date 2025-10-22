@@ -7,17 +7,21 @@ import { MenuTestPage } from "../pages/MenuTestPage";
 import DanhMucLoaiDiem from "../pages/DanhMucLoaiDiem";
 import DanhMucMonHoc from "../pages/DanhMucMonHoc";
 import DanhMucKyNang from "../pages/DanhMucKyNang";
-import DanhMucKhaoSat from "../pages/DanhMucKhaoSat";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
+
 import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
 import PhanTichHoSoHocTapPage from "../pages/vireya/PhanTichHoSoHocTapPage";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
+
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
-import Step1_JournalPage from "../pages/ayura/Step1_JournalPage";
 import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
-import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage"
+import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
+
 import VoidZone from "../pages/zenora/VoidZone";
+
+import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
+import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -27,6 +31,7 @@ export function PrivateRoutes() {
     () => import("../modules/general/GeneralPageWrapper")
   );
   const DocsPageWrapper = lazy(() => import("../modules/docs/DocsPageWrapper"));
+
   return (
     <Suspense fallback={<FallbackView />}>
       <Switch>
@@ -39,7 +44,6 @@ export function PrivateRoutes() {
         <Route path="/danh-muc/loai-diem" component={DanhMucLoaiDiem} />
         <Route path="/danh-muc/mon-hoc" component={DanhMucMonHoc} />
         <Route path="/danh-muc/chung-chi" component={DanhMucChungChi} />
-        <Route path="/danh-muc/khao-sat" component={DanhMucKhaoSat} />
         <Route path="/danh-muc/ky-nang" component={DanhMucKyNang} />
 
         <Route path="/vireya/ket-qua-hoc-tap" component={KetQuaHocTapForm} />
@@ -51,12 +55,18 @@ export function PrivateRoutes() {
         <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
         <Route path="/neovana/dinh-huong-phat-trien" component={DinhHuongPhatTrien} />
 
-
-        <Route path="/ayura/nhat-ky-chua-lanh" component={Step1_JournalPage} />
+        {/* ⬇️ SỬA 2: bọc route Ayura bằng Provider */}
+        <Route
+          path="/ayura/vuon-chua-lanh"
+          render={() => (
+            <AyuraCoreProvider>
+              <MindfulGardenComponent />
+            </AyuraCoreProvider>
+          )}
+        />
 
         <Route path="/zenora/void-zone" component={VoidZone} />
 
-      
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />
         <Redirect to="dashboard" />

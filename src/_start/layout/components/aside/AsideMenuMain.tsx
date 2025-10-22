@@ -43,10 +43,7 @@ export function AsideMenuMain() {
           AYURA (Vườn chữa lành)
         </h4>
       </div>
-      <AsideMenuItem to="/ayura/nhat-ky-chua-lanh" title="Nhật ký chữa lành" icon="fas fa-book-open text-warning px-2" />
-      <AsideMenuItem to="/ayura/nguyen-lieu-cham-cay" title="Nguyên liệu chăm cây" icon="fas fa-leaf text-warning px-2" />
-      <AsideMenuItem to="/ayura/tao-nguyen-lieu" title="Tạo nguyên liệu" icon="fas fa-flask text-warning px-2" />
-      <AsideMenuItem to="/ayura/cay-chua-lanh" title="Cây chữa lành" icon="fas fa-tree text-warning px-2" />
+      <AsideMenuItem to="/ayura/vuon-chua-lanh" title="Vườn chữa lành" icon="fas fa-book-open text-warning px-2" />
 
       {/* ZENORA */}
       <div className="menu-item mt-10">
