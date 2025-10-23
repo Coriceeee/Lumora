@@ -563,7 +563,7 @@ const LearningDashboardPage: React.FC = () => {
             {/* begin::Header */}
             <div className="card-header align-items-center border-0 mt-5">
               <h3 className="card-title align-items-start flex-column">
-                <span className="fw-bolder text-dark fs-3">Lịch sử cập nhật</span>
+                <span className="fw-bolder text-dark fs-3">Quá trình học tập</span>
                 <span className="text-muted mt-2 fw-bold fs-6">Nhật ký hoạt động</span>
               </h3>
               <div className="card-toolbar">

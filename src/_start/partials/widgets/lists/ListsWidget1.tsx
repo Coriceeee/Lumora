@@ -1,9 +1,9 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useEffect, useState } from "react";
 import { KTSVG } from "../../../helpers";
-import { Dropdown1 } from "../../content/dropdown/Dropdown1";
 import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
 import { LearningDashboard } from "../../../../types/LearningDashboard";
+import { useHistory } from "react-router-dom";
 
 /**
  * Safe helper: coerce Firestore Timestamp | Date | string | number into Date | undefined
@@ -41,6 +41,7 @@ type Props = {
 const ListsWidget1: React.FC<Props> = ({ className }) => {
   const userId = "user_fake_id_123456";
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
+const history = useHistory();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -49,31 +50,27 @@ const ListsWidget1: React.FC<Props> = ({ className }) => {
     };
     fetchData();
   }, [userId]);
-
   return (
     <div className={`card ${className}`}>
       {/* begin::Header */}
       <div className="card-header align-items-center border-0 mt-5">
         <h3 className="card-title align-items-start flex-column">
-          <span className="fw-bolder text-dark fs-3">Timeline</span>
+          <span className="fw-bolder text-dark fs-3">Quá trình học tập</span>
           <span className="text-muted mt-2 fw-bold fs-6">
-            Updates & notifications
+            Cập nhật & thông báo
           </span>
         </h3>
         <div className="card-toolbar">
-          <button
-            type="button"
-            className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
-            data-kt-menu-trigger="click"
-            data-kt-menu-placement="bottom-end"
-            data-kt-menu-flip="top-end"
-          >
-            <KTSVG
-              path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
-              className="svg-icon-1"
-            />
-          </button>
-          <Dropdown1 />
+            <button
+          type="button"
+          className="btn btn-sm btn-icon btn-color-primary btn-active-light-primary"
+          onClick={() => history.push("/vireya/danh-gia-trinh-do")}
+        >
+          <KTSVG
+            path="/media/icons/duotone/Navigation/Arrow-right.svg"
+            className="svg-icon-1"
+          />
+        </button>
         </div>
       </div>
       {/* end::Header */}

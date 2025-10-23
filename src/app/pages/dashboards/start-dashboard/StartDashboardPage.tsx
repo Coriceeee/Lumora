@@ -1,18 +1,39 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   EngageWidget5,
   ListsWidget1,
-  StatsWidget1,
-  StatsWidget2,
-  TablesWidget1,
   TablesWidget2,
 } from "../../../../_start/partials/widgets";
 import { CreateAppModal } from "../_modals/create-app-stepper/CreateAppModal";
+import CareersCard from "./CareersCard";
+import { CareerDashboard } from "../../../../types/CareerDashboard";
+import { getCareerDashboardsByUser } from "../../../../services/careerDashboardService";
+import KeySubjectsCard from "./KeySubjectsCard";
+import { LearningDashboard } from "../../../../types/LearningDashboard";
+import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
 
 export const StartDashboardPage: React.FC = () => {
+  const userId = "user_fake_id_123456"; // test id (thay bằng động nếu cần)
   const [show, setShow] = useState(false);
+  const [selectedCareerDashboard, setSelectedCareerDashboard] = useState<CareerDashboard | null>(null);
+  const [selectedLearningDashboard, setSelectedLearningDashboard] = useState<LearningDashboard | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const loadCareerDashboards = async () => {
+    const data = await getCareerDashboardsByUser();    
+    if (data && data.length > 0) setSelectedCareerDashboard(data[0]);
+  };
+  const loadLearningDashboards = async () => {
+    const data = await getLearningDashboardsByUser(userId);    
+    if (data && data.length > 0) setSelectedLearningDashboard(data[0]);
+  };
+
+   useEffect(() => {
+      loadCareerDashboards();
+      loadLearningDashboards()
+    }, []);
   return (
     <>
       {/* begin::Row */}
@@ -35,19 +56,7 @@ export const StartDashboardPage: React.FC = () => {
         </div>
 
         <div className="col-xl-8">
-          <TablesWidget1 className="card-stretch mb-5 mb-xxl-8" />
-        </div>
-      </div>
-      {/* end::Row */}
-
-      {/* begin::Row */}
-      <div className="row g-0 g-xl-5 g-xxl-8">
-        <div className="col-xl-4">
-          <StatsWidget1 className="card-stretch mb-5 mb-xxl-8" />
-        </div>
-
-        <div className="col-xl-8">
-          <StatsWidget2 className="card-stretch mb-5 mb-xxl-8" />
+          <CareersCard careers={selectedCareerDashboard?.careers || [] } />
         </div>
       </div>
       {/* end::Row */}
@@ -59,7 +68,7 @@ export const StartDashboardPage: React.FC = () => {
         </div>
 
         <div className="col-xl-8">
-          <TablesWidget2 className="card-stretch mb-5 mb-xxl-8" />
+          <KeySubjectsCard  selectedDashboard={selectedLearningDashboard} />
         </div>
       </div>
       {/* end::Row */}
