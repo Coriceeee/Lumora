@@ -1,0 +1,189 @@
+/* Bầu trời với độ cao cố định */
+.sky {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: url('/public/images/clouds/bau_troi.webp') no-repeat center center;
+  background-size: cover;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hiệu ứng chung cho đám mây */
+.cloud {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #444;
+  padding: 35px 55px;
+  box-shadow: 0px 18px 25px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.3s ease-in-out, opacity 1s ease-out;
+  filter: blur(0.5px);
+  animation: floatCloud 10s infinite ease-in-out alternate;
+  border-radius: 90px;
+  min-width: 280px;
+  min-height: 160px;
+  width: auto;
+  height: auto;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cloud:hover {
+  transform: scale(1.2);
+  filter: blur(0px);
+  box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal nội dung */
+.result {
+  position: absolute;
+  bottom: 20px;
+  left: 40%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 30px 55px;
+  border-radius: 35px;
+  box-shadow: 0 18px 25px rgba(0, 0, 0, 0.3);
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  animation: fadeIn 0.7s ease-in-out;
+  text-align: center;
+}
+
+/* Hiệu ứng xuất hiện */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+/* Nút thả tim ❤️ */
+.like-button {
+  background: none;
+  border: none;
+  color: #ff4d6d;
+  font-size: 20px;
+  cursor: pointer;
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, color 0.3s;
+}
+
+.like-button:hover {
+  transform: scale(1.2);
+  color: #ff1f4a;
+}
+
+.like-button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Nút đóng modal */
+.close-modal {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #ff1f4a;
+  cursor: pointer;
+}
+
+/* Hiệu ứng chung cho đám mây */
+.cloud {
+  position: absolute;
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: #444;
+  padding: 35px 55px;
+  box-shadow: 0px 18px 25px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.3s ease-in-out, opacity 1s ease-out;
+  filter: blur(0.5px);
+  animation: floatCloud 10s infinite ease-in-out alternate;
+  border-radius: 90px;
+  min-width: 280px;
+  min-height: 160px;
+  width: auto;
+  height: auto;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cloud:hover {
+  transform: scale(1.2);
+  filter: blur(0px);
+  box-shadow: 0px 20px 30px rgba(0, 0, 0, 0.3);
+}
+
+.cloud-title {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 12px;
+  border-radius: 12px;
+  box-shadow: 0px 6px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Từng loại đám mây */
+.cloud1, .cloud2, .cloud3 {
+  background-size: contain;
+  background-repeat: no-repeat;
+  width: auto;
+  height: auto;
+  padding: 35px 60px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+
+.cloud1 {
+  background-image: url('/public/images/clouds/Cloud_1.png');
+  top: 5%;
+  left: 8%;
+}
+
+.cloud2 {
+  background-image: url('/public/images/clouds/Cloud_2.png');
+  top: 40%;
+  left: 50%;
+}
+
+.cloud3 {
+  background-image: url('/public/images/clouds/Cloud_3.png');
+  top: 75%;
+  left: 82%;
+}

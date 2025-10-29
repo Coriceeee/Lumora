@@ -9,7 +9,6 @@ export * from "./layout/MenuModal";
 export * from "./layout/InboxCompose";
 export * from "./layout/header-menus/HeaderUserMenu";
 export * from "./layout/header-menus/HeaderNotificationsMenu";
-export * from "./layout/explore/ExploreMain";
 
 // dropdowns
 export * from "./content/dropdown/Dropdown1";

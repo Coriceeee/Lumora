@@ -8,7 +8,6 @@ import { ScrollTop } from "./components/ScrollTop";
 import { Content } from "./components/Content";
 import { MasterInit } from "./MasterInit";
 import { PageDataProvider } from "./core";
-import { ExploreMain } from "../partials";
 
 const MasterLayout: React.FC = ({ children }) => {
   return (
@@ -37,7 +36,6 @@ const MasterLayout: React.FC = ({ children }) => {
       </div>
       <ScrollTop />
       <MasterInit />
-      <ExploreMain />
     </PageDataProvider>
   );
 };

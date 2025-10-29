@@ -62,7 +62,7 @@ const GEMINI_API_URL =
  */
 const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE";
 
-/**
+/**7
  * Gọi API Gemini với prompt đầu vào
  * @param prompt chuỗi prompt gửi cho Gemini
  * @returns phản hồi dạng text raw

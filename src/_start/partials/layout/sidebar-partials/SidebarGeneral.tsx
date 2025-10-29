@@ -33,12 +33,14 @@ const SidebarGeneral: React.FC = () => {
       
     ],
     2: [{ label: "🪴Vườn chữa lành", to: "/ayura/vuon-chua-lanh", color: "#20c997" }],
-    3: [{ label: "🌀 Void Zone", to: "/zenora/void-zone", color: "#fd7e14" }],
+    3: [
+      { label: "🌀 Void Zone", to: "/zenora/void-zone", color: "#fd7e14" },
+      { label: "CloudWhisper", to: "/zenora/cloud-whisper", color: "#1427fdff" },
+    ],
     4: [
       { label: "📝 Loại điểm", to: "/danh-muc/loai-diem", color: "#0dcaf0" },
       { label: "📘 Môn học", to: "/danh-muc/mon-hoc", color: "#0dcaf0" },
       { label: "📜 Chứng chỉ", to: "/danh-muc/chung-chi", color: "#0dcaf0" },
-      { label: "📝 Khảo sát", to: "/danh-muc/khao-sat", color: "#0dcaf0" },
       { label: "💡 Kỹ năng", to: "/danh-muc/ky-nang", color: "#0dcaf0" },
     ],
   };

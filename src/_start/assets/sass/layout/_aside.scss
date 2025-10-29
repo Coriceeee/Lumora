@@ -1,118 +1,103 @@
-//
-// Aside
-//
+// ------------------------------------------
+// Lumora Sidebar Toggle Customization 🌸
+// ------------------------------------------
 
-// General Mode(all devices)
-.aside {
-	display: flex;
-	box-shadow: get($aside-config, base, box-shadow);
+// Khi sidebar bị thu gọn (chế độ collapsed)
+[data-kt-aside-minimize="on"] {
+  .aside {
+    width: 85px !important; // thu gọn sidebar
+    transition: width 0.3s ease;
 
-	// Aside Primary Panel
-	.aside-primary {
-		width: get($aside-config, base, primary-width);
-		flex-shrink: 0;
-	}
+    // Ẩn chữ, chỉ giữ icon
+    .aside-menu {
+      .menu-item {
+        text-align: center;
+        padding-left: 0;
+        padding-right: 0;
 
-	// Aside Secondary Panel
-	.aside-secondary {
-		overflow: hidden;
+        .menu-title,
+        .menu-content {
+          display: none !important;
+        }
 
-		// Workspace
-		.aside-workspace {
-			width: get($aside-config, base, secondary-width);
-			flex-shrink: 0;
-		}
+        i,
+        .svg-icon {
+          font-size: 1.6rem;
+          margin: 0 auto;
+          display: block;
+        }
 
-		// Menu
-		.aside-menu {
-			@include perfect-scrollbar-vertical-offset(4px);
-		}
-	}
+        .menu-link {
+          justify-content: center;
+        }
+      }
+    }
 
-	// Aside Nav
-	.aside-primary {
-		.btn-custom {
-			// $color, $icon-color, $border-color, $bg-color, $color-active, $icon-color-active, $border-color-active, $bg-color-active
-			@include button-custom-variant(null, null, null, null, $white, $white, null, rgba($white, 0.05));
-		}
-	}
+    // Thu gọn header/logo
+    .aside-logo,
+    .aside-primary {
+      justify-content: center !important;
+
+      img {
+        height: 34px;
+        width: auto;
+        transition: all 0.3s ease;
+      }
+
+      // Logo chính đổi sang logo nhỏ (V)
+      .logo-full {
+        display: none !important;
+      }
+      .logo-mini {
+        display: block !important;
+      }
+    }
+  }
 }
 
-// Desktop Mode
-@include media-breakpoint-up(lg) {
-	.aside {
-		transition: width get($aside-config, base, transition-speed) ease;
+// Khi sidebar mở rộng (trở lại bình thường)
+[data-kt-aside-minimize="off"],
+body:not([data-kt-aside-minimize="on"]) {
+  .aside {
+    width: 260px !important;
+    transition: width 0.3s ease;
 
-		// Fixed Aside Mode
-		.aside-fixed & {
-			position: fixed;
-			top: 0;
-			bottom: 0;
-			left: 0;
-			z-index: get($aside-config, base, z-index);
-		}
+    .aside-menu {
+      .menu-item {
+        text-align: left;
 
-		// Static Aside Mode
-		.aside-static & {
-			position: relative;
-			z-index: 1;
-		}
+        .menu-title,
+        .menu-content {
+          display: block !important;
+        }
 
-		// Aside secondary panel enabled
-		.aside-secondary-enabled & {
-			width: get($aside-config, base, primary-width) + get($aside-config, base, secondary-width);
-		}
+        i,
+        .svg-icon {
+          margin: 0 0.5rem 0 0;
+        }
 
-		// Aside primary panel disabled and aside secondary enabled modes
-		.aside-primary-disabled.aside-secondary-enabled & {
-			width: get($aside-config, base, secondary-width);
-		}
+        .menu-link {
+          justify-content: flex-start;
+        }
+      }
+    }
 
-		// Aside Secondary Panel disabled
-		.aside-secondary-disabled & {
-			width: get($aside-config, base, primary-width);
-		}
-
-		// Minimized Aside Mode
-		[data-kt-aside-minimize="on"] & {
-			width: get($aside-config, base, primary-width);
-			transition: get($aside-config, base, transition);
-
-			// Aside Primary Panel
-			.aside-primary {
-				border-color: transparent;
-			}
-		}
-	}
+    // Hiện logo đầy đủ
+    .aside-logo {
+      .logo-full {
+        display: block !important;
+      }
+      .logo-mini {
+        display: none !important;
+      }
+    }
+  }
 }
 
-// Tablet & Mobile Modes
-@include media-breakpoint-down(lg) {
-	.aside {
-		display: none;
-
-		// Aside Primary Panel
-		.aside-primary {
-			width: get($aside-config, base, primary-width-tablet-and-mobile);
-
-			// Buttons
-			.btn.btn-icon.btn-lg {
-				width: 40px;
-				height: 40px;
-
-				.svg-icon {
-					@include svg-icon-size(26px);
-				}
-			}
-		}
-
-		// Aside Secondary Panel
-		.aside-secondary {
-			// Workspace
-			.aside-workspace {
-				width: 100%;
-				flex-shrink: 1;
-			}
-		}
-	}
+// Hiệu ứng hover khi thu gọn: tooltip đơn giản
+[data-kt-aside-minimize="on"] {
+  .aside-menu .menu-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+  }
 }

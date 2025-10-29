@@ -1,13 +1,12 @@
-// src/lib/gemini.ts
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-
+const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE";
 /**
  * Gọi Gemini server-side. Sử dụng biến môi trường GEMINI_API_KEY.
  * Không gọi trực tiếp từ frontend.
  */
-export async function callGeminiServer(prompt: string): Promise<string> {
-  const API_KEY = process.env.GEMINI_API_KEY;
+export async function callGeminiServer(prompt: string): Promise<any> {
+  
   if (!API_KEY) throw new Error("Missing GEMINI_API_KEY in environment");
 
   const res = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
@@ -19,21 +18,24 @@ export async function callGeminiServer(prompt: string): Promise<string> {
           parts: [{ text: prompt }],
         },
       ],
-      generationConfig: {
-        temperature: 0,
-        maxOutputTokens: 1024,
-        candidateCount: 1,
-        topP: 0.95,
-        topK: 40,
-      },
+    
     }),
   });
 
-  const data = await res.json().catch(() => ({}));
+  const data = await res.json();
   if (!res.ok) {
     console.error("Gemini server error:", data);
     throw new Error(data.error?.message || "Gemini error");
   }
 
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  // Loại bỏ markdown code block nếu có
+  const cleanedText = responseText.replace(/```json|```/g, "").trim();
+
+  try {
+    return JSON.parse(cleanedText);
+  } catch (e) {
+    console.error("❌ Không thể parse JSON từ Gemini:\n", cleanedText);
+    throw new Error("Kết quả từ Gemini không phải JSON hợp lệ");
+  }
 }

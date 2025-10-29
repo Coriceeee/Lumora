@@ -19,6 +19,7 @@ import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
 import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
 
 import VoidZone from "../pages/zenora/VoidZone";
+import CloudWhisper from "../pages/zenora/CloudWhisper";
 
 import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
 import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
@@ -66,6 +67,8 @@ export function PrivateRoutes() {
         />
 
         <Route path="/zenora/void-zone" component={VoidZone} />
+        <Route path="/zenora/cloud-whisper" component={CloudWhisper} />
+
 
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />

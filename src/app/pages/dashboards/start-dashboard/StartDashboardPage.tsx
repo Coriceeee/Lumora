@@ -22,31 +22,31 @@ export const StartDashboardPage: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const loadCareerDashboards = async () => {
-    const data = await getCareerDashboardsByUser();    
+    const data = await getCareerDashboardsByUser();
     if (data && data.length > 0) setSelectedCareerDashboard(data[0]);
   };
+
   const loadLearningDashboards = async () => {
-    const data = await getLearningDashboardsByUser(userId);    
+    const data = await getLearningDashboardsByUser(userId);
     if (data && data.length > 0) setSelectedLearningDashboard(data[0]);
   };
 
-   useEffect(() => {
-      loadCareerDashboards();
-      loadLearningDashboards()
-    }, []);
+  useEffect(() => {
+    loadCareerDashboards();
+    loadLearningDashboards();
+  }, []);
+
   return (
     <>
-      {/* begin::Row */}
+      {/* begin::Row 1 - Nghề nghiệp gợi ý */}
       <div className="row g-0 g-xl-5 g-xxl-8">
         <div className="col-xl-4">
           <EngageWidget5 className="card-stretch mb-5 mb-xxl-8">
             {/* begin::Action */}
             <div className="text-center pt-7">
               <Link
-                to="/vireya/ket-qua-hoc-tap" // đổi thành link bạn muốn
+                to="/vireya/ket-qua-hoc-tap"
                 className="btn btn-primary fw-bolder fs-6 px-7 py-3"
-                // Nếu vẫn cần mở modal khi click link, bạn có thể thêm onClick ở đây, nhưng sẽ vừa chuyển trang vừa mở modal không hợp lý
-                // onClick={() => setShow(true)}
               >
                 Cập nhật
               </Link>
@@ -56,22 +56,22 @@ export const StartDashboardPage: React.FC = () => {
         </div>
 
         <div className="col-xl-8">
-          <CareersCard careers={selectedCareerDashboard?.careers || [] } />
+          <CareersCard careers={selectedCareerDashboard?.careers || []} />
         </div>
       </div>
-      {/* end::Row */}
+      {/* end::Row 1 */}
 
-      {/* begin::Row */}
-      <div className="row g-0 g-xl-5 g-xxl-8">
+      {/* begin::Row 2 - Các môn chủ chốt */}
+      <div className="row g-0 g-xl-5 g-xxl-8 mt-5"> {/* 👈 thêm khoảng cách giữa 2 tab */}
         <div className="col-xl-4">
           <ListsWidget1 className="card-stretch mb-5 mb-xxl-8" />
         </div>
 
         <div className="col-xl-8">
-          <KeySubjectsCard  selectedDashboard={selectedLearningDashboard} />
+          <KeySubjectsCard selectedDashboard={selectedLearningDashboard} />
         </div>
       </div>
-      {/* end::Row */}
+      {/* end::Row 2 */}
 
       {/* begin::Modals */}
       <CreateAppModal show={show} handleClose={() => setShow(false)} />

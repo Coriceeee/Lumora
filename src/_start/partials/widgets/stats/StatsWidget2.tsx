@@ -99,10 +99,8 @@ const StatsWidget2: React.FC<Props> = ({ className, innerPadding = "" }) => {
                   </div>
                   <div className="ps-1">
                     <span className="nav-text text-gray-600 fw-bolder fs-6">
-                      Luyện tập nhiều bài toán nâng cao
                     </span>
                     <span className="text-muted fw-bold d-block pt-1">
-                      Mua sách tham khảo, sách nâng cao
                     </span>
                   </div>
                 </a>
@@ -130,10 +128,8 @@ const StatsWidget2: React.FC<Props> = ({ className, innerPadding = "" }) => {
                   </div>
                   <div className="ps-1">
                     <span className="nav-text text-gray-600 fw-bolder fs-6">
-                      Nâng cao kỹ năng: Nghe-Nói-Đọc-Viết
                     </span>
                     <span className="text-muted fw-bold d-block pt-1">
-                      HR Solutions
                     </span>
                   </div>
                 </a>
@@ -162,12 +158,7 @@ const StatsWidget2: React.FC<Props> = ({ className, innerPadding = "" }) => {
                     />
                   </div>
                   <div className="ps-1">
-                    <span className="nav-text text-gray-600 fw-bolder fs-6">
-                      Foxy Solutions
-                    </span>
-                    <span className="text-muted fw-bold d-block pt-1">
-                      HR Solutions
-                    </span>
+          
                   </div>
                 </a>
               </li>
