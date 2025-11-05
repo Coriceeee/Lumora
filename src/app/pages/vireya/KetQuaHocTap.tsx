@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+const motion = { div: (props: any) => <div {...props} /> };
+const AnimatePresence = (props: any) => <>{props.children}</>;
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
-import { motion, AnimatePresence } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
 
 import { addLearningResult } from "../../../services/learningResultService";

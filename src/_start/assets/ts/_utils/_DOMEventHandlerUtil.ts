@@ -56,7 +56,7 @@ export class DOMEventHandlerUtil {
         e.target.removeEventListener(e.type, calee);
       }
 
-      if (element && element.removeEventListener && e && e.currentTarget) {
+if (element && typeof element.removeEventListener === "function" && e && e.currentTarget) {
         e.currentTarget.removeEventListener(e.type, calee);
       }
 

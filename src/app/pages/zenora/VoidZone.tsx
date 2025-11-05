@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+const motion = { div: (props: any) => <div {...props} /> };
+const AnimatePresence = (props: any) => <>{props.children}</>;
 import styled, { keyframes } from "styled-components";
-import { motion, PanInfo } from "framer-motion";
 import {
-  getDatabase,
+  getDatabase,  
   ref,
   query,
   orderByChild,
@@ -11,8 +12,9 @@ import {
   update,
 } from "firebase/database";
 import { getAuth } from "firebase/auth";
+import { PanInfo } from "framer-motion";
 
-// ==== Animations ====
+/* ---------------- Animations ---------------- */
 const swirl = keyframes`
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -26,7 +28,12 @@ const shake = keyframes`
   to { transform: rotate(3deg); }
 `;
 
-// ==== Styled Components ====
+/* ---------------- Styled Components ---------------- */
+/*
+  NOTE: cast motion.div as any to avoid styled-components<->framer-motion
+  type incompatibilities in some TypeScript setups. If your project
+  types are configured to accept this, you can remove the `as any` casts.
+*/
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -43,12 +50,15 @@ const Container = styled.div`
     gap: 2rem;
   }
 `;
+
 const StressItemsWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 1rem;
 `;
-const StressItem = styled(motion.div)`
+
+/* cast motion.div as any to avoid type issues */
+const StressItem = styled(motion.div as any)`
   background: linear-gradient(45deg, #ff85a2, #ff6188);
   color: white;
   padding: 14px 28px;
@@ -56,13 +66,14 @@ const StressItem = styled(motion.div)`
   cursor: grab;
   font-weight: bold;
   font-size: 20px;
-  box-shadow: 0px 5px 15px rgba(255, 75, 43, 0.6);
+  box-shadow: 0 5px 15px rgba(255, 75, 43, 0.6);
   user-select: none;
   &:hover {
     animation: ${shake} 0.2s infinite alternate ease-in-out;
   }
 `;
-const BlackholeWrapper = styled(motion.div)`
+
+const BlackholeWrapper = styled(motion.div as any)`
   position: relative;
   width: 400px;
   height: 400px;
@@ -102,6 +113,7 @@ const BlackholeWrapper = styled(motion.div)`
     border-radius: 25px;
   }
 `;
+
 const UserStressItemsWrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -109,7 +121,8 @@ const UserStressItemsWrapper = styled.div`
   max-width: 360px;
   width: 100%;
 `;
-const UserStressItem = styled(motion.div)`
+
+const UserStressItem = styled(motion.div as any)`
   background-color: #facc15;
   color: black;
   padding: 0.75rem 1rem;
@@ -118,11 +131,13 @@ const UserStressItem = styled(motion.div)`
   font-weight: 600;
   user-select: none;
 `;
+
 const InputWrapper = styled.div`
   background-color: #1f2937;
   padding: 1rem;
   border-radius: 1rem;
 `;
+
 const TextInput = styled.input`
   width: 100%;
   padding: 0.5rem;
@@ -133,6 +148,7 @@ const TextInput = styled.input`
   border: none;
   outline: none;
 `;
+
 const Button = styled.button`
   width: 100%;
   padding: 0.5rem;
@@ -145,6 +161,7 @@ const Button = styled.button`
     background-color: #1e40af;
   }
 `;
+
 const ChatBox = styled.div`
   background-color: #1f2937;
   padding: 1rem;
@@ -153,6 +170,7 @@ const ChatBox = styled.div`
   max-height: 300px;
   overflow-y: auto;
 `;
+
 const ChatMessage = styled.div<{ isUser: boolean }>`
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
@@ -160,7 +178,7 @@ const ChatMessage = styled.div<{ isUser: boolean }>`
   color: ${(p) => (p.isUser ? "#93c5fd" : "#34d399")};
 `;
 
-// ==== SVG Icons ====
+/* ---------------- Icons ---------------- */
 const SpinnerIcon = ({ size = 40 }: { size?: number }) => (
   <svg
     className="animate-spin"
@@ -200,10 +218,10 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-// ==== Component ====
+/* ---------------- Main Component ---------------- */
 const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
-const VoidZone = () => {
+const VoidZone: React.FC = () => {
   const [input, setInput] = useState("");
   const [userStressItems, setUserStressItems] = useState<string[]>([]);
   const [firebaseStressItems, setFirebaseStressItems] = useState<any[]>([]);
@@ -211,7 +229,8 @@ const VoidZone = () => {
   const [chatMessages, setChatMessages] = useState<any[]>([
     {
       role: "system",
-      content: "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
+      content:
+        "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
     },
   ]);
   const [chatLoading, setChatLoading] = useState(false);
@@ -220,6 +239,7 @@ const VoidZone = () => {
   const auth = getAuth();
   const user = auth.currentUser;
 
+  /* ---------- Firebase Fetch ---------- */
   useEffect(() => {
     if (!user) return;
     const fetchStressItems = async () => {
@@ -243,19 +263,39 @@ const VoidZone = () => {
     fetchStressItems();
   }, [user]);
 
+  const updatePoint = async (score: number) => {
+    if (!user) return;
+    const db = getDatabase();
+    const pointRef = ref(db, `pointItems`);
+    const q = query(pointRef, orderByChild("userId"), equalTo(user.uid));
+    const snap = await get(q);
+    if (snap.exists()) {
+      const data = snap.val();
+      const id = Object.keys(data)[0];
+      const userData = Object.values(data)[0] as any;
+      const refToUpdate = ref(db, `pointItems/${id}`);
+      await update(refToUpdate, { points: userData.points + score });
+    }
+  };
+
   const handleDrop = async () => {
     if (!draggingItem) return;
-    setFirebaseStressItems(firebaseStressItems.filter((item) => item.title !== draggingItem));
-    setUserStressItems(userStressItems.filter((item) => item !== draggingItem));
+    setFirebaseStressItems((items) =>
+      items.filter((item) => item.title !== draggingItem)
+    );
+    setUserStressItems((items) =>
+      items.filter((item) => item !== draggingItem)
+    );
     await updatePoint(-1);
     setDraggingItem(null);
   };
 
+  /* ---------- Chat ---------- */
   const handleAddMessage = async () => {
     if (!input.trim()) return;
     const newMessages = [...chatMessages, { role: "user", content: input }];
     setChatMessages(newMessages);
-    setUserStressItems([...userStressItems, input]);
+    setUserStressItems((prev) => [...prev, input]);
     setInput("");
     setChatLoading(true);
 
@@ -266,7 +306,7 @@ const VoidZone = () => {
             ? `Bạn: ${m.content}`
             : m.role === "assistant"
             ? `ZenBot: ${m.content}`
-            : ``
+            : ""
         )
         .filter(Boolean)
         .join("\n");
@@ -278,15 +318,7 @@ const VoidZone = () => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             prompt: {
-              override: true,
-              exampleCount: 0,
-              context: "",
-              messages: [
-                {
-                  content: [{ text: promptText }],
-                  role: "user",
-                },
-              ],
+              messages: [{ content: [{ text: promptText }], role: "user" }],
             },
           }),
         }
@@ -308,21 +340,7 @@ const VoidZone = () => {
     }
   };
 
-  const updatePoint = async (score: number) => {
-    if (!user) return;
-    const db = getDatabase();
-    const pointRef = ref(db, `pointItems`);
-    const q = query(pointRef, orderByChild("userId"), equalTo(user.uid));
-    const snap = await get(q);
-    if (snap.exists()) {
-      const data = snap.val();
-      const id = Object.keys(data)[0];
-      const userData = Object.values(data)[0] as any;
-      const refToUpdate = ref(db, `pointItems/${id}`);
-      await update(refToUpdate, { points: userData.points + score });
-    }
-  };
-
+  /* ---------- Render ---------- */
   return (
     <Container>
       <StressItemsWrapper>
@@ -335,11 +353,9 @@ const VoidZone = () => {
               drag
               dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
               onDragStart={(
-                event: MouseEvent | TouchEvent | PointerEvent,
-                info: PanInfo
-              ) => {
-                setDraggingItem(item.title);
-              }}
+                _event: MouseEvent | TouchEvent | PointerEvent,
+                _info: PanInfo
+              ) => setDraggingItem(item.title)}
               whileHover={{ scale: 1.2 }}
             >
               {item.title}
@@ -349,11 +365,11 @@ const VoidZone = () => {
       </StressItemsWrapper>
 
       <BlackholeWrapper
-        onDrop={(e: React.DragEvent<HTMLDivElement>) => {
+        onDrop={(e: { preventDefault: () => void }) => {
           e.preventDefault();
           handleDrop();
         }}
-        onDragOver={(e: React.DragEvent<HTMLDivElement>) => e.preventDefault()}
+        onDragOver={(e: { preventDefault: () => any }) => e.preventDefault()}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 1.5, ease: "easeOut" }}
       >
@@ -369,11 +385,9 @@ const VoidZone = () => {
             drag
             dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
             onDragStart={(
-              event: MouseEvent | TouchEvent | PointerEvent,
-              info: PanInfo
-            ) => {
-              setDraggingItem(item);
-            }}
+              _event: MouseEvent | TouchEvent | PointerEvent,
+              _info: PanInfo
+            ) => setDraggingItem(item)}
             whileHover={{ scale: 1.1 }}
           >
             {item}
@@ -383,9 +397,7 @@ const VoidZone = () => {
         <InputWrapper>
           <TextInput
             value={input}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setInput(e.target.value)
-            }
+            onChange={(e) => setInput(e.target.value)}
             placeholder="Nhập cảm xúc hoặc câu hỏi..."
           />
           <Button onClick={handleAddMessage}>Gửi đến ZenBot</Button>

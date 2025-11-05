@@ -21,8 +21,7 @@ import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
 import VoidZone from "../pages/zenora/VoidZone";
 import CloudWhisper from "../pages/zenora/CloudWhisper";
 
-import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
-import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
+import MindfulGardenComponent from "../pages/ayura/MindfulGarden";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -55,16 +54,7 @@ export function PrivateRoutes() {
         <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
         <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
         <Route path="/neovana/dinh-huong-phat-trien" component={DinhHuongPhatTrien} />
-
-        {/* ⬇️ SỬA 2: bọc route Ayura bằng Provider */}
-        <Route
-          path="/ayura/vuon-chua-lanh"
-          render={() => (
-            <AyuraCoreProvider>
-              <MindfulGardenComponent />
-            </AyuraCoreProvider>
-          )}
-        />
+        <Route path="/ayura/vuon-chua-lanh" component={MindfulGardenComponent} />
 
         <Route path="/zenora/void-zone" component={VoidZone} />
         <Route path="/zenora/cloud-whisper" component={CloudWhisper} />

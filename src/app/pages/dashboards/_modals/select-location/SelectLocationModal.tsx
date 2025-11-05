@@ -26,6 +26,7 @@ const SelectLocationModal: React.FC<Props> = ({ show, handleClose, data }) => {
 
   return (
     <Modal
+    
       className="modal fade"
       id="kt_modal_select_location"
       data-backdrop="static"

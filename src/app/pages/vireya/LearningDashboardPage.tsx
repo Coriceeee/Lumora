@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as Recharts from "recharts";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatedCollapse } from "../../../_start/layout/components/AnimatedCollapse";
 import { Check, TrendingUp, ChevronDown, ChevronUp, ArrowUp, ArrowDown, Minus } from "lucide-react";
 import {
   getLearningDashboardsByUser,
@@ -823,52 +823,126 @@ const LearningDashboardPage: React.FC = () => {
                       </div>
                     </button>
 
-                    <AnimatePresence>
-                      {selectedSubjectDetail === s && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.22 }}>
-                          <div style={{ padding: 12, background: "#fff", borderRadius: 8, marginTop: 8, border: "1px solid rgba(15,23,42,0.04)" }}>
-                            {(() => {
-                              const insightItem = (dashboardToShow?.subjectInsights || []).find((it: any) => (it?.subjectName || "").toString().toLowerCase() === (s || "").toLowerCase());
-                              if (insightItem) {
-                                const spRaw = computeSuggestionPriorityForSubject(s);
-                                const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
-                                return (
-                                  <div>
-                                    <p style={{ margin: "6px 0" }}><TrendingUp size={14} /> <strong>{insightItem.trend || "Không có xu hướng"}</strong></p>
-                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-                                      <div style={{ minWidth: 150 }}>
-                                        <div style={{ fontWeight: 700 }}>Điểm mạnh</div>
-                                        <div style={{ color: "#475569" }}>{insightItem.strength || "Chưa có"}</div>
-                                      </div>
-                                      <div style={{ minWidth: 150 }}>
-                                        <div style={{ fontWeight: 700 }}>Điểm yếu</div>
-                                        <div style={{ color: "#475569" }}>{insightItem.weakness || "Chưa có"}</div>
-                                      </div>
-                                    </div>
+                  <AnimatedCollapse show={selectedSubjectDetail === s}>
+  <div
+    style={{
+      padding: 12,
+      background: "#fff",
+      borderRadius: 8,
+      marginTop: 8,
+      border: "1px solid rgba(15,23,42,0.04)",
+    }}
+  >
+    {(() => {
+      const insightItem = (dashboardToShow?.subjectInsights || []).find(
+        (it: any) =>
+          (it?.subjectName || "").toString().toLowerCase() ===
+          (s || "").toLowerCase()
+      );
 
-                                    <div style={{ marginBottom: 8 }}>
-                                      <div style={{ fontWeight: 700 }}>Gợi ý</div>
-                                      <div style={{ color: "#475569" }}>{insightItem.suggestion || "Chưa có gợi ý cụ thể."}</div>
-                                    </div>
+      if (insightItem) {
+        const spRaw = computeSuggestionPriorityForSubject(s);
+        const spDisplay =
+          suggestionScale === "five"
+            ? Math.max(1, Math.round((spRaw / 100) * 4) + 1)
+            : spRaw;
 
-                                    <div style={{ marginTop: 6, display: 'flex', gap: 12, alignItems: 'center' }}>
-                                      <div style={{ fontWeight: 800 }}>Ưu tiên cải thiện</div>
-                                      <div style={{ minWidth: 160 }}>
-                                        <div style={{ background: '#f8fafc', padding: 8, borderRadius: 8 }}>
-                                          <div style={{ fontWeight: 900 }}>{spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
-                                          <div style={{ height: 8, borderRadius: 8, background: '#eef2ff', marginTop: 6, overflow: 'hidden' }}>
-                                            <div className="ld-suggestion-fill" style={{ width: `${spRaw}%`, height: '100%', background: 'linear-gradient(90deg,#fb7185,#f97316)' }} />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
+        return (
+          <div>
+            {/* --- Xu hướng --- */}
+            <p style={{ margin: "6px 0" }}>
+              <TrendingUp size={14} />{" "}
+              <strong>{insightItem.trend || "Không có xu hướng"}</strong>
+            </p>
 
-                                  </div>
-                                );
-                              } else {
-                                return <div style={{ fontStyle: "italic", color: "#64748b" }}>Chưa có phân tích AI cho môn này — đang hiển thị biểu đồ điểm gốc nếu có.</div>;
-                              }
-                            })()}
+            {/* --- Điểm mạnh / yếu --- */}
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                marginBottom: 8,
+              }}
+            >
+              <div style={{ minWidth: 150 }}>
+                <div style={{ fontWeight: 700 }}>Điểm mạnh</div>
+                <div style={{ color: "#475569" }}>
+                  {insightItem.strength || "Chưa có"}
+                </div>
+              </div>
+              <div style={{ minWidth: 150 }}>
+                <div style={{ fontWeight: 700 }}>Điểm yếu</div>
+                <div style={{ color: "#475569" }}>
+                  {insightItem.weakness || "Chưa có"}
+                </div>
+              </div>
+            </div>
+
+            {/* --- Gợi ý --- */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ fontWeight: 700 }}>Gợi ý</div>
+              <div style={{ color: "#475569" }}>
+                {insightItem.suggestion || "Chưa có gợi ý cụ thể."}
+              </div>
+            </div>
+
+            {/* --- Ưu tiên cải thiện --- */}
+            <div
+              style={{
+                marginTop: 6,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}
+            >
+              <div style={{ fontWeight: 800 }}>Ưu tiên cải thiện</div>
+              <div style={{ minWidth: 160 }}>
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    padding: 8,
+                    borderRadius: 8,
+                  }}
+                >
+                  <div style={{ fontWeight: 900 }}>
+                    {spDisplay}
+                    {suggestionScale === "percent" ? "%" : ""}
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      borderRadius: 8,
+                      background: "#eef2ff",
+                      marginTop: 6,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      className="ld-suggestion-fill"
+                      style={{
+                        width: `${spRaw}%`,
+                        height: "100%",
+                        background:
+                          "linear-gradient(90deg,#fb7185,#f97316)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      } else {
+        return (
+          <div style={{ fontStyle: "italic", color: "#64748b" }}>
+            Chưa có phân tích AI cho môn này — đang hiển thị biểu đồ điểm
+            gốc nếu có.
+          </div>
+        );
+      }
+    })()}
+  </div>
+</AnimatedCollapse>
 
                             {/* --- NEW: Chi tiết điểm và Tiến bộ --- */}
                             <div style={{ marginTop: 12 }} className="ld-subject-detail">
@@ -964,25 +1038,155 @@ const LearningDashboardPage: React.FC = () => {
                             ) : (
                               <div style={{ fontSize: 13, color: "#64748b", marginTop: 8 }}>Không có dữ liệu điểm để vẽ biểu đồ.</div>
                             )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                                              <AnimatedCollapse show={selectedSubjectDetail === s}>
+                      <div
+                        style={{
+                          padding: 12,
+                          background: "#fff",
+                          borderRadius: 8,
+                          marginTop: 8,
+                          border: "1px solid rgba(15,23,42,0.04)",
+                        }}
+                      >
+                        {(() => {
+                          const insightItem =
+                            (dashboardToShow?.subjectInsights || []).find(
+                              (it: any) =>
+                                (it?.subjectName || "")
+                                  .toString()
+                                  .toLowerCase() === (s || "").toLowerCase()
+                            );
+                          if (insightItem) {
+                            const spRaw =
+                              computeSuggestionPriorityForSubject(s);
+                            const spDisplay =
+                              suggestionScale === "five"
+                                ? Math.max(
+                                    1,
+                                    Math.round((spRaw / 100) * 4) + 1
+                                  )
+                                : spRaw;
+                            return (
+                              <div>
+                                <p style={{ margin: "6px 0" }}>
+                                  <TrendingUp size={14} />{" "}
+                                  <strong>
+                                    {insightItem.trend || "Không có xu hướng"}
+                                  </strong>
+                                </p>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: 8,
+                                    flexWrap: "wrap",
+                                    marginBottom: 8,
+                                  }}
+                                >
+                                  <div style={{ minWidth: 150 }}>
+                                    <div style={{ fontWeight: 700 }}>
+                                      Điểm mạnh
+                                    </div>
+                                    <div style={{ color: "#475569" }}>
+                                      {insightItem.strength || "Chưa có"}
+                                    </div>
+                                  </div>
+                                  <div style={{ minWidth: 150 }}>
+                                    <div style={{ fontWeight: 700 }}>
+                                      Điểm yếu
+                                    </div>
+                                    <div style={{ color: "#475569" }}>
+                                      {insightItem.weakness || "Chưa có"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ marginBottom: 8 }}>
+                                  <div style={{ fontWeight: 700 }}>Gợi ý</div>
+                                  <div style={{ color: "#475569" }}>
+                                    {insightItem.suggestion ||
+                                      "Chưa có gợi ý cụ thể."}
+                                  </div>
+                                </div>
+
+                                <div
+                                  style={{
+                                    marginTop: 6,
+                                    display: "flex",
+                                    gap: 12,
+                                    alignItems: "center",
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 800 }}>
+                                    Ưu tiên cải thiện
+                                  </div>
+                                  <div style={{ minWidth: 160 }}>
+                                    <div
+                                      style={{
+                                        background: "#f8fafc",
+                                        padding: 8,
+                                        borderRadius: 8,
+                                      }}
+                                    >
+                                      <div style={{ fontWeight: 900 }}>
+                                        {spDisplay}
+                                        {suggestionScale === "percent"
+                                          ? "%"
+                                          : ""}
+                                      </div>
+                                      <div
+                                        style={{
+                                          height: 8,
+                                          borderRadius: 8,
+                                          background: "#eef2ff",
+                                          marginTop: 6,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <div
+                                          className="ld-suggestion-fill"
+                                          style={{
+                                            width: `${spRaw}%`,
+                                            height: "100%",
+                                            background:
+                                              "linear-gradient(90deg,#fb7185,#f97316)",
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div
+                                style={{
+                                  fontStyle: "italic",
+                                  color: "#64748b",
+                                }}
+                              >
+                                Chưa có phân tích AI cho môn này — đang hiển
+                                thị biểu đồ điểm gốc nếu có.
+                              </div>
+                            );
+                          }
+                        })()}
+                      </div>
+                    </AnimatedCollapse>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-             
-            </>
-          ) : (
-            <p className="ld-empty">Chưa có phân tích nào.</p>
-          )}
-        </div>
-      </div>
+        </>
+      ) : (
+        <p className="ld-empty">Chưa có phân tích nào.</p>
+      )}
+    </div>
+  </div>
 
-      {/* CSS inline */}
-      <style>{`
+  {/* CSS inline */}
+  <style>{`
 /* Container */
 .ld-container { max-width: 1200px; margin: 0 auto; padding: 20px; color: #222; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 .ld-grid { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; }
@@ -1011,142 +1215,20 @@ const LearningDashboardPage: React.FC = () => {
 /* Left top row */
 .ld-left-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 
-.ld-timeline-list { margin-top: 12px; }
-.ld-timeline-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  margin-bottom: 12px;
-  background: #fff;
-  border: 1px solid rgba(15,23,42,0.06);
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-.ld-timeline-item:hover { border-color: rgba(79,70,229,0.18); }
-.ld-timeline-item--active {
-  background: linear-gradient(90deg, rgba(79,70,229,0.06), rgba(34,197,94,0.02));
-  border-color: rgba(79,70,229,0.22);
-}
-.ld-dot {
-  width: 12px; height: 12px; border-radius: 999px;
-  background: #34d399; margin-top: 4px; flex-shrink: 0;
-}
-.timeline-content { display: flex; flex-direction: column; }
-.timeline-content span:first-child { font-weight: 700; color: #062173; }
-timeline-content span:last-child { color: #64748b; font-size: 12px; }
-
-.ld-timeline-item-content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-.ld-timeline-item-date {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.ld-timeline-item-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #062173;
-}
-
 /* Compact subject button (left list) */
 .subject-button-compact { width: 100%; text-align: left; padding: 10px 12px; background: #f8fafc; border: none; outline: none; cursor: pointer; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; overflow: visible; }
 
-/* Key subjects */
-.ld-keyrow { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-.ld-keyrow-info { color: #64748b; font-size: 13px; }
-
-/* Selector */
-.ld-selector { position: relative; padding: 12px; border-radius: 12px; border: 1px solid rgba(15,23,42,0.06); background: #fff; box-shadow: 0 8px 30px rgba(2,6,23,0.06); margin-bottom: 12px; }
-.ld-selector-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.ld-selector-list { display: flex; gap: 12px; flex-wrap: wrap; }
-.ld-subject-chip { display: flex; align-items: center; gap: 8px; border: 1px dashed rgba(2,6,23,0.06); padding: 8px 10px; border-radius: 10px; cursor: pointer; user-select: none; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease; }
-.ld-subject-chip:hover { box-shadow: 0 6px 18px rgba(2,6,23,0.06); }
-.ld-subject-chip--checked { border: 1px solid rgba(79,70,229,0.25); background: rgba(79,70,229,0.06); }
-.ld-subject-chip-label { font-size: 13px; font-weight: 700; }
-
 /* Infobox + chart */
 .ld-infobox { background: #f8fafc; padding: 16px; border-radius: 10px; margin-bottom: 12px; box-shadow: inset 0 0 10px rgba(99,102,241,0.03); color: #0f172a; }
-.ld-chart-wrap { width: 100%; height: 300px; }
-.ld-fallback-note { font-size: 12px; color: #64748b; margin-top: 6px; margin-bottom: 6px; }
-
-/* 3 columns info */
-.ld-rows3 { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-.ld-col { min-width: 200px; }
-.ld-col-title { font-size: 13px; color: #0f172a; font-weight: 700; margin-bottom: 2px; }
-.ld-col-text { color: #475569; }
-
-/* Accordion */
-.ld-accordion { margin-bottom: 12px; border-radius: 12px; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease; border: 1px solid rgba(15,23,42,0.03); background: #fff; box-shadow: 0 6px 18px rgba(2,6,23,0.04); }
-.ld-accordion--open { transform: translateY(-2px); border: 1px solid rgba(79,70,229,0.14); background: linear-gradient(180deg, rgba(255,255,255,1), rgba(249,250,251,1)); box-shadow: 0 10px 30px rgba(2,6,23,0.06); }
-.ld-accordion-head { display: flex; gap: 12px; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; }
-.ld-leftmark { width: 8px; height: 48px; border-radius: 8px; margin-right: 4px; flex-shrink: 0; }
-.ld-acc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.ld-acc-title { font-size: 16px; font-weight: 700; margin: 0; color: #07113a; display: flex; align-items: center; gap: 8px; }
-.ld-acc-short { margin-top: 4px; font-size: 13px; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%; }
-.ld-acc-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.ld-acc-hint { font-size: 12px; color: #94a3b8; }
-.ld-chevron { display: inline-block; transition: transform .25s ease; font-size: 14px; color: #334155; }
-.ld-chevron--open { transform: rotate(90deg); }
-
-.ld-accordion-body { padding: 16px; border-top: 1px solid rgba(15,23,42,0.06); background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(249,250,251,0.95)); font-size: 14px; color: #334155; line-height: 1.6; }
-.ld-badge-row { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-.ld-badge { display: inline-flex; align-items: center; gap: 6px; background: #eef2ff; color: #3730a3; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.ld-badge-label { font-weight: 700; }
-.ld-trend { margin-left: 6px; }
-
-.ld-two { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-.ld-field { min-width: 180px; }
-.ld-field-title { font-size: 13px; font-weight: 700; }
-.ld-field-text { color: #475569; }
-
-.ld-actions { display: flex; gap: 8px; margin-top: 8px; }
-
- /* subject detail */
-.ld-subject-detail { margin-top: 8px; }
 
 /* Status cell (horizontal) */
-.ld-status-cell {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-left: 12px;
-  min-width: 170px;
-  justify-content: flex-end;
-}
-.ld-status-bar {
-  width: 120px;
-  height: 8px;
-  background: #eef2ff;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.ld-status-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width .45s ease;
-}
-.ld-status-percent {
-  width: 48px;
-  text-align: right;
-  font-weight: 700;
-  font-size: 12px;
-  color: #0f172a;
-}
+.ld-status-cell { display: flex; align-items: center; gap: 10px; margin-left: 12px; min-width: 170px; justify-content: flex-end; }
+.ld-status-bar { width: 120px; height: 8px; background: #eef2ff; border-radius: 999px; overflow: hidden; }
+.ld-status-fill { height: 100%; border-radius: 999px; transition: width .45s ease; }
+.ld-status-percent { width: 48px; text-align: right; font-weight: 700; font-size: 12px; color: #0f172a; }
 
 /* suggestion fill */
-.ld-suggestion-fill {
-  height: 100%;
-  border-radius: 8px;
-  transition: width 700ms cubic-bezier(.2,.9,.2,1);
-}
+.ld-suggestion-fill { height: 100%; border-radius: 8px; transition: width 700ms cubic-bezier(.2,.9,.2,1); }
 
 /* responsive tweaks */
 @media (max-width: 900px) {
@@ -1154,8 +1236,8 @@ timeline-content span:last-child { color: #64748b; font-size: 12px; }
   .ld-status-cell { min-width: 120px; }
 }
       `}</style>
-    </div>
-  );
+</div>
+);
 };
 
 export default LearningDashboardPage;

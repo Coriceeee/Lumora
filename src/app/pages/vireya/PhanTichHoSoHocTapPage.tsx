@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { toast } from "react-toastify";
+const motion = { div: (props: any) => <div {...props} /> };
+const AnimatePresence = (props: any) => <>{props.children}</>;
 import * as Recharts from "recharts";
 import "react-toastify/dist/ReactToastify.css";
 

@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+const motion = { div: (props: any) => <div {...props} /> };
+const AnimatePresence = (props: any) => <>{props.children}</>;
 import {
   Dialog,
   DialogTitle,
@@ -13,6 +14,8 @@ import {
   useTheme,
 } from "@mui/material";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
+const motion = { div: (props: any) => <div {...props} /> };
+
 
 interface SuggestionDialogProps {
   open: boolean;
@@ -257,3 +260,7 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
 };
 
 export default SuggestionDialog;
+function useReducedMotion() {
+  throw new Error("Function not implemented.");
+}
+
