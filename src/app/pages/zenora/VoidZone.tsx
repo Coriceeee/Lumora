@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-const motion = { div: (props: any) => <div {...props} /> };
-const AnimatePresence = (props: any) => <>{props.children}</>;
+import { motion, AnimatePresence } from "../../../utils/fakeMotion";
 import styled, { keyframes } from "styled-components";
 import {
   getDatabase,  

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
-const motion = { div: (props: any) => <div {...props} /> };
-const AnimatePresence = (props: any) => <>{props.children}</>;
 import * as Recharts from "recharts";
 import "react-toastify/dist/ReactToastify.css";
+import { motion, AnimatePresence } from "../../../utils/fakeMotion";
+
 
 import { getAllLearningResults, getGeminiAnalysis } from "../../../services/learningResultService";
 import { getAllSubjects } from "../../../services/subjectService";

@@ -1,7 +1,5 @@
 "use client";
 import React, { useMemo, useState } from "react";
-const motion = { div: (props: any) => <div {...props} /> };
-const AnimatePresence = (props: any) => <>{props.children}</>;
 import {
   Dialog,
   DialogTitle,
@@ -14,8 +12,9 @@ import {
   useTheme,
 } from "@mui/material";
 import ClearAllIcon from "@mui/icons-material/ClearAll";
-const motion = { div: (props: any) => <div {...props} /> };
 
+// ✅ Motion giả (bỏ hoàn toàn framer-motion)
+const motion = { div: (props: any) => <div {...props} /> };
 
 interface SuggestionDialogProps {
   open: boolean;
@@ -35,7 +34,9 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const prefersReducedMotion = useReducedMotion();
+
+  // ✅ Bỏ useReducedMotion — không cần animation
+  const prefersReducedMotion = false;
 
   const [strengths, setStrengths] = useState("");
   const [interests, setInterests] = useState("");
@@ -43,7 +44,6 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
   const [dreamJob, setDreamJob] = useState("");
 
   const disabled = useMemo(() => {
-    // Yêu cầu tối thiểu: có ít nhất strengths và dreamJob
     return strengths.trim().length < 5 || dreamJob.trim().length < 3;
   }, [strengths, dreamJob]);
 
@@ -58,18 +58,6 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
     if (disabled) return;
     onSubmit({ strengths, interests, personality, dreamJob });
     onClose();
-  };
-
-  const variants = {
-    hidden: { opacity: 0, y: prefersReducedMotion ? 0 : -16 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: prefersReducedMotion ? 0 : 0.45,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
   };
 
   return (
@@ -95,7 +83,7 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
         },
       }}
     >
-      <motion.div initial="hidden" animate="visible" variants={variants}>
+      <motion.div>
         <DialogTitle
           sx={{
             py: 2,
@@ -132,7 +120,9 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
         <DialogContent
           dividers
           sx={{
-            borderColor: isDark ? "rgba(148,163,184,0.15)" : "rgba(59,130,246,0.15)",
+            borderColor: isDark
+              ? "rgba(148,163,184,0.15)"
+              : "rgba(59,130,246,0.15)",
             py: 2,
           }}
         >
@@ -157,7 +147,9 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
                     ? "Mô tả tối thiểu 5 ký tự (ví dụ: Tư duy phân tích, giải quyết vấn đề, lập trình…)."
                     : " "
                 }
-                error={strengths.trim().length > 0 && strengths.trim().length < 5}
+                error={
+                  strengths.trim().length > 0 && strengths.trim().length < 5
+                }
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
@@ -226,7 +218,9 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
             px: 2,
             py: 1.5,
             gap: 1,
-            background: isDark ? "rgba(2,6,23,0.5)" : "rgba(255,255,255,0.6)",
+            background: isDark
+              ? "rgba(2,6,23,0.5)"
+              : "rgba(255,255,255,0.6)",
           }}
         >
           <Button
@@ -260,7 +254,3 @@ const SuggestionDialog: React.FC<SuggestionDialogProps> = ({
 };
 
 export default SuggestionDialog;
-function useReducedMotion() {
-  throw new Error("Function not implemented.");
-}
-

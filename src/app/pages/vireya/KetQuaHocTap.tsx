@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-const motion = { div: (props: any) => <div {...props} /> };
-const AnimatePresence = (props: any) => <>{props.children}</>;
+import { motion, AnimatePresence } from "../../../utils/fakeMotion";
 import { useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
