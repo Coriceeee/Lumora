@@ -1,4 +1,4 @@
-import { useAyura } from "../AyuraCoreProvider";
+import { useAyuraCore } from "../AyuraCoreProvider";
 
 export const HealingHUDControls = () => {
   const { state, dispatch } = useAyura();
@@ -23,3 +23,7 @@ export const HealingHUDControls = () => {
     </div>
   );
 };
+function useAyura(): { state: any; dispatch: any; } {
+  throw new Error("Function not implemented.");
+}
+

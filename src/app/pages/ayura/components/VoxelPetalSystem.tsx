@@ -13,7 +13,10 @@ export const VoxelPetalSystem: React.FC<{ count: number; area?: number; wind: nu
   const ref = useRef<THREE.InstancedMesh>(null!);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const geo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: color || new THREE.Color("#ff6b6b"), roughness: 0.6 }), [color]);
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: color || new THREE.Color("#ff6b6b"), roughness: 0.6 }),
+    [color]
+  );
   const positions = useMemo(() => new Float32Array(count * 3), [count]);
 
   useEffect(() => {

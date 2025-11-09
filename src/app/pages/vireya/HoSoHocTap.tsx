@@ -29,6 +29,9 @@ import {
   Trash2,
   Save,
 } from "lucide-react";
+import { getAuth } from "firebase/auth";
+const userId = getAuth().currentUser?.uid || "";
+
 
 /* ---------- types for grouping ---------- */
 type SemesterRow = {
@@ -222,20 +225,33 @@ export default function HoSoHocTapPage() {
   const [editedScores, setEditedScores] = useState<Record<string, number>>({});
   const [deleteQueue, setDeleteQueue] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [results, subs, types] = await Promise.all([getAllLearningResults(), getAllSubjects(), getAllScoreTypes()]);
-        setLearningResults(results);
-        setSubjects(subs);
-        setScoreTypes(types);
-      } catch {
-        toast.error("Lỗi khi tải dữ liệu.");
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  (async () => {
+    try {
+      // ✅ kiểm tra trước khi gọi Firestore
+      if (!userId) {
+        console.warn("⏳ userId chưa sẵn sàng, bỏ qua lần tải dữ liệu.");
+        return; // ⚡ return sớm, KHÔNG gọi Firestore
       }
-    })();
-  }, []);
+
+      const [results, subs, types] = await Promise.all([
+        getAllLearningResults(userId), // ✅ truyền userId thật
+        getAllSubjects(),
+        getAllScoreTypes(),
+      ]);
+
+      setLearningResults(results);
+      setSubjects(subs);
+      setScoreTypes(types);
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải dữ liệu.");
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [userId]); // ✅ thêm userId vào dependency
+
 
   const getSubjectName = (id: string) => subjects.find((s) => s.id === id)?.name || "Không rõ";
 

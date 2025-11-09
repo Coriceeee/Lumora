@@ -4,6 +4,7 @@ import { KTSVG } from "../../../helpers";
 import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
 import { LearningDashboard } from "../../../../types/LearningDashboard";
 import { useHistory } from "react-router-dom";
+import { getAuth } from "firebase/auth";
 
 /**
  * Safe helper: coerce Firestore Timestamp | Date | string | number into Date | undefined
@@ -39,7 +40,7 @@ type Props = {
 };
 
 const ListsWidget1: React.FC<Props> = ({ className }) => {
-  const userId = "user_fake_id_123456";
+ const userId = getAuth().currentUser?.uid || "";
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
 const history = useHistory();
 

@@ -9,6 +9,7 @@ import { getAllSubjects } from "../../../services/subjectService";
 import { getAllScoreTypes } from "../../../services/scoreTypeService";
 import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
+import { getAuth } from "firebase/auth";
 
 interface FormData {
   classLevel: 10 | 11 | 12;
@@ -26,7 +27,7 @@ export default function KetQuaHocTapForm() {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(true); // 👈 control hiển thị form
 
-  const userFakeId = "user_fake_id_123456";
+ const userId = getAuth().currentUser?.uid || "";
   const maxScoreCount = 5;
 
   const {
@@ -73,7 +74,7 @@ export default function KetQuaHocTapForm() {
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
-      const userId = userFakeId;
+      const userId = getAuth().currentUser?.uid || "";
       const validScores = (data.scores ?? [])
         .slice(0, inputCount)
         .filter(

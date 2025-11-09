@@ -18,6 +18,7 @@ import "react-toastify/dist/ReactToastify.css";
 import classNames from "classnames";
 import { KTSVG } from "../../../_start/helpers";
 import { Dropdown1 } from "../../../_start/partials";
+import { getAuth } from "firebase/auth";
 
 const {
   BarChart,
@@ -255,7 +256,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ subjectName = "x", pe
 
 /* ---------- Component ---------- */
 const LearningDashboardPage: React.FC = () => {
-  const userId = "user_fake_id_123456"; // test id (thay bằng động nếu cần)
+ const userId = getAuth().currentUser?.uid || "";
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set());

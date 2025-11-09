@@ -1,4 +1,4 @@
-// learningResultService.ts
+// src/app/services/learningResultService.ts
 
 import { db } from "../firebase/firebase";
 import {
@@ -20,20 +20,45 @@ const learningResultsCollection = collection(db, "learningResults");
 
 // --- CRUD LearningResult ---
 
-export async function getAllLearningResults(): Promise<LearningResult[]> {
-  const snapshot = await getDocs(learningResultsCollection);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as LearningResult));
+export async function getAllLearningResults(userId?: string): Promise<LearningResult[]> {
+  try {
+    if (userId) {
+      const q = query(learningResultsCollection, where("userId", "==", userId));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() } as LearningResult)
+      );
+    } else {
+      console.warn("⚠️ getAllLearningResults: userId không có, trả về mảng rỗng.");
+      return [];
+    }
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy tất cả LearningResults:", error);
+    return [];
+  }
 }
 
-export async function getLearningResultsByUser(userId: string): Promise<LearningResult[]> {
-  if (!userId) throw new Error("userId không hợp lệ");
-  const q = query(learningResultsCollection, where("userId", "==", userId));
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as LearningResult));
+export async function getLearningResultsByUser(userId?: string): Promise<LearningResult[]> {
+  if (!userId) {
+    console.warn("⚠️ getLearningResultsByUser: userId undefined, trả về mảng rỗng.");
+    return [];
+  }
+
+  try {
+    const q = query(learningResultsCollection, where("userId", "==", userId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(
+      (doc) => ({ id: doc.id, ...doc.data() } as LearningResult)
+    );
+  } catch (error) {
+    console.error("❌ Lỗi khi truy vấn getLearningResultsByUser:", error);
+    return [];
+  }
 }
 
 export async function addLearningResult(data: LearningResult): Promise<string> {
   if (!data.userId) throw new Error("userId là bắt buộc");
+
   const docRef = await addDoc(learningResultsCollection, {
     ...data,
     createdAt: new Date(),
@@ -170,15 +195,25 @@ export const getGeminiAnalysis = async (results: LearningResult[]) => {
 
 // --- XỬ LÝ DỮ LIỆU CHO BIỂU ĐỒ ---
 
-export async function getLearningResultsBySubjects(userId: string) {
-  const q = query(collection(db, "learningResults"), where("userId", "==", userId));
-  const snapshot = await getDocs(q);
-  const data = snapshot.docs.map((doc) => doc.data()) as LearningResult[];
+export async function getLearningResultsBySubjects(userId?: string) {
+  if (!userId) {
+    console.warn("⚠️ getLearningResultsBySubjects: userId undefined, trả về mảng rỗng.");
+    return [];
+  }
 
-  // Lọc 3 môn chính: toan, van, anh
-  return data.filter((result) =>
-    ["toan", "van", "anh"].includes(result.subjectCode)
-  );
+  try {
+    const q = query(collection(db, "learningResults"), where("userId", "==", userId));
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map((doc) => doc.data()) as LearningResult[];
+
+    // Lọc 3 môn chính: Toán, Văn, Anh
+    return data.filter((result) =>
+      ["toan", "van", "anh"].includes(result.subjectCode)
+    );
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy getLearningResultsBySubjects:", error);
+    return [];
+  }
 }
 
 const convertCodeToName = (code: string): string => {
@@ -210,9 +245,7 @@ export function generateTrendChartData(results: LearningResult[]): ChartDataItem
   results.forEach((result) => {
     const subject = convertCodeToName(result.subjectCode);
     result.assessments?.forEach((assessment: { type: string; score: any }) => {
-      const index = chartData.findIndex(
-        (item) => item.name === assessment.type
-      );
+      const index = chartData.findIndex((item) => item.name === assessment.type);
       if (index !== -1) {
         chartData[index][subject] = assessment.score;
       }

@@ -1,121 +1,91 @@
-import React, { useMemo, useRef, useLayoutEffect } from "react";
+import React from "react";
 import * as THREE from "three";
-import { useFrame, extend } from "@react-three/fiber";
-import { mapEmotions, generateBranches, pointsAroundEnds } from "./voxel-utils";
 
-extend({ InstancedMesh: THREE.InstancedMesh, Group: THREE.Group });
-
-interface EmotionProps {
+interface Emotions {
   valence: number;
-  arousal: number;
   calmness: number;
+  arousal: number;
 }
 
-interface Branch {
-  start: THREE.Vector3;
-  end: THREE.Vector3;
-  radius: number;
+interface VoxelPhuongTreeProps {
+  size?: number;
+  emotions?: Emotions;
 }
 
-export const VoxelPhuongTree: React.FC<{ emotions: EmotionProps }> = ({ emotions }) => {
-  const params = useMemo(() => mapEmotions(emotions), [emotions]);
-  const branches = useMemo<Branch[]>(() => generateBranches({}), []);
-  const swayRef = useRef<THREE.Group>(null!);
+export const VoxelPhuongTree: React.FC<VoxelPhuongTreeProps> = ({ size = 1, emotions }) => {
+  const trunkHeight = 4;
+  const trunkThickness = 0.8;
+  const branchLength = 3;
+  const branchThickness = 0.6;
+  const leafSize = 0.5;
+  const flowerSize = 0.4;
 
-  // 🌲 Thân cây
-  const trunkVoxels = useMemo(() => {
-    const cubes: THREE.Vector3[] = [];
-    branches.forEach((b: Branch) => {
-      const dir = b.end.clone().sub(b.start);
-      const len = dir.length();
-      const n = Math.max(1, Math.floor(len / 0.35));
-      for (let i = 0; i <= n; i++) cubes.push(b.start.clone().addScaledVector(dir, i / n));
-    });
-    return cubes;
-  }, [branches]);
+  const leafPositions: [number, number, number][] = [];
+  const flowerPositions: [number, number, number][] = [];
 
-  // 🍃 Lá và hoa
-  const leafVoxels = useMemo(
-    () => pointsAroundEnds(branches, Math.floor(params.leafDensity), 3.0),
-    [branches, params.leafDensity]
-  );
-  const blossomVoxels = useMemo(
-    () => pointsAroundEnds(branches, Math.floor(params.blossomDensity), 2.4),
-    [branches, params.blossomDensity]
-  );
+  // 🍃 Sinh ngẫu nhiên cụm lá hình cầu tán
+  for (let i = 0; i < 80; i++) {
+    const r = 2.2 + Math.random() * 1.8;
+    const theta = Math.random() * 2 * Math.PI;
+    const phi = Math.random() * Math.PI;
+    const x = r * Math.sin(phi) * Math.cos(theta);
+    const y = trunkHeight - 0.5 + Math.random() * 1.5;
+    const z = r * Math.sin(phi) * Math.sin(theta);
+    leafPositions.push([x, y, z]);
+  }
 
-  // 🌬 Hiệu ứng gió (lung lay)
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    if (swayRef.current) {
-      swayRef.current.rotation.z = Math.sin(t * params.swaySpeed) * params.windStrength * 0.03;
-      swayRef.current.rotation.x = Math.cos(t * params.swaySpeed * 0.7) * params.windStrength * 0.02;
-    }
-  });
+  // 🌸 Hoa tập trung trên ngọn và đầu cành
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 2 + Math.random();
+    const height = trunkHeight + 0.5 + Math.random() * 0.5;
+    const x = radius * Math.cos(angle);
+    const z = radius * Math.sin(angle);
+    flowerPositions.push([x, height, z]);
+  }
 
   return (
-    <group ref={swayRef}>
-      <InstancedVoxels
-        positions={trunkVoxels}
-        color={new THREE.Color("#8B5A2B")}
-        size={[0.35, 0.35, 0.35]}
-      />
-      <InstancedVoxels
-        positions={leafVoxels}
-        color={new THREE.Color("#3ba454")}
-        size={[0.26, 0.26, 0.26]}
-        jitter
-      />
-      <InstancedVoxels
-        positions={blossomVoxels}
-        color={new THREE.Color().setHSL(params.hue, 0.8, 0.55)}
-        size={[0.22, 0.22, 0.22]}
-        jitter
-      />
+    <group scale={[size, size, size]}>
+      {/* 🌳 Thân chính */}
+      <mesh position={[0, trunkHeight / 2, 0]} castShadow>
+        <boxGeometry args={[trunkThickness, trunkHeight, trunkThickness]} />
+        <meshStandardMaterial color="#7a4f2c" roughness={0.9} />
+      </mesh>
+
+      {/* 🌿 Các nhánh ngang (4 hướng) */}
+      {[
+        [branchLength / 2, trunkHeight - 0.3, 0],
+        [-branchLength / 2, trunkHeight - 0.3, 0],
+        [0, trunkHeight - 0.3, branchLength / 2],
+        [0, trunkHeight - 0.3, -branchLength / 2],
+      ].map((pos, idx) => (
+        <mesh key={`branch-${idx}`} position={pos as [number, number, number]} castShadow>
+          <boxGeometry
+            args={
+              idx < 2
+                ? [branchLength, branchThickness, branchThickness]
+                : [branchThickness, branchThickness, branchLength]
+            }
+          />
+          <meshStandardMaterial color="#7a4f2c" roughness={0.9} />
+        </mesh>
+      ))}
+
+      {/* 🍃 Lá */}
+      {leafPositions.map((pos, idx) => (
+        <mesh key={`leaf-${idx}`} position={pos} castShadow>
+          <boxGeometry args={[leafSize, leafSize, leafSize]} />
+          <meshStandardMaterial color="#2e7d32" roughness={0.7} />
+        </mesh>
+      ))}
+
+      {/* 🌸 Hoa */}
+      {flowerPositions.map((pos, idx) => (
+        <mesh key={`flower-${idx}`} position={pos} castShadow>
+          <boxGeometry args={[flowerSize, flowerSize, flowerSize]} />
+          <meshStandardMaterial color="#ff4500" roughness={0.6} />
+        </mesh>
+      ))}
     </group>
-  );
-};
-
-// 📦 Component voxel khối lập phương
-const InstancedVoxels: React.FC<{
-  positions: THREE.Vector3[];
-  color: THREE.Color;
-  size: [number, number, number];
-  jitter?: boolean;
-}> = ({ positions, color, size, jitter = false }) => {
-  const ref = useRef<THREE.InstancedMesh>(null!);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const geo = useMemo(() => new THREE.BoxGeometry(1, 1, 1), []);
-  const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color, roughness: 0.9, metalness: 0 }),
-    [color]
-  );
-
-  useLayoutEffect(() => {
-    positions.forEach((p, i) => {
-      dummy.position.set(
-        p.x + (jitter ? (Math.random() - 0.5) * 0.06 : 0),
-        p.y + (jitter ? (Math.random() - 0.5) * 0.06 : 0),
-        p.z + (jitter ? (Math.random() - 0.5) * 0.06 : 0)
-      );
-      dummy.scale.set(size[0], size[1], size[2]);
-      dummy.updateMatrix();
-      ref.current.setMatrixAt(i, dummy.matrix);
-    });
-    ref.current.instanceMatrix.needsUpdate = true;
-
-    return () => {
-      geo.dispose();
-      mat.dispose();
-    };
-  }, [positions, size, jitter, geo, mat, dummy]);
-
-  return (
-    <instancedMesh
-      ref={ref}
-      args={[geo, mat, positions.length]}
-      castShadow
-      receiveShadow
-    />
   );
 };

@@ -8,8 +8,8 @@ import { getUserCertificates } from "../../../services/userCertificateService";
 import { UserCertificateForm } from "./UserCertificateForm";
 import { UserSkillForm } from "./UserSkillForm";
 
-const userId = "demo_user_001";
-
+import { getAuth } from "firebase/auth";
+const userId = getAuth().currentUser?.uid || "";
 // --- Animations ---
 const gradientAnimation = keyframes`
   0% {

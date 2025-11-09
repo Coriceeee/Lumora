@@ -9,24 +9,25 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { CareerDashboard } from "../types/CareerDashboard";
+import { getAuth } from "firebase/auth";
 
 const COLLECTION_NAME = "careerDashboards";
-const FAKE_USER_ID = "user_fake_id_123456"; // ID giả để test
+ const userId = getAuth().currentUser?.uid || "";
 
 // Thêm dashboard mới
 export const addCareerDashboard = async (dashboard: CareerDashboard) => {
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
     ...dashboard,
-    userId: FAKE_USER_ID, // luôn gắn ID giả
+ 
   });
-  return { ...dashboard, id: docRef.id, userId: FAKE_USER_ID };
+  return { ...dashboard, id: docRef.id, userId};
 };
 
 // Lấy tất cả dashboard của user giả
 export const getCareerDashboardsByUser = async (userId?: string) => {
   const q = query(
     collection(db, COLLECTION_NAME),
-    where("userId", "==", FAKE_USER_ID)
+    where("userId", "==", userId)
   );
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map((docSnap) => ({

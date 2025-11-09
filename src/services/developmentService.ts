@@ -3,6 +3,7 @@ import { getLearningResultsByUser } from "./learningResultService";
 import { callGeminiForDashboard } from "./geminiDashboardService";
 import { getAllSubjects } from "./subjectService";
 import { getAllScoreTypes } from "./scoreTypeService";
+import { getAuth } from "firebase/auth";
 
 // 👉 Prompt riêng được tách ra
 const developmentPrompt = (
@@ -40,7 +41,7 @@ KHÔNG thêm bất kỳ giải thích hay mô tả nào khác ngoài JSON.
 };
 
 export async function getDevelopmentSuggestions() {
-  const userId = "user_fake_id_123456"; // ✅ Dùng ID giả cố định
+ const userId = getAuth().currentUser?.uid || "";
 
   // Lấy dữ liệu kết quả học tập và kế hoạch học tập
   const [results, dashboards] = await Promise.all([

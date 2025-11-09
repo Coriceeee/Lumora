@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useSpring, animated } from "@react-spring/web";
+import { useEffect, useState, useMemo } from "react";
+import { useSprings, animated, SpringValue } from "@react-spring/web";
 import { FaSpinner, FaHeart } from "react-icons/fa";
 import { callGeminiServer } from "../../../services/gemini";
 import "./CloudWhisper.css";
@@ -9,6 +9,13 @@ type CloudItem = {
   title: string;
   content: string;
   likes: number;
+};
+
+type CloudConfig = {
+  top: number;
+  size: number;
+  className: string;
+  startX: number;
 };
 
 const classNames = ["cloud1", "cloud2", "cloud3"];
@@ -21,7 +28,7 @@ export default function CloudWhisper() {
   const [selectedItem, setSelectedItem] = useState<CloudItem | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const prompt = `
+const prompt = `
      Bạn là trợ lý tạo thông điệp tích cực dành cho học sinh và sinh viên Việt Nam. 
     Nhiệm vụ của bạn là sinh ra 30 thông điệp ngắn gọn, vui tươi, khích lệ tinh thần học tập, vượt qua áp lực và yêu bản thân.
     
@@ -50,15 +57,13 @@ export default function CloudWhisper() {
 
   async function fetchClouds() {
     setLoading(true);
-    setError("");
     try {
       const data = await callGeminiServer(prompt);
       const arr = data.messages || [];
       const items = arr.slice(0, 30).map((it: any, i: number) => ({
         id: Math.random().toString(36),
         title: it.title || `🌤️ Đám mây #${i + 1}`,
-        content:
-          it.content || "Hít thở sâu — bạn tuyệt vời hơn bạn nghĩ đó! 🍀",
+        content: it.content || "Hít thở sâu — bạn tuyệt vời hơn bạn nghĩ đó! 🍀",
         likes: 0,
       }));
       setClouds(items);
@@ -77,15 +82,12 @@ export default function CloudWhisper() {
   const handleLike = (id: string) => {
     setLiked((prev) => new Set([...prev, id]));
     setClouds((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, likes: c.likes + 1 } : c
-      )
+      prev.map((c) => (c.id === id ? { ...c, likes: c.likes + 1 } : c))
     );
   };
 
   const handleCloudClick = (index: number) => {
-    const cloud = clouds[index];
-    setSelectedItem(cloud);
+    setSelectedItem(clouds[index]);
     setModalOpen(true);
   };
 
@@ -94,47 +96,55 @@ export default function CloudWhisper() {
     setSelectedItem(null);
   };
 
+  // ✅ Tạo thông tin tĩnh cho từng đám mây — đây chính là configs
+  const configs: CloudConfig[] = useMemo(() => {
+    const screenHeight = window.innerHeight;
+    return clouds.map(() => ({
+      top: Math.random() * 0.5 * screenHeight,
+      size: Math.random() * 400 + 100,
+      className: classNames[Math.floor(Math.random() * classNames.length)],
+      startX: Math.random() * window.innerWidth - window.innerWidth / 2,
+    }));
+  }, [clouds.length]);
+
+  // ✅ Dùng useSprings để tạo animation
+  const springs: { transform: SpringValue<string> }[] = useSprings(
+    clouds.length,
+    configs.map((cfg) => ({
+      from: { transform: `translateX(${cfg.startX}px)` },
+      to: async (next: (arg0: { transform: string; }) => any) => {
+        while (1) {
+          await next({
+            transform: `translateX(-130vw) translateY(${
+              Math.random() * 100 - 50
+            }px)`,
+          });
+        }
+      },
+      config: { duration: 100000 },
+      reset: true,
+    }))
+  );
+
   return (
     <div className="sky">
       {loading ? (
         <div className="flex-1 flex justify-center items-center">
-          
-        </div>
+          </div>
       ) : (
-        clouds.map((cloud, index) => {
-          const screenHeight = window.innerHeight;
-          const positionTop = (Math.random() * 0.5) * screenHeight;
-          const size = Math.random() * 400 + 100;
-          const className =
-            classNames[Math.floor(Math.random() * classNames.length)];
-          const startX =
-            Math.random() * window.innerWidth - window.innerWidth / 2;
-
-          // 👇 Animation React Spring
-          const anim = useSpring({
-            from: { transform: `translateX(${startX}px)` },
-            to: async (next) => {
-              while (1) {
-                await next({
-                  transform: `translateX(-130vw) translateY(${
-                    Math.random() * 100 - 50
-                  }px)`,
-                });
-              }
-            },
-            config: { duration: 100000 },
-            reset: true,
-          });
+        springs.map((style, index) => {
+          const cloud = clouds[index];
+          const cfg = configs[index]; // ✅ lấy giá trị tĩnh tại đây
 
           return (
             <animated.div
               key={cloud.id}
-              className={className}
+              className={cfg.className}
               style={{
-                ...anim,
-                width: `${size}px`,
-                height: `${size * 0.6}px`,
-                top: `${positionTop}px`,
+                ...style,
+                width: `${cfg.size}px`,
+                height: `${cfg.size * 0.6}px`,
+                top: `${cfg.top}px`,
                 position: "absolute",
               }}
               onClick={() => handleCloudClick(index)}
@@ -153,8 +163,6 @@ export default function CloudWhisper() {
             disabled={liked.has(selectedItem.id)}
             onClick={() => handleLike(selectedItem.id)}
           >
-           
-            ✖
           </button>
         </div>
       )}

@@ -15,8 +15,9 @@ import { getCareersInLatestDashboard } from "../../../services/targetProfileServ
 import SkillEvaluation from "./components_phantich/SkillEvaluation";
 import CertificateEvaluation from "./components_phantich/CertificateEvaluation";
 import SubjectEvaluation from "./components_phantich/SubjectEvaluation";
+import { getAuth } from "firebase/auth";
 
-const USER_ID = "user_fake_id_123456";
+ const userId = getAuth().currentUser?.uid || "";
 
 export default function PhanTichNangLucPage() {
   const [learning, setLearning] = React.useState<any[]>([]);
@@ -68,13 +69,13 @@ export default function PhanTichNangLucPage() {
     (async () => {
       try {
         const [lr, sk, ct, sc, cc, subj, userProfiles] = await Promise.all([
-          getLearningResultsByUser(USER_ID),
-          getUserSkills(USER_ID),
-          getUserCertificates(USER_ID),
+          getLearningResultsByUser(userId),
+          getUserSkills(userId),
+          getUserCertificates(userId),
           getAllSkills(),
           getAllCertificates(),
           getAllSubjects(),
-          getCareersInLatestDashboard(USER_ID)
+          getCareersInLatestDashboard(userId)
         ]);
 
         if (!mounted) return;

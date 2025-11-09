@@ -20,9 +20,10 @@ import SubjectsCard from "./components_dinhhuong/SubjectsCard";
 import SummaryCard from "./components_dinhhuong/SummaryCard";
 import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
 import './timeline.css'
+import { getAuth } from "firebase/auth";
 
 
-const userId = "user_fake_id_123456";
+ const userId = getAuth().currentUser?.uid || "";
 
 const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);

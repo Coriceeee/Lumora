@@ -21,7 +21,8 @@ import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
 import VoidZone from "../pages/zenora/VoidZone";
 import CloudWhisper from "../pages/zenora/CloudWhisper";
 
-import MindfulGardenComponent from "../pages/ayura/MindfulGarden";
+import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
+import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(
@@ -54,15 +55,22 @@ export function PrivateRoutes() {
         <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
         <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
         <Route path="/neovana/dinh-huong-phat-trien" component={DinhHuongPhatTrien} />
-        <Route path="/ayura/vuon-chua-lanh" component={MindfulGardenComponent} />
+
+        <Route
+          path="/ayura/vuon-chua-lanh"
+          render={() => (
+            <AyuraCoreProvider>
+              <MindfulGardenComponent />
+            </AyuraCoreProvider>
+          )}
+        />
 
         <Route path="/zenora/void-zone" component={VoidZone} />
         <Route path="/zenora/cloud-whisper" component={CloudWhisper} />
 
-
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />
-        <Redirect to="dashboard" />
+        <Redirect to="/dashboard" />
       </Switch>
     </Suspense>
   );

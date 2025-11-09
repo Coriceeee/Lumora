@@ -1,5 +1,5 @@
 // FILE: src/app/pages/vireya/components/SubjectsCard.tsx
-// ✅ Version dùng React Spring (không còn Framer Motion)
+// ✅ Version dùng React Spring (chuẩn ESLint, không còn Framer Motion)
 
 import React from "react";
 import { useTrail, animated } from "@react-spring/web";
@@ -43,20 +43,22 @@ export interface SubjectsCardProps {
 }
 
 const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
-  if (!subjects || subjects.length === 0) {
-    return (
-      <div className="p-4 rounded-2xl bg-gray-50 text-gray-500 text-center">
-        Chưa có dữ liệu môn học cần tập trung.
-      </div>
-    );
-  }
-
-  // React Spring animation: hiệu ứng xuất hiện dần từng thẻ
-  const trail = useTrail(subjects.length, {
+  // ✅ Hook phải được gọi luôn, không đặt sau early return
+  const trail = useTrail(subjects?.length || 0, {
     from: { opacity: 0, y: 20 },
     to: { opacity: 1, y: 0 },
     config: { tension: 210, friction: 18 },
   });
+
+  // ✅ Kiểm tra rỗng ở phần render thay vì return sớm
+  if (!subjects || subjects.length === 0) {
+    return (
+      <div className="p-4 rounded-2xl bg-gray-50 text-gray-500 text-center">
+        Chưa có dữ liệu môn học cần tập trung.
+        
+      </div>
+    );
+  }
 
   return (
     <div className="grid gap-4 md:grid-cols-2 p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white shadow-lg hover:shadow-xl transition-all ease-in-out duration-300">
@@ -65,7 +67,10 @@ const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
         return (
           <animated.div
             key={idx}
-            style={style}
+            style={{
+              opacity: style.opacity,
+              transform: style.y.to((y) => `translateY(${y}px)`),
+            }}
             className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white shadow hover:shadow-lg transition cursor-pointer"
           >
             <div className="flex items-center gap-2 mb-2">

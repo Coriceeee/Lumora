@@ -13,9 +13,10 @@ import { getCareerDashboardsByUser } from "../../../../services/careerDashboardS
 import KeySubjectsCard from "./KeySubjectsCard";
 import { LearningDashboard } from "../../../../types/LearningDashboard";
 import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
+import { getAuth } from "firebase/auth";
 
 export const StartDashboardPage: React.FC = () => {
-  const userId = "user_fake_id_123456"; // test id (thay bằng động nếu cần)
+ const userId = getAuth().currentUser?.uid || "";
   const [show, setShow] = useState(false);
   const [selectedCareerDashboard, setSelectedCareerDashboard] = useState<CareerDashboard | null>(null);
   const [selectedLearningDashboard, setSelectedLearningDashboard] = useState<LearningDashboard | null>(null);

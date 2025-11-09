@@ -52,16 +52,9 @@ export function Header() {
           {!config.aside.content && (
             <>
               {/* begin::Mega Menu Toggler */}
-              <button
-                className="btn btn-icon btn-accent me-2 me-lg-6"
-                id="kt_mega_menu_toggle"
-                onClick={() => setShowMegaMenuModal(true)}
-              >
-                <KTSVG
-                  path="/media/icons/duotone/Text/Article.svg"
-                  className="svg-icon-1"
-                />
-              </button>
+             
+
+              
               {/* end::Mega Menu Toggler */}
 
               {/* begin::Logo */}
