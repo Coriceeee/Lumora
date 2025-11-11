@@ -32,10 +32,10 @@ const SidebarGeneral: React.FC = () => {
       { label: "🧠 Phân tích năng lực", to: "/neovana/phan-tich-nang-luc", color: "#845ef7" },
       
     ],
-    2: [{ label: "🪴Vườn chữa lành", to: "/ayura/vuon-chua-lanh", color: "#20c997" }],
+    2: [{ label: "🪴Vườn chữa lành", to: "", color: "#20c997" }],
     3: [
       { label: "🌀 Void Zone", to: "/zenora/void-zone", color: "#fd7e14" },
-      { label: "CloudWhisper", to: "/zenora/cloud-whisper", color: "#1427fdff" },
+      { label: " ☁ CloudWhisper", to: "/zenora/cloud-whisper", color: "#fd7e14" },
     ],
     4: [
       { label: "📝 Loại điểm", to: "/danh-muc/loai-diem", color: "#0dcaf0" },

@@ -80,7 +80,7 @@ export async function deleteLearningResult(id: string): Promise<void> {
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE";
+const API_KEY = "AIzaSyD99Fi_5Flj41apmCEONCltKyUJ-eLl3Fo"; 
 
 /**
  * Gọi API Gemini để phân tích dữ liệu học tập, trả về kết quả dạng text

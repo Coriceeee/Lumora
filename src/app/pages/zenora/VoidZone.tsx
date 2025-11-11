@@ -218,8 +218,7 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
 );
 
 /* ---------------- Main Component ---------------- */
-const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
-
+const API_KEY = process.env.REACT_APP_GEMINI_API_KEY; 
 const VoidZone: React.FC = () => {
   const [input, setInput] = useState("");
   const [userStressItems, setUserStressItems] = useState<string[]>([]);
@@ -311,7 +310,7 @@ const VoidZone: React.FC = () => {
         .join("\n");
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={AIzaSyCR0Fa1XOG2kyP5bC64Sj6wcDiQnt7yUaI}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

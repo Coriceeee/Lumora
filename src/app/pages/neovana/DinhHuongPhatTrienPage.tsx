@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Button,
-  Typography,
-} from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import {
   addCareerDashboard,
   getCareerDashboardsByUser,
@@ -19,26 +15,33 @@ import CertificatesCard from "./components_dinhhuong/CertificatesCard";
 import SubjectsCard from "./components_dinhhuong/SubjectsCard";
 import SummaryCard from "./components_dinhhuong/SummaryCard";
 import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
-import './timeline.css'
-import { getAuth } from "firebase/auth";
-
-
- const userId = getAuth().currentUser?.uid || "";
+import "./timeline.css";
+import { useFirebaseUser } from "../../hooks/useFirebaseUser";
+import { toast } from "react-toastify";
 
 const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
   const [selected, setSelected] = useState<CareerDashboard | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ✅ dùng hook để đảm bảo userId có giá trị hợp lệ
+  const { userId, loading: authLoading } = useFirebaseUser();
+
   const loadDashboards = async () => {
-    const data = await getCareerDashboardsByUser();
+    if (!userId) {
+      console.warn("⚠️ userId chưa sẵn sàng, bỏ qua tải dữ liệu dashboard.");
+      return;
+    }
+
+    const data = await getCareerDashboardsByUser(userId);
     setDashboards(data);
     if (data.length > 0) setSelected(data[0]);
   };
 
   useEffect(() => {
+    if (authLoading) return; // ⏳ chờ xác thực
     loadDashboards();
-  }, []);
+  }, [userId, authLoading]);
 
   const handleCreate = () => {
     setDialogOpen(true);
@@ -50,6 +53,11 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     personality: string;
     dreamJob: string;
   }) => {
+    if (!userId) {
+      toast.error("❌ Không tìm thấy userId, vui lòng đăng nhập lại.");
+      return;
+    }
+
     const dashboard = await generateCareerDashboard(userId, formData);
     const saved = await addCareerDashboard(dashboard);
     await loadDashboards();
@@ -69,15 +77,12 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     <>
       <div className="row g-0 g-xl-5 g-xxl-8">
         <div className="col-xxl-4">
+          {/* Nhập thông tin */}
           <div className="card mb-5">
             <div className="card-body">
               <div className="d-flex bg-light-primary card-rounded flex-grow-1">
                 <div className="py-10 ps-7">
-                  <div className="">
-                    <span className="font-weight-light fs-1 text-gray-800">
-                      <span className="fw-bolder fs-1 text-gray-800">Nhập thông tin</span>
-                    </span>
-                  </div>
+                  <span className="fw-bolder fs-1 text-gray-800">Nhập thông tin</span>
                   <Button
                     variant="contained"
                     color="primary"
@@ -98,12 +103,12 @@ const DinhHuongPhatTrienPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Lịch sử dashboard */}
           <div className="card mb-5">
             <div className="card-body">
               <Typography variant="h6" className="dashboard-history-title">
                 Lịch sử Dashboard
               </Typography>
-
               <div className="neovana-timeline">
                 {dashboards.map((d) => {
                   const isSelected = selected?.id === d.id;
@@ -112,10 +117,14 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                       <span className="neovana-timeline-dot" />
                       <button
                         type="button"
-                        className={`neovana-timeline-btn ${isSelected ? "neovana-timeline-btn--selected" : ""}`}
+                        className={`neovana-timeline-btn ${
+                          isSelected ? "neovana-timeline-btn--selected" : ""
+                        }`}
                         onClick={() => setSelected(d)}
                       >
-                        <span className="neovana-timeline-title">{d.title || "Dashboard"}</span>
+                        <span className="neovana-timeline-title">
+                          {d.title || "Dashboard"}
+                        </span>
                         <span className="neovana-timeline-date">
                           {new Date(d.createdAt).toLocaleDateString()}
                         </span>
@@ -126,21 +135,22 @@ const DinhHuongPhatTrienPage: React.FC = () => {
               </div>
             </div>
           </div>
-
         </div>
 
+        {/* Bảng chi tiết bên phải */}
         <div className="col-xxl-8 gy-0 gy-xxl-8">
           {selected ? (
             <Box display="flex" flexDirection="column" gap={2}>
               <SummaryCard dashboard={selected} />
-              <CareersCard careers={selected.careers} />              
-              
+              <CareersCard careers={selected.careers} />
             </Box>
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
       </div>
+
+      {/* Hàng kỹ năng & chứng chỉ */}
       <div className="row g-0 g-xl-5 g-xxl-8">
         <div className="col-xxl-6 p-5">
           {selected ? (
@@ -150,21 +160,22 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           )}
         </div>
         <div className="col-xxl-6">
-           {selected ? (
+          {selected ? (
             <CertificatesCard certificates={selected.certificatesToAdd || []} />
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
       </div>
+
+      {/* Hàng môn học */}
       <div className="row g-0 g-xl-5 g-xxl-8">
         {selected ? (
-            <SubjectsCard subjects={selected.subjectsToFocus || []} />
-          ) : (
-            <Typography>Chưa có dữ liệu.</Typography>
-          )}
+          <SubjectsCard subjects={selected.subjectsToFocus || []} />
+        ) : (
+          <Typography>Chưa có dữ liệu.</Typography>
+        )}
       </div>
-
 
       <SuggestionDialog
         open={dialogOpen}

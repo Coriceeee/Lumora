@@ -139,7 +139,7 @@ export function AsideMenuMain() {
           </div>
         )}
         <AsideMenuItem
-          to="/ayura/vuon-chua-lanh"
+          to=""
           title={collapsed ? "" : "Vườn chữa lành"}
           icon="fas fa-book-open text-warning px-2"
         />
