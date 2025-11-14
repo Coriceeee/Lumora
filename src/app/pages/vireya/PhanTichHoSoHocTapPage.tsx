@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "../../../utils/fakeMotion";
 import { getAllLearningResults, getGeminiAnalysis } from "../../../services/learningResultService";
 import { getAllSubjects } from "../../../services/subjectService";
 import { getAllScoreTypes } from "../../../services/scoreTypeService";
+import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 
 /**
  * File: PhanTichHoSoHocTapPage.tsx
@@ -148,6 +149,9 @@ const PhanTichHoSoHocTapPage: React.FC = () => {
 
   const allCombinations = { ...customCombinations };
 
+  // 🔥 Hook lấy userId
+  const { userId, loading: authLoading } = useFirebaseUser();
+
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
@@ -165,12 +169,15 @@ const PhanTichHoSoHocTapPage: React.FC = () => {
 
   // Fetch phân tích AI
   useEffect(() => {
+    if (authLoading) return;            // ⛔ Chưa load xong auth → chờ
+    if (!userId) return;                // ⛔ Không có userId → không fetch
+    
     const fetchAnalysis = async () => {
       if (!selectedCombination || !allCombinations[selectedCombination]) return;
 
       setLoading(true);
       try {
-        const [results] = await Promise.all([getAllLearningResults()]);
+        const [results] = await Promise.all([getAllLearningResults(userId)]);
         if (!results.length) {
           toast.info("Chưa có dữ liệu học tập để phân tích.");
           setLoading(false);
