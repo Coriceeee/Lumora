@@ -18,7 +18,7 @@ import "react-toastify/dist/ReactToastify.css";
 import classNames from "classnames";
 import { KTSVG } from "../../../_start/helpers";
 import { Dropdown1 } from "../../../_start/partials";
-import { getAuth } from "firebase/auth";
+import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 
 const {
   BarChart,
@@ -256,7 +256,8 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ subjectName = "x", pe
 
 /* ---------- Component ---------- */
 const LearningDashboardPage: React.FC = () => {
- const userId = getAuth().currentUser?.uid || "";
+ // 🔥 Hook lấy userId
+   const { userId } = useFirebaseUser();
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set());
@@ -278,7 +279,7 @@ const LearningDashboardPage: React.FC = () => {
   const [priorityLimit, setPriorityLimit] = useState<number>(0); // 0 => show all
 
   const loadDashboards = async () => {
-    if (!userId) return;
+    if (!userId) return;    
     try {
       const data = await getLearningDashboardsByUser(userId);
       setDashboards(data || []);
@@ -292,6 +293,7 @@ const LearningDashboardPage: React.FC = () => {
   };
 
   const loadLearningResults = async () => {
+     if (!userId) return;
     try {
       const results = await getLearningResultsByUser(userId);
       const final = Array.isArray(results) && results.length > 0 ? results : (await getAllLearningResults());

@@ -44,7 +44,7 @@ export default function PhanTichNangLucPage() {
     severity: "success" as "success" | "error",
   });
     // 🔥 Hook lấy userId
-    const { userId, loading: authLoading } = useFirebaseUser();
+    const { userId } = useFirebaseUser();
   
 
   
@@ -74,9 +74,9 @@ export default function PhanTichNangLucPage() {
 };
 
 React.useEffect(() => {
-  if (!userId || authLoading) return;
+  if (!userId) return;
   loadDashboards();
-}, [userId, authLoading]);
+}, [userId]);
 
 
 

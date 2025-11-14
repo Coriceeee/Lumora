@@ -150,7 +150,7 @@ const PhanTichHoSoHocTapPage: React.FC = () => {
   const allCombinations = { ...customCombinations };
 
   // 🔥 Hook lấy userId
-  const { userId, loading: authLoading } = useFirebaseUser();
+  const { userId } = useFirebaseUser();
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -168,8 +168,7 @@ const PhanTichHoSoHocTapPage: React.FC = () => {
   }, []);
 
   // Fetch phân tích AI
-  useEffect(() => {
-    if (authLoading) return;            // ⛔ Chưa load xong auth → chờ
+  useEffect(() => {    
     if (!userId) return;                // ⛔ Không có userId → không fetch
     
     const fetchAnalysis = async () => {

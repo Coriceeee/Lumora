@@ -64,10 +64,15 @@ Trả kết quả chỉ trả về theo định dạng JSON chuẩn như sau:
 
   subjectInsights: {
     subjectName: string;
+    scores: {
+      "Thường xuyên": number;
+      "Giữa kỳ": number;
+      "Cuối kỳ": number;
+    };
     trend: string;
     strength: string;
     weakness: string;
-    suggestion: string;
+    suggestion: string;    
   }[];
 }`;
 

@@ -32,7 +32,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // 🔥 Hook lấy userId
-  const { userId, loading: authLoading } = useFirebaseUser();
+  const { userId } = useFirebaseUser();
 
   // ⭐ Load dashboard theo user
   const loadDashboards = async () => {
@@ -47,8 +47,9 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!authLoading) loadDashboards();
-  }, [userId, authLoading]);
+    if (!userId) return;
+    loadDashboards();
+  }, [userId]);
 
   // ⭐ Tạo mới dashboard
   const handleCreate = () => setDialogOpen(true);
