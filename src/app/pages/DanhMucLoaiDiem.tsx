@@ -5,10 +5,10 @@ import {
   deleteScoreType,
 } from "../../services/scoreTypeService";
 import { ScoreType } from "../../types/ScoreType";
+import { getAuth } from "firebase/auth"; // Import Firebase Auth
 
 export default function DanhMucLoaiDiem() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
-  // Thêm trường nhập điểm (point) vào state mới
   const [newScoreType, setNewScoreType] = useState<Omit<ScoreType, "id">>({
     name: "",
     weight: 1,
@@ -16,6 +16,7 @@ export default function DanhMucLoaiDiem() {
   });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const fetchScoreTypes = async () => {
     setLoading(true);
@@ -29,20 +30,28 @@ export default function DanhMucLoaiDiem() {
 
   useEffect(() => {
     fetchScoreTypes();
+
+    // Check if the user is the admin by email
+    const auth = getAuth();
+    const user = auth.currentUser;
+    if (user?.email === "nguyenlamvananh66@gmail.com") {
+      setIsAdmin(true);
+    }
   }, []);
 
-
   const handleAdd = async () => {
+    if (!isAdmin) {
+      alert("Bạn không có quyền thêm loại điểm.");
+      return;
+    }
     if (!newScoreType.name.trim()) {
       alert("Tên loại điểm không được để trống.");
       return;
     }
     try {
-      // Chuẩn bị dữ liệu để gửi lên server
       const scoreTypeToAdd: ScoreType & { point?: number } = {
         ...newScoreType,
       };
-      // Nếu backend không cần trường point thì bạn có thể bỏ nó trước khi gửi
       await addScoreType(scoreTypeToAdd);
       setNewScoreType({ name: "", weight: 1, description: "" });
       setShowForm(false);
@@ -54,6 +63,10 @@ export default function DanhMucLoaiDiem() {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!isAdmin) {
+      alert("Bạn không có quyền xóa loại điểm.");
+      return;
+    }
     if (!id) return;
     if (!window.confirm("Bạn có chắc muốn xóa loại điểm này?")) return;
     try {
@@ -114,7 +127,6 @@ export default function DanhMucLoaiDiem() {
             borderRadius: 16,
           }}
         >
-          {/* Tên loại điểm */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên loại điểm *</label>
             <input
@@ -128,8 +140,6 @@ export default function DanhMucLoaiDiem() {
               autoFocus
             />
           </div>
-
-          {/* Hệ số */}
           <div className="mb-3">
             <label className="form-label fw-semibold">Hệ số</label>
             <input
@@ -146,8 +156,6 @@ export default function DanhMucLoaiDiem() {
               }
             />
           </div>
-
-          {/* Diễn giải */}
           <div className="mb-4">
             <label className="form-label fw-semibold">Diễn giải</label>
             <textarea
@@ -160,7 +168,6 @@ export default function DanhMucLoaiDiem() {
               }
             />
           </div>
-
           <button
             className="btn btn-success btn-lg w-100"
             onClick={handleAdd}
@@ -223,22 +230,24 @@ export default function DanhMucLoaiDiem() {
                       <i className="bi bi-pie-chart-fill me-2"></i>
                       {scoreType.name}
                     </h5>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      title="Xóa loại điểm"
-                      onClick={() => handleDelete(scoreType.id)}
-                      aria-label={`Xóa loại điểm ${scoreType.name}`}
-                      style={{ transition: "all 0.3s ease" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = "#d6336c")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.color = "")
-                      }
-                    >
-                      <i className="bi bi-trash3"></i>
-                    </button>
-                  </div>                
+                    {isAdmin && (
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        title="Xóa loại điểm"
+                        onClick={() => handleDelete(scoreType.id)}
+                        aria-label={`Xóa loại điểm ${scoreType.name}`}
+                        style={{ transition: "all 0.3s ease" }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.color = "#d6336c")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.color = "")
+                        }
+                      >
+                        <i className="bi bi-trash3"></i>
+                      </button>
+                    )}
+                  </div>
                   <p className="mb-1">
                     <b>Hệ số:</b> {scoreType.weight}
                   </p>

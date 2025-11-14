@@ -1,3 +1,5 @@
+// FILE: src/app/pages/neovana/DinhHuongPhatTrienPage.tsx
+
 import React, { useEffect, useState } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import {
@@ -5,16 +7,21 @@ import {
   getCareerDashboardsByUser,
 } from "../../../services/careerDashboardService";
 import { generateCareerDashboard } from "../../../services/neovanaDashboardService";
+
 import {
   CareerDashboard,
   SkillToImprove,
+  CertificateToAdd,
+  SubjectToFocus,
 } from "../../../types/CareerDashboard";
+
 import CareersCard from "./components_dinhhuong/CareersCard";
 import SkillsCard, { Skill } from "./components_dinhhuong/SkillsCard";
 import CertificatesCard from "./components_dinhhuong/CertificatesCard";
 import SubjectsCard from "./components_dinhhuong/SubjectsCard";
 import SummaryCard from "./components_dinhhuong/SummaryCard";
 import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
+
 import "./timeline.css";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 import { toast } from "react-toastify";
@@ -24,12 +31,13 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const [selected, setSelected] = useState<CareerDashboard | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // ✅ dùng hook để đảm bảo userId có giá trị hợp lệ
+  // 🔥 Hook lấy userId
   const { userId, loading: authLoading } = useFirebaseUser();
 
+  // ⭐ Load dashboard theo user
   const loadDashboards = async () => {
     if (!userId) {
-      console.warn("⚠️ userId chưa sẵn sàng, bỏ qua tải dữ liệu dashboard.");
+      console.warn("⚠ userId chưa sẵn sàng → bỏ qua tải dashboard");
       return;
     }
 
@@ -39,13 +47,11 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (authLoading) return; // ⏳ chờ xác thực
-    loadDashboards();
+    if (!authLoading) loadDashboards();
   }, [userId, authLoading]);
 
-  const handleCreate = () => {
-    setDialogOpen(true);
-  };
+  // ⭐ Tạo mới dashboard
+  const handleCreate = () => setDialogOpen(true);
 
   const handleDialogSubmit = async (formData: {
     strengths: string;
@@ -54,35 +60,42 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     dreamJob: string;
   }) => {
     if (!userId) {
-      toast.error("❌ Không tìm thấy userId, vui lòng đăng nhập lại.");
+      toast.error("Không tìm thấy userId");
       return;
     }
 
     const dashboard = await generateCareerDashboard(userId, formData);
+    dashboard.userId = userId;
+
     const saved = await addCareerDashboard(dashboard);
     await loadDashboards();
     setSelected(saved);
     setDialogOpen(false);
   };
 
+  // ⭐ Chuẩn hoá dữ liệu skills → SkillsCard
   const mapSkills = (skills: SkillToImprove[]): Skill[] =>
     skills.map((s) => ({
       name: s.name,
-      priority: Number(s.priority),
-      priorityRatio: s.priorityRatio,
-      reason: s.reason,
+      priority: Number(s.priority) || 0,
+      priorityRatio: Number(s.priorityRatio) || 0,
+      reason: s.reason || "",
     }));
 
   return (
     <>
       <div className="row g-0 g-xl-5 g-xxl-8">
+        {/* LEFT COLUMN */}
         <div className="col-xxl-4">
           {/* Nhập thông tin */}
           <div className="card mb-5">
             <div className="card-body">
               <div className="d-flex bg-light-primary card-rounded flex-grow-1">
                 <div className="py-10 ps-7">
-                  <span className="fw-bolder fs-1 text-gray-800">Nhập thông tin</span>
+                  <span className="fw-bolder fs-1 text-gray-800">
+                    Nhập thông tin
+                  </span>
+
                   <Button
                     variant="contained"
                     color="primary"
@@ -93,6 +106,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                     Tạo Career Dashboard
                   </Button>
                 </div>
+
                 <div
                   className="position-relative bgi-no-repeat bgi-size-contain bgi-position-y-bottom bgi-position-x-end mt-6 flex-grow-1"
                   style={{
@@ -109,12 +123,15 @@ const DinhHuongPhatTrienPage: React.FC = () => {
               <Typography variant="h6" className="dashboard-history-title">
                 Lịch sử Dashboard
               </Typography>
+
               <div className="neovana-timeline">
                 {dashboards.map((d) => {
                   const isSelected = selected?.id === d.id;
+
                   return (
                     <div key={d.id} className="neovana-timeline-item">
                       <span className="neovana-timeline-dot" />
+
                       <button
                         type="button"
                         className={`neovana-timeline-btn ${
@@ -125,6 +142,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                         <span className="neovana-timeline-title">
                           {d.title || "Dashboard"}
                         </span>
+
                         <span className="neovana-timeline-date">
                           {new Date(d.createdAt).toLocaleDateString()}
                         </span>
@@ -137,7 +155,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Bảng chi tiết bên phải */}
+        {/* RIGHT COLUMN */}
         <div className="col-xxl-8 gy-0 gy-xxl-8">
           {selected ? (
             <Box display="flex" flexDirection="column" gap={2}>
@@ -150,16 +168,17 @@ const DinhHuongPhatTrienPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Hàng kỹ năng & chứng chỉ */}
-      <div className="row g-0 g-xl-5 g-xxl-8">
-        <div className="col-xxl-6 p-5">
+      {/* SKILLS + CERTIFICATES */}
+      <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
+        <div className="col-xxl-6 p-4">
           {selected ? (
             <SkillsCard skills={mapSkills(selected.skillsToImprove || [])} />
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
-        <div className="col-xxl-6">
+
+        <div className="col-xxl-6 p-4">
           {selected ? (
             <CertificatesCard certificates={selected.certificatesToAdd || []} />
           ) : (
@@ -168,15 +187,18 @@ const DinhHuongPhatTrienPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Hàng môn học */}
-      <div className="row g-0 g-xl-5 g-xxl-8">
-        {selected ? (
-          <SubjectsCard subjects={selected.subjectsToFocus || []} />
-        ) : (
-          <Typography>Chưa có dữ liệu.</Typography>
-        )}
+      {/* SUBJECTS */}
+      <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
+        <div className="col-xxl-12 p-4">
+          {selected ? (
+            <SubjectsCard subjects={selected.subjectsToFocus || []} />
+          ) : (
+            <Typography>Chưa có dữ liệu.</Typography>
+          )}
+        </div>
       </div>
 
+      {/* Dialog */}
       <SuggestionDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}

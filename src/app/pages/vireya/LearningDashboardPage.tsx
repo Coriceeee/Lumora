@@ -797,8 +797,7 @@ const LearningDashboardPage: React.FC = () => {
                               const spRaw = computeSuggestionPriorityForSubject(s);
                               const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
                               return (
-                                <>
-                                  <div style={{ fontSize: 12, fontWeight: 900, color }}>{percentText}</div>
+                                <>                                  
                                   <div style={{ marginLeft: 8, fontSize: 12, color: "#7c2d12", fontWeight: 800 }}>Ưu tiên: {spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
                                 </>
                               );
@@ -978,22 +977,7 @@ const LearningDashboardPage: React.FC = () => {
 
                                 <div style={{ flex: 1, minWidth: 200 }}>
                                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    {/* show subject name + small progress badge beside it */}
-                                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                          {(() => {
-                                            const p = computeProgressForSubject(s);
-                                            const up = p.delta > 0.05;
-                                            const down = p.delta < -0.05;
-                                            const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                                            const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-                                            return (
-                                              <>
-                                                <div style={{ fontWeight: 700, fontSize: 15 }}>{s}</div>
-                                                <div style={{ fontSize: 12, fontWeight: 800, color }}>{percentText}</div>
-                                              </>
-                                            );
-                                          })()}
-                                    </div>
+                                    
 
                                     {/* status indicator in the compact detail */}
                                     {(() => {

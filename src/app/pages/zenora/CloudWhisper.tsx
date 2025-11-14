@@ -26,21 +26,21 @@ export default function CloudWhisper() {
   const [selectedItem, setSelectedItem] = useState<CloudItem | null>(null);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
-  const [hiddenClouds, setHiddenClouds] = useState<Set<string>>(new Set()); // Mới thêm state này
+  const [hiddenClouds, setHiddenClouds] = useState<Set<string>>(new Set());
 
   const randomSeed = Math.floor(Math.random() * 100000);
   const prompt = `
-  Bạn là trợ lý tạo thông điệp tích cực dành cho học sinh và sinh viên Việt Nam.
-  Hãy sinh ra 30 thông điệp ngắn gọn, vui tươi, khích lệ tinh thần học tập, vượt qua áp lực và yêu bản thân.
-  (Mã yêu cầu: ${randomSeed})
+      Bạn là trợ lý tạo thông điệp nhẹ nhàng, chữa lành và đầy yêu thương dành cho học sinh và sinh viên Việt Nam.
+      Hãy sinh ra 30 thông điệp ngắn gọn, ấm áp, vui tươi, khích lệ tinh thần học tập, vượt qua áp lực và yêu bản thân.
+      (Mã yêu cầu: ${randomSeed})
+      Yêu cầu:
 
-  Yêu cầu:
-  - Mỗi thông điệp gồm hai trường: "title" và "content".
-  - "title" là một cụm 2–5 từ kèm emoji ở đầu (ví dụ: "🌈 Vững bước lên nhé").
-  - "content" là 1–2 câu khích lệ bằng tiếng Việt, tự nhiên, gần gũi, có thể thêm emoji.
-  - Phong cách viết tích cực, truyền năng lượng, nhẹ nhàng, đáng yêu, như lời nhắn từ một người bạn.
-  - Không lặp lại ý tưởng.
-  - Chỉ TRẢ VỀ JSON THUẦN TÚY, KHÔNG markdown, KHÔNG giải thích, KHÔNG comment.
+      Mỗi thông điệp gồm hai trường: "title" và "content".
+      "title" là một cụm 2–5 từ kèm emoji ở đầu (ví dụ: "🌸 Bình yên trong lòng").
+      "content" là 1–2 câu khích lệ bằng tiếng Việt, nhẹ nhàng, tình cảm và gần gũi, có thể thêm emoji.
+      Phong cách viết như lời động viên của một người bạn thân thiết, luôn sẵn sàng ở bên để an ủi và nâng đỡ, truyền cảm hứng và sự an yên, nhưng ngắn gọn thôi.
+      Không lặp lại ý tưởng.
+      Chỉ TRẢ VỀ JSON THUẦN TÚY, KHÔNG markdown, KHÔNG giải thích, KHÔNG comment.
 
   Cấu trúc JSON mẫu:
   {
@@ -110,6 +110,17 @@ export default function CloudWhisper() {
     setSelectedItem(cloud);
     setModalOpen(true);
     setHiddenClouds((prev) => new Set([...prev, cloud.id])); // Ẩn đám mây sau khi click
+
+    // Tạo một đám mây mới thay thế
+    setClouds((prev) => {
+      const newCloud = {
+        id: `cloud-${Math.random()}`,
+        title: `☁️ Đám mây mới`,
+        content: "Cảm ơn bạn đã đồng hành cùng mình! 🍀",
+        likes: 0,
+      };
+      return [...prev.filter((c) => c.id !== cloud.id), newCloud];
+    });
   };
 
   const closeModal = () => {

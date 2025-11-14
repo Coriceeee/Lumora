@@ -13,32 +13,39 @@ import {
 } from "firebase/firestore";
 import { LearningResult } from "../types/LearningResult";
 
-/**
- * Collection Firestore lưu kết quả học tập
- */
+// =========================
+// 🔥 FIRESTORE COLLECTION
+// =========================
 const learningResultsCollection = collection(db, "learningResults");
 
-// --- CRUD LearningResult ---
+// =========================
+// 🔥 CRUD FUNCTIONS
+// =========================
 
-export async function getAllLearningResults(userId?: string): Promise<LearningResult[]> {
+export async function getAllLearningResults(
+  userId?: string
+): Promise<LearningResult[]> {
   try {
-    if (userId) {
-      const q = query(learningResultsCollection, where("userId", "==", userId));
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() } as LearningResult)
-      );
-    } else {
+    if (!userId) {
       console.warn("⚠️ getAllLearningResults: userId không có, trả về mảng rỗng.");
       return [];
     }
+
+    const q = query(learningResultsCollection, where("userId", "==", userId));
+    const snapshot = await getDocs(q);
+
+    return snapshot.docs.map(
+      (docSnap) => ({ id: docSnap.id, ...docSnap.data() } as LearningResult)
+    );
   } catch (error) {
     console.error("❌ Lỗi khi lấy tất cả LearningResults:", error);
     return [];
   }
 }
 
-export async function getLearningResultsByUser(userId?: string): Promise<LearningResult[]> {
+export async function getLearningResultsByUser(
+  userId?: string
+): Promise<LearningResult[]> {
   if (!userId) {
     console.warn("⚠️ getLearningResultsByUser: userId undefined, trả về mảng rỗng.");
     return [];
@@ -47,8 +54,9 @@ export async function getLearningResultsByUser(userId?: string): Promise<Learnin
   try {
     const q = query(learningResultsCollection, where("userId", "==", userId));
     const snapshot = await getDocs(q);
+
     return snapshot.docs.map(
-      (doc) => ({ id: doc.id, ...doc.data() } as LearningResult)
+      (docSnap) => ({ id: docSnap.id, ...docSnap.data() } as LearningResult)
     );
   } catch (error) {
     console.error("❌ Lỗi khi truy vấn getLearningResultsByUser:", error);
@@ -56,17 +64,23 @@ export async function getLearningResultsByUser(userId?: string): Promise<Learnin
   }
 }
 
-export async function addLearningResult(data: LearningResult): Promise<string> {
+export async function addLearningResult(
+  data: LearningResult
+): Promise<string> {
   if (!data.userId) throw new Error("userId là bắt buộc");
 
   const docRef = await addDoc(learningResultsCollection, {
     ...data,
     createdAt: new Date(),
   });
+
   return docRef.id;
 }
 
-export async function updateLearningResult(id: string, data: Partial<LearningResult>): Promise<void> {
+export async function updateLearningResult(
+  id: string,
+  data: Partial<LearningResult>
+): Promise<void> {
   const docRef = doc(db, "learningResults", id);
   await updateDoc(docRef, data);
 }
@@ -76,16 +90,23 @@ export async function deleteLearningResult(id: string): Promise<void> {
   await deleteDoc(docRef);
 }
 
-// --- Gemini API ---
+// =========================
+// 🔥 GEMINI API
+// =========================
 
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
 const API_KEY = "AIzaSyD99Fi_5Flj41apmCEONCltKyUJ-eLl3Fo"; 
 
 /**
- * Gọi API Gemini để phân tích dữ liệu học tập, trả về kết quả dạng text
+ * Gọi Gemini để phân tích Dashboard
  */
-export const callGeminiForDashboard = async (prompt: string): Promise<string> => {
+export const callGeminiForDashboard = async (
+  prompt: string
+): Promise<string> => {
+  if (!API_KEY) throw new Error("Thiếu API_KEY cho Gemini");
+
   try {
     const res = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
       method: "POST",
@@ -115,7 +136,7 @@ export const callGeminiForDashboard = async (prompt: string): Promise<string> =>
     }
 
     return (
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data.candidates?.[0]?.content?.parts?.[0]?.text ??
       "(Không có phản hồi)"
     );
   } catch (error) {
@@ -124,20 +145,22 @@ export const callGeminiForDashboard = async (prompt: string): Promise<string> =>
   }
 };
 
-/**
- * Tạo prompt phân tích kết quả học tập để gọi AI Gemini
- */
+// =========================
+// 🔥 PROMPT BUILDER
+// =========================
+
 function buildPromptFromResults(results: LearningResult[]): string {
   const grouped: Record<string, Record<string, number>> = {};
 
   results.forEach((r) => {
     const subject = r.subjectName ?? "Không rõ môn";
     const termLabel = r.termLabel || "Không rõ học kỳ";
+
     if (!grouped[subject]) grouped[subject] = {};
+
     grouped[subject][termLabel] = r.score;
   });
 
-  // Thứ tự các mốc học kỳ
   const termOrder = ["Giữa HK1", "Cuối HK1", "Giữa HK2", "Cuối HK2"];
 
   const lines = Object.entries(grouped).map(([subject, scores]) => {
@@ -151,7 +174,7 @@ function buildPromptFromResults(results: LearningResult[]): string {
 Đây là dữ liệu điểm của học sinh theo từng học kỳ:
 ${lines.join("\n")}
 
-Hãy phân tích theo mẫu JSON dưới đây và chỉ TRẢ VỀ JSON THUẦN TÚY (KHÔNG giải thích, KHÔNG markdown, KHÔNG comment):
+Hãy phân tích theo mẫu JSON dưới đây và chỉ TRẢ VỀ JSON THUẦN TÚY:
 
 {
   "subjectInsights": [
@@ -173,27 +196,33 @@ Hãy phân tích theo mẫu JSON dưới đây và chỉ TRẢ VỀ JSON THUẦN
 }`;
 }
 
-/**
- * Lấy phân tích JSON từ Gemini dựa trên dữ liệu học tập
- */
+// =========================
+// 🔥 PHÂN TÍCH JSON TỪ GEMINI
+// =========================
+
 export const getGeminiAnalysis = async (results: LearningResult[]) => {
   if (results.length === 0) throw new Error("Không có dữ liệu học tập");
 
   const prompt = buildPromptFromResults(results);
   const responseText = await callGeminiForDashboard(prompt);
 
-  // Xử lý loại bỏ ký tự markdown nếu có
-  const cleanedText = responseText.replace(/```json|```/g, "").trim();
+  // Xóa markdown nếu có
+  const cleanedText = responseText
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
 
   try {
     return JSON.parse(cleanedText);
   } catch (e) {
-    console.error("❌ Không thể parse JSON từ Gemini:\n", cleanedText);
+    console.error("❌ Không thể parse JSON từ Gemini:", cleanedText);
     throw new Error("Kết quả từ Gemini không phải JSON hợp lệ");
   }
 };
 
-// --- XỬ LÝ DỮ LIỆU CHO BIỂU ĐỒ ---
+// =========================
+// 🔥 LẤY 3 MÔN CHÍNH: TOÁN – VĂN – ANH
+// =========================
 
 export async function getLearningResultsBySubjects(userId?: string) {
   if (!userId) {
@@ -204,9 +233,11 @@ export async function getLearningResultsBySubjects(userId?: string) {
   try {
     const q = query(collection(db, "learningResults"), where("userId", "==", userId));
     const snapshot = await getDocs(q);
-    const data = snapshot.docs.map((doc) => doc.data()) as LearningResult[];
 
-    // Lọc 3 môn chính: Toán, Văn, Anh
+    const data = snapshot.docs.map(
+      (docSnap) => docSnap.data() as LearningResult
+    );
+
     return data.filter((result) =>
       ["toan", "van", "anh"].includes(result.subjectCode)
     );
@@ -215,6 +246,10 @@ export async function getLearningResultsBySubjects(userId?: string) {
     return [];
   }
 }
+
+// =========================
+// 🔥 BIỂU ĐỒ XU HƯỚNG
+// =========================
 
 const convertCodeToName = (code: string): string => {
   switch (code) {
@@ -229,13 +264,14 @@ const convertCodeToName = (code: string): string => {
   }
 };
 
-// Kiểu dữ liệu có index signature cho biểu đồ
 type ChartDataItem = {
   name: string;
   [key: string]: any;
 };
 
-export function generateTrendChartData(results: LearningResult[]): ChartDataItem[] {
+export function generateTrendChartData(
+  results: LearningResult[]
+): ChartDataItem[] {
   const chartData: ChartDataItem[] = [
     { name: "KTTX" },
     { name: "Giữa kỳ" },
@@ -244,8 +280,12 @@ export function generateTrendChartData(results: LearningResult[]): ChartDataItem
 
   results.forEach((result) => {
     const subject = convertCodeToName(result.subjectCode);
-    result.assessments?.forEach((assessment: { type: string; score: any }) => {
-      const index = chartData.findIndex((item) => item.name === assessment.type);
+
+    result.assessments?.forEach((assessment: { type: string; score: any; }) => {
+      const index = chartData.findIndex(
+        (item) => item.name === assessment.type
+      );
+
       if (index !== -1) {
         chartData[index][subject] = assessment.score;
       }

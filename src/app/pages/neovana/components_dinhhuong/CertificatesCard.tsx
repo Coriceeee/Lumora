@@ -1,87 +1,86 @@
+"use client";
 import React from "react";
+import ReactApexChart from "react-apexcharts";
 import {
   Card,
   CardContent,
   Typography,
-  List,
-  ListItem,
-  ListItemText,
+  Chip,
+  Stack,
   Box,
+  useTheme,
+  LinearProgress,
 } from "@mui/material";
-import { CertificateToAdd } from "../../../../types/CareerDashboard";
-import ApexCharts from "react-apexcharts"; // Import ApexCharts for donut chart
+import { CertificateToAdd } from "@/types/CareerDashboard";
 
 interface Props {
   certificates: CertificateToAdd[];
 }
 
-const CertificatesCard: React.FC<Props> = ({ certificates }) => {
-  // Dữ liệu biểu đồ chứng chỉ
-  const certificatesData = certificates.map((c) => ({
-    name: c.name,
-    value: c.priorityRatio, // Dùng tỷ lệ ưu tiên làm giá trị cho biểu đồ
-  }));
+const getPriorityColor = (v: number, dark: boolean) => {
+  if (v >= 80) return dark ? "#16a34a" : "#22c55e";
+  if (v >= 60) return dark ? "#2563eb" : "#3b82f6";
+  if (v >= 40) return dark ? "#ca8a04" : "#f59e0b";
+  return dark ? "#ef4444" : "#f87171";
+};
 
-  // Cấu hình cho biểu đồ donut (ApexCharts)
-  const chartOptions = {
-    chart: {
-      type: 'donut' as const, // Cung cấp kiểu dữ liệu đúng
-    },
-    labels: certificatesData.map((item) => item.name), // Gán tên chứng chỉ làm nhãn
-    colors: ['#ff6384', '#36a2eb', '#ffcd56', '#4bc0c0'], // Màu sắc các phân đoạn
-    responsive: [
-      {
-        breakpoint: 480,
-        options: {
-          chart: {
-            width: '100%',
-          },
-          legend: {
-            position: 'bottom',
-          },
-        },
-      },
-    ],
+export default function CertificatesCard({ certificates }: Props) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
+  if (!certificates || certificates.length === 0) {
+    return (
+      <Card sx={{ p: 2, borderRadius: 3 }}>
+        <CardContent>
+          <Typography variant="h6">Chứng chỉ cần thiết</Typography>
+          <Typography color="text.secondary">Chưa có dữ liệu.</Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const labels = certificates.map((c) => c.name);
+  const chartSeries: number[] = certificates.map(
+    (c) => Number(c.priorityRatio) || 0
+  );
+
+  const chartOptions: ApexCharts.ApexOptions = {
+    chart: { type: "donut" },
+    labels,
+    legend: { position: "bottom" },
   };
 
-  const chartSeries = certificatesData.map((item) => item.value); // Dữ liệu biểu đồ (tỉ lệ chứng chỉ)
-
   return (
-    <Card sx={{ mt: 2, borderRadius: "16px", boxShadow: "0 6px 18px rgba(0, 0, 0, 0.15)", padding: "16px", transition: "all 0.3s ease", "&:hover": { boxShadow: "0 8px 24px rgba(0, 0, 0, 0.2)" } }}>
-      <CardContent>
-        <Typography variant="h6" sx={{ fontSize: "1.2rem", color: "#4E81A8" }}>
+    <Card sx={{ borderRadius: 3, boxShadow: 4, p: 2 }}>
+      <CardContent sx={{ p: 0 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
           Chứng chỉ cần bổ sung
         </Typography>
-        {/* Thêm Biểu đồ Donut */}
-        <Box mt={4}>          
-          <ApexCharts
-            options={chartOptions}
-            series={chartSeries}
-            type="donut"
-            width="500"
-            height="500"
-          />
-        </Box>
-        <List>
-          {certificates.map((c, index) => (
-            <ListItem key={index}>
-              <ListItemText
-                primary={`${c.name}`}
-                secondary={`Ưu tiên: ${c.priority} | Liên quan: ${c.relevance} | Nguồn: ${c.source} | Lý do: ${c.reason}`}
-                sx={{
-                  fontSize: "1rem",
-                  color: "#6b7280",
-                  fontWeight: "500",
-                }}
-              />
-            </ListItem>
-          ))}
-        </List>
 
-        
+        <ReactApexChart
+          options={chartOptions}
+          series={chartSeries}
+          type="donut"
+          width="100%"
+        />
+
+        <Stack spacing={2} mt={2}>
+          {certificates.map((c, i) => {
+            const ratio = Number(c.priorityRatio) || 0;
+            const color = getPriorityColor(ratio, isDark);
+
+            return (
+              <Box key={i} sx={{ p: 1.5, borderRadius: 2, border: "1px solid #eee" }}>
+                <Typography fontWeight={600}>{c.name}</Typography>
+                <Chip
+                  label={`${ratio}% ưu tiên`}
+                  sx={{ mt: 1, background: color, color: "#fff" }}
+                />
+              </Box>
+            );
+          })}
+        </Stack>
       </CardContent>
     </Card>
   );
-};
-
-export default CertificatesCard;
+}

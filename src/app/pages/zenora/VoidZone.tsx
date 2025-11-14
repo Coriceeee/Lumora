@@ -74,9 +74,9 @@ const StressItem = styled(motion.div as any)`
 
 const BlackholeWrapper = styled(motion.div as any)`
   position: relative;
-  width: 400px;
-  height: 400px;
-  border-radius: 50%;
+  width: 600px;
+  height: 500px;
+  border-radius: 5%;
   box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
   overflow: hidden;
   &::before {
@@ -109,7 +109,7 @@ const BlackholeWrapper = styled(motion.div as any)`
     min-width: 100%;
     min-height: 100%;
     object-fit: cover;
-    border-radius: 25px;
+    border-radius: 5px;
   }
 `;
 
@@ -290,78 +290,90 @@ const VoidZone: React.FC = () => {
 
   /* ---------- Chat ---------- */
   const handleAddMessage = async () => {
-    if (!input.trim()) return;
-    const newMessages = [...chatMessages, { role: "user", content: input }];
-    setChatMessages(newMessages);
-    setUserStressItems((prev) => [...prev, input]);
-    setInput("");
-    setChatLoading(true);
+  if (!input.trim()) return;
 
-    try {
-      const promptText = newMessages
-        .map((m) =>
-          m.role === "user"
-            ? `Bạn: ${m.content}`
-            : m.role === "assistant"
-            ? `ZenBot: ${m.content}`
-            : ""
-        )
-        .filter(Boolean)
-        .join("\n");
+  const newMessages = [...chatMessages, { role: "user", content: input }];
+  setChatMessages(newMessages);
+  setUserStressItems((prev) => [...prev, input]);
+  setInput("");
+  setChatLoading(true);
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={AIzaSyCR0Fa1XOG2kyP5bC64Sj6wcDiQnt7yUaI}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: {
-              messages: [{ content: [{ text: promptText }], role: "user" }],
-            },
-          }),
-        }
-      );
+  try {
+    // --- Prompt ZenBot CHUẨN ---
+    const chatHistory = newMessages
+      .map((m) =>
+        m.role === "user"
+          ? `User: ${m.content}`
+          : m.role === "assistant"
+          ? `ZenBot: ${m.content}`
+          : ""
+      )
+      .filter(Boolean)
+      .join("\n");
 
-      const data = await res.json();
-      const reply =
-        data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "Mình chưa nghĩ ra câu trả lời...";
-      setChatMessages([...newMessages, { role: "assistant", content: reply }]);
-    } catch (err) {
-      console.error(err);
-      setChatMessages([
-        ...newMessages,
-        { role: "assistant", content: "Có lỗi xảy ra, hãy thử lại nhé!" },
-      ]);
-    } finally {
-      setChatLoading(false);
-    }
-  };
+    const promptText = `
+Bạn là ZenBot – AI trị liệu cảm xúc trong hệ thống Lumora, mặc định là tiếng việt.
+
+Phong cách trả lời:
+- Ngắn gọn (2–4 câu).
+- Không dùng bullet, không markdown, không liệt kê.
+- Giọng ấm, chậm, nhẹ nhàng như đang lắng nghe.
+- Không giảng dạy, không phân tích lý trí.
+- Tập trung phản hồi cảm xúc trước.
+- Cuối đoạn luôn hỏi một câu mở nhẹ nhàng.
+- Như một người bạn vô hình luôn bên cạnh.
+
+Dưới đây là toàn bộ hội thoại:
+${chatHistory}
+
+Hãy tạo câu trả lời tiếp theo của ZenBot.
+    `.trim();
+
+    // --- Gọi API Gemini ---
+    const GEMINI_API_URL =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+
+    const API_KEY = "AIzaSyAYNlFuG-vxpaEz3_m-jjw-HftDA1H9gps";
+
+    const res = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: promptText }],
+          },
+        ],
+      }),
+    });
+
+    const data = await res.json();
+
+    const reply =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "Mình đang lắng nghe bạn, nhưng hơi khó để phản hồi lúc này…";
+
+    setChatMessages([...newMessages, { role: "assistant", content: reply }]);
+  } catch (err) {
+    console.error(err);
+    setChatMessages([
+      ...newMessages,
+      {
+        role: "assistant",
+        content: "Có chút trục trặc… mình xin lỗi nhé. Bạn thử lại được không?",
+      },
+    ]);
+  } finally {
+    setChatLoading(false);
+  }
+};
+
 
   /* ---------- Render ---------- */
   return (
     <Container>
-      <StressItemsWrapper>
-        {loading ? (
-          <SpinnerIcon size={40} />
-        ) : (
-          firebaseStressItems.map((item) => (
-            <StressItem
-              key={item.id}
-              drag
-              dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
-              onDragStart={(
-                _event: MouseEvent | TouchEvent | PointerEvent,
-                _info: PanInfo
-              ) => setDraggingItem(item.title)}
-              whileHover={{ scale: 1.2 }}
-            >
-              {item.title}
-            </StressItem>
-          ))
-        )}
-      </StressItemsWrapper>
-
+      
       <BlackholeWrapper
         onDrop={(e: { preventDefault: () => void }) => {
           e.preventDefault();

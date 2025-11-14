@@ -1,3 +1,5 @@
+// src/app/services/careerDashboardService.ts
+
 import {
   collection,
   addDoc,
@@ -12,7 +14,7 @@ import { CareerDashboard } from "../types/CareerDashboard";
 
 const COLLECTION_NAME = "careerDashboards";
 
-// 🔹 Thêm mới
+// 🔹 Thêm Career Dashboard
 export const addCareerDashboard = async (dashboard: CareerDashboard) => {
   if (!dashboard.userId) {
     console.error("❌ Không thể thêm dashboard vì thiếu userId.");
@@ -27,11 +29,11 @@ export const addCareerDashboard = async (dashboard: CareerDashboard) => {
   return { ...dashboard, id: docRef.id };
 };
 
-// 🔹 Lấy dashboard theo userId
+// 🔹 Lấy danh sách dashboard theo user
 export const getCareerDashboardsByUser = async (userId?: string) => {
   if (!userId) {
     console.warn("⚠️ getCareerDashboardsByUser bị gọi mà không có userId.");
-    return []; // Không gọi Firestore nếu userId rỗng hoặc undefined
+    return [];
   }
 
   const q = query(
@@ -40,13 +42,16 @@ export const getCareerDashboardsByUser = async (userId?: string) => {
   );
 
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data(),
-  })) as CareerDashboard[];
+  return querySnapshot.docs.map(
+    (docSnap) =>
+      ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      } as CareerDashboard)
+  );
 };
 
-// 🔹 Xóa dashboard
+// 🔹 Xóa Career Dashboard
 export const deleteCareerDashboard = async (id: string) => {
   await deleteDoc(doc(db, COLLECTION_NAME, id));
 };

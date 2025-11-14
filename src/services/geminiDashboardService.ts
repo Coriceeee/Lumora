@@ -60,7 +60,7 @@ const GEMINI_API_URL =
  * ⚠️ Không để lộ API KEY trong production,
  * đây chỉ demo, bạn nên dùng env var hoặc server proxy bảo mật
  */
-const API_KEY = "AIzaSyCkCmNGA5DcO_OJ66e4oswZgszlcpBazXE";
+const API_KEY = "AIzaSyAYNlFuG-vxpaEz3_m-jjw-HftDA1H9gps";
 
 /**7
  * Gọi API Gemini với prompt đầu vào

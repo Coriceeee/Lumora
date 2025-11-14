@@ -29,9 +29,9 @@ Bạn là cố vấn nghề nghiệp. Dữ liệu của học sinh:
 
 Hãy phân tích và trả về JSON theo cấu trúc CareerDashboard với:
 - 5 nghề nghiệp (careers) kèm % phù hợp, lý do, bước chuẩn bị.
-- skillsToImprove (tên, priority, priorityRatio, reason).
-- certificatesToAdd (tên, priority, priorityRatio, relevance, source).
-- subjectsToFocus (nếu học sinh chưa hoàn thành 12, priority, priorityRatio, reason, recommendation).
+- skillsToImprove (name, priority, priorityRatio, reason).
+- certificatesToAdd (name, priority, priorityRatio, relevance, source, reason).
+- subjectsToFocus (nếu học sinh chưa hoàn thành 12, name, score, priority, priorityRatio, reason, recommendation).
 - title, summary, createdAt (ISO string).
 Chỉ trả JSON hợp lệ.
   `;

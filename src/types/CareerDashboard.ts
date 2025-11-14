@@ -1,38 +1,48 @@
-import { ReactElement, JSXElementConstructor, ReactNodeArray, ReactPortal } from "react";
-
 // FILE: src/types/CareerDashboard.ts
+import {
+  ReactElement,
+  JSXElementConstructor,
+  ReactNodeArray,
+  ReactPortal,
+} from "react";
+
+// --------------------------- CAREER ----------------------------
 export interface Career {
-  [x: string]: string | number | boolean | {} | ReactElement<any, string | JSXElementConstructor<any>> | ReactNodeArray | ReactPortal | null | undefined;
   name: string;
   matchPercentage: number;
-  reason: string;
-  preparationSteps: string[];
+  reason?: string;
+  preparationSteps?: string[];
 }
 
+// ----------------------- SKILL TO IMPROVE -----------------------
 export interface SkillToImprove {
   name: string;
-  priority: string;
-  priorityRatio: number;
-  reason: string;
+  priority: number | string;          // từ Gemini/Career Dashboard
+  priorityRatio?: number | string;    // %
+  reason?: string;
 }
 
+// ---------------------- CERTIFICATE TO ADD ----------------------
 export interface CertificateToAdd {
-  [x: string]: any;
   name: string;
-  priority: string;
-  priorityRatio: number;
-  relevance: string;
-  source: string;
+  priority?: number | string;
+  priorityRatio?: number | string;
+  relevance?: number | string;        // % phù hợp
+  source?: string;                    // nguồn đề xuất
+  reason?: string;                    // (đã thêm để fix CertificatesCard)
 }
 
+// ------------------------ SUBJECT TO FOCUS ----------------------
 export interface SubjectToFocus {
   name: string;
-  priority: string;
-  priorityRatio: number;
-  reason: string;
-  recommendation: string;
+  score: number;                      // dùng cho Radar Subjects
+  priority?: number | string;
+  priorityRatio?: number | string;
+  reason?: string;
+  recommendation?: string;
 }
 
+// ------------------------ MAIN DASHBOARD ------------------------
 export interface CareerDashboard {
   id?: string;
   userId: string;

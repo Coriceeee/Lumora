@@ -27,7 +27,7 @@ export const MenuTestPage: React.FC = () => {
                 <div className="menu-item me-lg-2">
                   <a
                     className="menu-link active py-3"
-                    href="/keenthemes/products/themes/start/html/demo1/dist/?page=index"
+                    href="/Lumora/products/themes/start/html/demo1/dist/?page=index"
                   >
                     <span className="menu-title">Dashboard</span>
                   </a>
@@ -78,7 +78,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -89,7 +89,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -119,7 +119,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -130,7 +130,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -141,7 +141,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -152,7 +152,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -163,7 +163,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -174,7 +174,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -185,7 +185,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -198,7 +198,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -209,7 +209,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -239,7 +239,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -250,7 +250,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -261,7 +261,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -272,7 +272,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -283,7 +283,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -294,7 +294,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -305,7 +305,7 @@ export const MenuTestPage: React.FC = () => {
                             <div className="menu-item">
                               <a
                                 className="menu-link py-3"
-                                href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
+                                href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
                               >
                                 <span className="menu-bullet">
                                   <span className="bullet bullet-dot"></span>
@@ -318,7 +318,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -329,7 +329,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -361,7 +361,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/overview"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/overview"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -372,7 +372,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/lists"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/lists"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -383,7 +383,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/activity"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/activity"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -394,7 +394,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/files"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/files"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -405,7 +405,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/users"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/users"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -416,7 +416,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/targets"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/targets"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -443,7 +443,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-vertical"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-vertical"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -454,7 +454,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-horizontal"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-horizontal"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -484,7 +484,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/search/search-horizontal"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/search/search-horizontal"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -497,7 +497,7 @@ export const MenuTestPage: React.FC = () => {
                         <div className="menu-item">
                           <a
                             className="menu-link py-3"
-                            href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/search/search-vertical"
+                            href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/search/search-vertical"
                           >
                             <span className="menu-bullet">
                               <span className="bullet bullet-dot"></span>
@@ -525,7 +525,7 @@ export const MenuTestPage: React.FC = () => {
                     <div className="menu-item">
                       <a
                         className="menu-link py-3"
-                        href="/keenthemes/products/themes/start/html/demo1/dist/?page=documentation/getting-started"
+                        href="/Lumora/products/themes/start/html/demo1/dist/?page=documentation/getting-started"
                       >
                         <span className="menu-icon">
                           <span className="svg-icon svg-icon-1">
@@ -542,7 +542,7 @@ export const MenuTestPage: React.FC = () => {
                     <div className="menu-item">
                       <a
                         className="menu-link py-3"
-                        href="/keenthemes/products/themes/start/html/demo1/dist/?page=layout-builder"
+                        href="/Lumora/products/themes/start/html/demo1/dist/?page=layout-builder"
                       >
                         <span className="menu-icon">
                           <span className="svg-icon svg-icon-1">
@@ -559,7 +559,7 @@ export const MenuTestPage: React.FC = () => {
                     <div className="menu-item">
                       <a
                         className="menu-link py-3"
-                        href="/keenthemes/products/themes/start/html/demo1/dist/?page=documentation/getting-started/changelog"
+                        href="/Lumora/products/themes/start/html/demo1/dist/?page=documentation/getting-started/changelog"
                       >
                         <span className="menu-icon">
                           <span className="svg-icon svg-icon-1">
@@ -775,7 +775,7 @@ export const MenuTestPage: React.FC = () => {
               <div className="menu-item">
                 <a
                   className="menu-link active"
-                  href="/keenthemes/products/themes/start/html/demo1/dist/?page=index"
+                  href="/Lumora/products/themes/start/html/demo1/dist/?page=index"
                 >
                   <span className="menu-icon">
                     <span className="svg-icon svg-icon-1">
@@ -824,7 +824,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/overview"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -835,7 +835,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/projects"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -846,7 +846,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/campaigns"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -857,7 +857,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/documents"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -868,7 +868,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/followers"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -879,7 +879,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/activity"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -890,7 +890,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/profile/dashboard"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -912,7 +912,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/overview"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/overview"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -923,7 +923,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/lists"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/lists"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -934,7 +934,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/activity"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/activity"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -945,7 +945,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/files"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/files"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -956,7 +956,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/users"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/users"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -967,7 +967,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/projects/targets"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/projects/targets"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -989,7 +989,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-vertical"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-vertical"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -1000,7 +1000,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-horizontal"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/wizards/wizard-horizontal"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -1022,7 +1022,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/search/search-horizontal"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/search/search-horizontal"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -1033,7 +1033,7 @@ export const MenuTestPage: React.FC = () => {
                       <div className="menu-item">
                         <a
                           className="menu-link"
-                          href="/keenthemes/products/themes/start/html/demo1/dist/?page=pages/search/search-vertical"
+                          href="/Lumora/products/themes/start/html/demo1/dist/?page=pages/search/search-vertical"
                         >
                           <span className="menu-bullet">
                             <span className="bullet bullet-dot"></span>
@@ -1053,7 +1053,7 @@ export const MenuTestPage: React.FC = () => {
               <div className="menu-item">
                 <a
                   className="menu-link"
-                  href="/keenthemes/products/themes/start/html/demo1/dist/?page=documentation/getting-started"
+                  href="/Lumora/products/themes/start/html/demo1/dist/?page=documentation/getting-started"
                 >
                   <span className="menu-icon">
                     <span className="svg-icon svg-icon-1">
@@ -1068,7 +1068,7 @@ export const MenuTestPage: React.FC = () => {
               <div className="menu-item">
                 <a
                   className="menu-link"
-                  href="/keenthemes/products/themes/start/html/demo1/dist/?page=layout-builder"
+                  href="/Lumora/products/themes/start/html/demo1/dist/?page=layout-builder"
                 >
                   <span className="menu-icon">
                     <span className="svg-icon svg-icon-1">
@@ -1083,7 +1083,7 @@ export const MenuTestPage: React.FC = () => {
               <div className="menu-item">
                 <a
                   className="menu-link"
-                  href="/keenthemes/products/themes/start/html/demo1/dist/?page=documentation/getting-started/changelog"
+                  href="/Lumora/products/themes/start/html/demo1/dist/?page=documentation/getting-started/changelog"
                 >
                   <span className="menu-icon">
                     <span className="svg-icon svg-icon-1">

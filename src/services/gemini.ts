@@ -1,7 +1,7 @@
 const GEMINI_API_URL =
   "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
-const API_KEY = "AIzaSyD99Fi_5Flj41apmCEONCltKyUJ-eLl3Fo";
+const API_KEY = "AIzaSyAYNlFuG-vxpaEz3_m-jjw-HftDA1H9gps";
 
 if (!API_KEY) {
   throw new Error("❌ Missing Gemini API key. Check your .env.local file.");
