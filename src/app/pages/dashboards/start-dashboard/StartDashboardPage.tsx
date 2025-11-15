@@ -1,49 +1,75 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+
 import {
   EngageWidget5,
   ListsWidget1,
-  TablesWidget2,
 } from "../../../../_start/partials/widgets";
+
 import { CreateAppModal } from "../_modals/create-app-stepper/CreateAppModal";
+
 import CareersCard from "./CareersCard";
-import { CareerDashboard } from "../../../../types/CareerDashboard";
-import { getCareerDashboardsByUser } from "../../../../services/careerDashboardService";
 import KeySubjectsCard from "./KeySubjectsCard";
+
+import { CareerDashboard } from "../../../../types/CareerDashboard";
 import { LearningDashboard } from "../../../../types/LearningDashboard";
-import { getLearningDashboardsByUser } from "../../../../services/learningDashboardService";
-import { getAuth } from "firebase/auth";
+
+import {
+  getCareerDashboardsByUser,
+} from "../../../../services/careerDashboardService";
+
+import {
+  getLearningDashboardsByUser,
+} from "../../../../services/learningDashboardService";
+
+import { useFirebaseUser } from "../../../hooks/useFirebaseUser";
 
 export const StartDashboardPage: React.FC = () => {
- const userId = getAuth().currentUser?.uid || "";
+  const { userId } = useFirebaseUser();   // ⭐ LẤY userId giống trang Định hướng
   const [show, setShow] = useState(false);
-  const [selectedCareerDashboard, setSelectedCareerDashboard] = useState<CareerDashboard | null>(null);
-  const [selectedLearningDashboard, setSelectedLearningDashboard] = useState<LearningDashboard | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
+  const [selectedCareerDashboard, setSelectedCareerDashboard] =
+    useState<CareerDashboard | null>(null);
+
+  const [selectedLearningDashboard, setSelectedLearningDashboard] =
+    useState<LearningDashboard | null>(null);
+
+  // ⭐ Load Career Dashboard
   const loadCareerDashboards = async () => {
-    const data = await getCareerDashboardsByUser();
+    if (!userId) {
+      console.warn("⚠️ getCareerDashboardsByUser bị bỏ qua do chưa có userId");
+      return;
+    }
+
+    const data = await getCareerDashboardsByUser(userId);
     if (data && data.length > 0) setSelectedCareerDashboard(data[0]);
   };
 
+  // ⭐ Load Learning Dashboard
   const loadLearningDashboards = async () => {
+    if (!userId) {
+      console.warn("⚠️ getLearningDashboardsByUser bị bỏ qua do chưa có userId");
+      return;
+    }
+
     const data = await getLearningDashboardsByUser(userId);
     if (data && data.length > 0) setSelectedLearningDashboard(data[0]);
   };
 
+  // ⭐ Trigger load khi userId sẵn sàng
   useEffect(() => {
+    if (!userId) return;
     loadCareerDashboards();
     loadLearningDashboards();
-  }, []);
+  }, [userId]);
 
   return (
     <>
-      {/* begin::Row 1 - Nghề nghiệp gợi ý */}
+      {/* Row 1 - Nghề nghiệp gợi ý */}
       <div className="row g-0 g-xl-5 g-xxl-8">
         <div className="col-xl-4">
           <EngageWidget5 className="card-stretch mb-5 mb-xxl-8">
-            {/* begin::Action */}
             <div className="text-center pt-7">
               <Link
                 to="/vireya/ket-qua-hoc-tap"
@@ -52,7 +78,6 @@ export const StartDashboardPage: React.FC = () => {
                 Cập nhật
               </Link>
             </div>
-            {/* end::Action */}
           </EngageWidget5>
         </div>
 
@@ -60,10 +85,9 @@ export const StartDashboardPage: React.FC = () => {
           <CareersCard careers={selectedCareerDashboard?.careers || []} />
         </div>
       </div>
-      {/* end::Row 1 */}
 
-      {/* begin::Row 2 - Các môn chủ chốt */}
-      <div className="row g-0 g-xl-5 g-xxl-8 mt-5"> {/* 👈 thêm khoảng cách giữa 2 tab */}
+      {/* Row 2 - Các môn chủ chốt */}
+      <div className="row g-0 g-xl-5 g-xxl-8 mt-5">
         <div className="col-xl-4">
           <ListsWidget1 className="card-stretch mb-5 mb-xxl-8" />
         </div>
@@ -72,11 +96,9 @@ export const StartDashboardPage: React.FC = () => {
           <KeySubjectsCard selectedDashboard={selectedLearningDashboard} />
         </div>
       </div>
-      {/* end::Row 2 */}
 
-      {/* begin::Modals */}
+      {/* Modal */}
       <CreateAppModal show={show} handleClose={() => setShow(false)} />
-      {/* end::Modals */}
     </>
   );
 };

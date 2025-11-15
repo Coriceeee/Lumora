@@ -11,7 +11,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { Career } from "@/types/CareerDashboard";
-import { useHistory } from "react-router-dom";
+import { useHistory } from "react-router-dom";   
 import { KTSVG } from "../../../../_start/helpers/components/KTSVG";
 
 interface Props {
@@ -54,7 +54,11 @@ const getProgressColor = (v: number, dark = false) => {
 export default function CareersCard({ careers }: Props) {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
-  const history = useHistory();
+  const history = useHistory(); 
+  const sortedCareers = [...(careers || [])].sort(
+    (a, b) => Number(b.matchPercentage || 0) - Number(a.matchPercentage || 0)
+  );
+
 
   if (!careers || careers.length === 0) {
     return (

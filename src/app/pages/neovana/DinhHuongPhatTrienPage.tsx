@@ -11,8 +11,6 @@ import { generateCareerDashboard } from "../../../services/neovanaDashboardServi
 import {
   CareerDashboard,
   SkillToImprove,
-  CertificateToAdd,
-  SubjectToFocus,
 } from "../../../types/CareerDashboard";
 
 import CareersCard from "./components_dinhhuong/CareersCard";
@@ -34,7 +32,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   // 🔥 Hook lấy userId
   const { userId } = useFirebaseUser();
 
-  // ⭐ Load dashboard theo user
+  // ⭐ Load dashboard theo user (LẤY MỚI NHẤT)
   const loadDashboards = async () => {
     if (!userId) {
       console.warn("⚠ userId chưa sẵn sàng → bỏ qua tải dashboard");
@@ -42,8 +40,17 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     }
 
     const data = await getCareerDashboardsByUser(userId);
-    setDashboards(data);
-    if (data.length > 0) setSelected(data[0]);
+
+    // ⭐ SẮP XẾP THEO NGÀY MỚI NHẤT
+    const sorted = data.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    setDashboards(sorted);
+
+    // ⭐ MẶC ĐỊNH CHỌN DASHBOARD MỚI NHẤT
+    if (sorted.length > 0) setSelected(sorted[0]);
   };
 
   useEffect(() => {
@@ -70,7 +77,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
 
     const saved = await addCareerDashboard(dashboard);
     await loadDashboards();
-    setSelected(saved);
+    setSelected(saved); // chọn dashboard mới tạo
     setDialogOpen(false);
   };
 
@@ -104,7 +111,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                     onClick={handleCreate}
                     className="btn-create-dashboard hover:bg-blue-600 bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md transition-all ease-in-out duration-300"
                   >
-                    Tạo Career Dashboard
+                    Phân tích năng lực
                   </Button>
                 </div>
 
@@ -181,7 +188,9 @@ const DinhHuongPhatTrienPage: React.FC = () => {
 
         <div className="col-xxl-6 p-4">
           {selected ? (
-            <CertificatesCard certificates={selected.certificatesToAdd || []} />
+            <CertificatesCard
+              certificates={selected.certificatesToAdd || []}
+            />
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
           )}

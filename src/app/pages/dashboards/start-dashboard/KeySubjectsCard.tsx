@@ -81,6 +81,7 @@ const KeySubjectsCard: React.FC<KeySubjectsCardProps> = ({ selectedDashboard }) 
   const isDark = theme.palette.mode === "dark";
   const history = useHistory();
 
+
   const { subjectsData, anyFallback } = useMemo(() => {
     if (!selectedDashboard) return { subjectsData: [], anyFallback: false };
 

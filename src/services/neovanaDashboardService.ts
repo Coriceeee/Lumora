@@ -33,6 +33,7 @@ Hãy phân tích và trả về JSON theo cấu trúc CareerDashboard với:
 - certificatesToAdd (name, priority, priorityRatio, relevance, source, reason).
 - subjectsToFocus (nếu học sinh chưa hoàn thành 12, name, score, priority, priorityRatio, reason, recommendation).
 - title, summary, createdAt (ISO string).
+- mặc định tiếng việt, và thời gian là thời gian thật.
 Chỉ trả JSON hợp lệ.
   `;
 

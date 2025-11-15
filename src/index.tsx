@@ -42,3 +42,14 @@ ReactDOM.render(
   document.getElementById("root")
 );
   
+// Fix ResizeObserver loop error
+const resizeObserverErr = (e: any) => {
+  if (
+    e.message &&
+    e.message.includes("ResizeObserver loop completed")
+  ) {
+    return;
+  }
+};
+window.addEventListener("error", resizeObserverErr);
+window.addEventListener("unhandledrejection", resizeObserverErr);

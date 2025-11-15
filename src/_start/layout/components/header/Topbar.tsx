@@ -65,23 +65,7 @@ export function Topbar() {
       </div>
       {/* end::User */}
 
-      {/* begin::Notifications */}
-      <div className="ms-1 ms-lg-6">
-        {/* begin::Dropdown */}
-        <button
-          className="btn btn-icon btn-sm btn-light-danger fw-bolder pulse pulse-danger"
-          data-kt-menu-trigger="click"
-          data-kt-menu-placement="bottom-end"
-        >
-          <span className="position-absolute fs-6">3</span>
-          <span className="pulse-ring"></span>
-        </button>
-        <HeaderNotificationsMenu />
-        {/* end::Dropdown */}
-      </div>
-      {/* end::Notifications */}
-
-      {/* begin::Aside Toggler */}
+     
       {config.aside.display && (
         <button
           className="btn btn-icon btn-sm btn-active-bg-accent d-lg-none ms-1 ms-lg-6"

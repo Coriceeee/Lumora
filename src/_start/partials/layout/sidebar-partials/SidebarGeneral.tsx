@@ -1,41 +1,82 @@
-import React, { useState, useEffect } from "react";
-import { useHistory } from "react-router-dom";
-import { KTSVG, toAbsoluteUrl } from "../../../helpers";
-import { Dropdown1 } from "../../../partials/content/dropdown/Dropdown1";
+import React, { useState, useEffect, useRef } from "react";
+import { useHistory, useLocation } from "react-router-dom";
+import { toAbsoluteUrl } from "../../../helpers";
 
 const SidebarGeneral: React.FC = () => {
-  const [activeTab, setTab] = useState<number>(0);
+  const [activeTab, setTab] = useState<number | null>(null);
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const history = useHistory();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeItem, setActiveItem] = useState<string>("");
 
-  // Tab definitions
+  const history = useHistory();
+  const location = useLocation();
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    setActiveItem(location.pathname);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === "/dashboard") {
+      setSidebarOpen(false);
+      setTab(null);
+    }
+  }, [location.pathname]);
+
   const tabs = [
     { id: 0, title: "Vireya", iconFile: "aven", color: "#ff6b81" },
     { id: 1, title: "Neovana", iconFile: "tower", color: "#6f42c1" },
-    { id: 2, title: "Ayura", iconFile: "ayura", color: "#20c997" },
-    { id: 3, title: "Zenora", iconFile: "kanba", color: "#fd7e14" },
+    { id: 2, title: "Zenora", iconFile: "ayura", color: "#20c997" },
+    { id: 3, title: "Roboki", iconFile: "kanba", color: "#fd7e14" },
     { id: 4, title: "Danh mục", iconFile: "treva", color: "#0dcaf0" },
   ];
 
-  // Menus
-  const menus: { [key: number]: { label: string; to: string; color: string }[] } = {
+  const menus: any = {
     0: [
-      { label: "📊 Kết quả học tập", to: "/vireya/ket-qua-hoc-tap", color: "#ff6b81" },
       { label: "📂 Hồ sơ học tập", to: "/vireya/ho-so-hoc-tap", color: "#ff8787" },
       { label: "📈 Phân tích hồ sơ học tập", to: "/vireya/phan-tich-ho-so-hoc-tap", color: "#ff8787" },
       { label: "🧪 Đánh giá & Định hướng học tập", to: "/vireya/danh-gia-trinh-do", color: "#ff8787" },
-
     ],
     1: [
       { label: "👤 Hồ sơ năng lực", to: "/neovana/ho-so-ca-nhan", color: "#6f42c1" },
-      { label: "🚀 Đánh giá & Định hướng nghề nghiệp", to: "/neovana/dinh-huong-phat-trien", color: "#845ef7" },
+      { label: "🚀 Định hướng nghề nghiệp", to: "/neovana/dinh-huong-phat-trien", color: "#845ef7" },
       { label: "🧠 Phân tích năng lực", to: "/neovana/phan-tich-nang-luc", color: "#845ef7" },
-      
     ],
-    2: [{ label: "🪴Vườn chữa lành", to: "", color: "#20c997" }],
-    3: [
+    2: [
       { label: "🌀 Void Zone", to: "/zenora/void-zone", color: "#fd7e14" },
-      { label: " ☁ CloudWhisper", to: "/zenora/cloud-whisper", color: "#fd7e14" },
+      { label: "☁ CloudWhisper", to: "/zenora/cloud-whisper", color: "#fd7e14" },
+    ],
+    3: [
+      {
+        label: "🤖 Hỗ trợ (Gì cũng biết)",
+        to: "/roboki/embed/hotro",
+        link: "https://roboki.vn/",
+        color: "#e6fd14"
+      },
+      {
+        label: "📘 Thiết kế dự án học tập",
+        to: "/roboki/embed/thietke",
+        link: "https://roboki.vn/g/682c2d277e2e043fa9c31cba",
+        color: "#e6fd14"
+      },
+      {
+        label: "🧠 Chuyên sâu – Tư duy phản biện",
+        to: "/roboki/embed/tuduy",
+        link: "https://roboki.vn/g/67ddbd59923d0072befa135f",
+        color: "#e6fd14"
+      },
+      {
+        label: "🎓 Học sinh – Gia sư THPT",
+        to: "/roboki/embed/giasu",
+        link: "https://roboki.vn/g/681d6f075a561b1d5e71e835",
+        color: "#e6fd14"
+      },
+      {
+        label: "📊 Đánh giá năng lực",
+        to: "/roboki/danh-gia-nang-luc",
+        link: null,
+        color: "#e6fd14"
+      }
     ],
     4: [
       { label: "📝 Loại điểm", to: "/danh-muc/loai-diem", color: "#0dcaf0" },
@@ -46,78 +87,108 @@ const SidebarGeneral: React.FC = () => {
   };
 
   const menuItemStyles: React.CSSProperties = {
-    padding: "10px 16px",
-    borderRadius: "10px",
-    transition: "all 0.2s ease",
+    padding: "12px 18px",
+    borderRadius: "12px",
     display: "flex",
     alignItems: "center",
     gap: "12px",
     cursor: "pointer",
     fontWeight: 600,
     fontSize: "1.1rem",
-    background: "transparent",
-    textShadow: "0 0 2px #000",
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    marginBottom: "12px",
+    transition: "all 0.25s ease",
   };
 
-  // Cursor tracking
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => setCursorPos({ x: e.clientX, y: e.clientY });
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    const move = (e: any) => setCursorPos({ x: e.clientX, y: e.clientY });
+    window.addEventListener("mousemove", move);
+    return () => window.removeEventListener("mousemove", move);
   }, []);
 
-  // Neon glow effect based on cursor distance
-  const computeGlow = (elem: HTMLDivElement, color: string) => {
+  const computeGlow = (elem: HTMLDivElement | null, color: string) => {
+    if (!elem) return "none";
     const rect = elem.getBoundingClientRect();
     const dx = cursorPos.x - (rect.left + rect.width / 2);
     const dy = cursorPos.y - (rect.top + rect.height / 2);
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const intensity = Math.max(0, 150 - dist) / 150;
-    const glow1 = `0 0 ${10 + 20 * intensity}px ${color}`;
-    const glow2 = `0 0 ${30 + 40 * intensity}px ${color}55`;
-    const glow3 = `0 0 ${50 + 50 * intensity}px ${color}33`;
-    return `${glow1}, ${glow2}, ${glow3}`;
+    const intensity = Math.max(0, 140 - dist) / 140;
+
+    return `
+      0 0 ${10 + 20 * intensity}px ${color}77,
+      0 0 ${30 + 40 * intensity}px ${color}55
+    `;
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", backgroundColor: "#1f1f2e" }}>
-      {/* Sidebar Content (giữ bên trái) */}
-      <div style={{ flexGrow: 1, overflowY: "auto", padding: "1rem" }}>
-        <div className="card card-custom bg-transparent w-100">
-          <div className="card-header d-flex justify-content-between align-items-center border-0 mb-3">
-            <h3 className="card-title fw-bolder text-white fs-2">{tabs[activeTab].title}</h3>
-            <div className="card-toolbar d-flex align-items-center gap-2">
-              <button type="button" className="btn btn-md btn-icon btn-icon-white btn-info">
-                <KTSVG path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg" className="svg-icon-1" />
-              </button>
-              <Dropdown1 />
-            </div>
-          </div>
+    <div style={{ display: "flex", height: "100vh", background: "#1f1f2e" }}>
+      
+      <div
+        style={{
+          flexGrow: 1,
+          padding: "1rem",
+          position: "relative",
+          paddingBottom: "220px",
+          transform: sidebarOpen ? "translateX(0)" : "translateX(-130%)",
+          transition: "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      >
+        {activeTab !== null && (
+          <>
+            <h3 className="fw-bolder text-white fs-2 mb-4">{tabs[activeTab].title}</h3>
 
-          <div>
-            {menus[activeTab].map((item) => (
-              <div
-                key={item.to}
-                style={{
-                  ...menuItemStyles,
-                  color: item.color,
-                  boxShadow: "0 0 8px rgba(0,0,0,0.3)",
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                }}
-                className="menu-item mb-2"
-                onClick={() => history.push(item.to)}
-                ref={(el) => {
-                  if (el) el.style.boxShadow = computeGlow(el, item.color);
-                }}
-              >
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+            {menus[activeTab].map((item: any) => {
+              const isActive = activeItem === item.to;
+              return (
+                <div
+                  key={item.to}
+                  ref={(el) => (itemRefs.current[item.to] = el)}
+                  style={{
+                    ...menuItemStyles,
+                    color: item.color,
+                    boxShadow: isActive
+                      ? `0 0 18px ${item.color}, 0 0 40px ${item.color}55`
+                      : computeGlow(itemRefs.current[item.to], item.color),
+                  }}
+                  onClick={() => {
+                    setActiveItem(item.to);
+                    history.push(item.to, { link: item.link });
+                  }}
+                >
+                  <span>{item.label}</span>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
-      {/* Sidebar Tabs (chuyển sang bên phải) */}
+      {/* IMAGE FIXED */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "100px",
+          left: 0,
+          width: "100%",
+          display: "flex",
+          justifyContent: "center",
+        }}
+      >
+        <img
+          src="/media/schools/Trường THPT.NK.jpg"
+          style={{
+            width: "88%",
+            height: "220px",
+            objectFit: "cover",
+            borderRadius: "16px",
+            boxShadow: "0 0 35px #0dcaf077",
+            border: "1px solid rgba(255,255,255,0.18)",
+          }}
+        />
+      </div>
+
+      {/* RIGHT TAB */}
       <div
         style={{
           width: 80,
@@ -125,45 +196,41 @@ const SidebarGeneral: React.FC = () => {
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          borderLeft: "1px solid rgba(255,255,255,0.2)",
         }}
       >
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            onClick={() => setTab(tab.id)}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: "12px",
-              marginBottom: "12px",
-              backgroundColor: activeTab === tab.id ? tab.color : "transparent",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.3s ease",
-              boxShadow:
-                activeTab === tab.id
-                  ? `0 0 20px ${tab.color}, 0 0 40px ${tab.color}55, 0 0 60px ${tab.color}33`
-                  : "0 2px 6px rgba(0,0,0,0.2)",
-              animation: activeTab === tab.id ? "glowPulse 2s infinite alternate" : "none",
-            }}
-          >
-            <img
-              alt={tab.title}
-              src={toAbsoluteUrl(`/media/svg/logo/colored/${tab.iconFile}.svg`)}
-              style={{
-                width: 30,
-                filter:
-                  activeTab === tab.id
-                    ? `drop-shadow(0 0 10px ${tab.color}) drop-shadow(0 0 20px ${tab.color}aa)`
-                    : "none",
-                transition: "filter 0.3s ease",
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <div
+              key={tab.id}
+              onClick={() => {
+                setTab(tab.id);
+                setSidebarOpen(true);
               }}
-            />
-          </div>
-        ))}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "18px",
+                marginBottom: "16px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isActive ? tab.color : "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.3)",
+                boxShadow: isActive
+                  ? `0 0 20px ${tab.color}, 0 0 40px ${tab.color}`
+                  : `0 0 12px rgba(0,0,0,0.3)`,
+                transition: "all 0.25s ease",
+              }}
+            >
+              <img
+                src={toAbsoluteUrl(`/media/svg/logo/colored/${tab.iconFile}.svg`)}
+                style={{ width: 28, filter: "brightness(0) invert(1)" }}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
