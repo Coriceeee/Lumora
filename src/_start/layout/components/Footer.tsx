@@ -16,7 +16,7 @@ export function Footer() {
             {new Date().getFullYear()} &copy;
           </span>
           <a href="#" className="text-gray-800 text-hover-primary">
-            Keenthemes
+            Lumora
           </a>
         </div>
         {/* end::Copyright */}
@@ -31,11 +31,6 @@ export function Footer() {
           <li className="menu-item">
             <a href="#" className="menu-link pe-0 pe-2">
               Contact
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="#" className="menu-link pe-0">
-              Purchase
             </a>
           </li>
         </ul>

@@ -43,7 +43,11 @@ export const StartDashboardPage: React.FC = () => {
     }
 
     const data = await getCareerDashboardsByUser(userId);
-    if (data && data.length > 0) setSelectedCareerDashboard(data[0]);
+     const sorted = data.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    if (sorted && sorted.length > 0) setSelectedCareerDashboard(sorted[0]);
   };
 
   // ⭐ Load Learning Dashboard
