@@ -58,41 +58,59 @@ export default function CloudWhisper() {
 
   // Hàm gọi Gemini API và lấy dữ liệu
   async function fetchClouds() {
-    setLoading(true);
+  setLoading(true);
+  try {
+    const rawText = await callGeminiServer(prompt);
+
+    
+  const cleanedText = rawText.replace(/```json|```/g, "").trim();
+    // 5️⃣ Parse JSON từ rawText
+    let parsed;
     try {
-      const data = await callGeminiServer(prompt, { temperature: 1.3 });
-
-      // Kiểm tra xem dữ liệu trả về có phải là JSON hợp lệ không
-      if (typeof data !== 'object' || !Array.isArray(data?.messages)) {
-        throw new Error("Gemini trả về không phải JSON hợp lệ.");
-      }
-
-      const arr = data.messages;
-      if (arr.length === 0) throw new Error("Gemini không trả về dữ liệu hợp lệ");
-
-      const items = arr.slice(0, 30).map((it: any, i: number) => ({
-        id: `cloud-${i}`,
-        title: it.title || `☁️ Đám mây #${i + 1}`,
-        content: it.content || "Bạn tuyệt vời hơn bạn nghĩ đó! 🍀",
-        likes: 0,
-      }));
-
-      setClouds(items);
-    } catch (err: any) {
-      console.error("Gemini lỗi:", err);
-      setError("Không thể tạo thông điệp từ Gemini, dùng dữ liệu mẫu.");
-      setClouds(
-        Array.from({ length: 30 }).map((_, i) => ({
-          id: `sample-${i}`,
-          title: `☁️ Đám mây #${i + 1}`,
-          content: "Bạn đang làm rất tốt! Tiếp tục nhé 💖",
-          likes: 0,
-        }))
-      );
-    } finally {
-      setLoading(false);
+      parsed = JSON.parse(cleanedText);
+    } catch {
+      console.error("❌ rawText JSON PARSE FAILED:", cleanedText);
+      throw new Error("Gemini trả JSON sai format");
     }
+
+    // 6️⃣ Check messages
+    if (!parsed.messages || !Array.isArray(parsed.messages)) {
+      throw new Error("parsed.messages không hợp lệ");
+    }
+
+    const arr = parsed.messages;
+    if (arr.length === 0) throw new Error("messages rỗng");
+
+    // 7️⃣ Tạo cloud items
+    const items = arr.slice(0, 30).map((it: any, i: number) => ({
+      id: `cloud-${i}`,
+      title: it.title || `☁️ Đám mây #${i + 1}`,
+      content: it.content || "Bạn tuyệt vời hơn bạn nghĩ đó! 🍀",
+      likes: 0,
+    }));
+
+    setClouds(items);
+
+  } catch (err: any) {
+    console.error("❌ Gemini lỗi:", err);
+
+    setError("Không thể tạo thông điệp từ Gemini, dùng dữ liệu mẫu.");
+
+    // fallback data
+    setClouds(
+      Array.from({ length: 30 }).map((_, i) => ({
+        id: `sample-${i}`,
+        title: `☁️ Đám mây #${i + 1}`,
+        content: "Bạn đang làm rất tốt! Tiếp tục nhé 💖",
+        likes: 0,
+      }))
+    );
+  } finally {
+    setLoading(false);
   }
+}
+
+
 
   useEffect(() => {
     fetchClouds();

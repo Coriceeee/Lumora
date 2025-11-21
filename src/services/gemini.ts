@@ -1,5 +1,5 @@
 const API_GATEWAY_URL =
-  "https://lumora-api-t86b.vercel.app/api/gemini";
+  "https://lumora-api-roan.vercel.app/api/gemini";
 
 /**
  * Gọi API Gemini thông qua server Vercel (không lộ API key).
@@ -7,11 +7,9 @@ const API_GATEWAY_URL =
  * @param options - cấu hình sinh nội dung (temperature, topP, topK)
  */
 export async function callGeminiServer(
-  prompt: string,
-  options: { temperature?: number } = {}
+  prompt: string,  
 ) {
-  const temperature = options.temperature ?? 1.0;
-
+  
   try {
     const res = await fetch(API_GATEWAY_URL, {
       method: "POST",
@@ -19,8 +17,11 @@ export async function callGeminiServer(
         "Content-Type": "application/json" 
       },
       body: JSON.stringify({
-        prompt,
-        temperature,
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
       }),
     });
 
@@ -32,7 +33,7 @@ export async function callGeminiServer(
     }
 
     // Trả thẳng response từ server
-    return data;
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "(Không có phản hồi)";
   } catch (err) {
     console.error("❌ callGeminiServer FE error:", err);
     throw err;

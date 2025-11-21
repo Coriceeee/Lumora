@@ -4,6 +4,7 @@ import { callGeminiForDashboard } from "./geminiDashboardService";
 import { getAllSubjects } from "./subjectService";
 import { getAllScoreTypes } from "./scoreTypeService";
 import { getAuth } from "firebase/auth";
+import { callGeminiServer } from "./gemini";
 
 // 👉 Prompt riêng được tách ra
 const developmentPrompt = (
@@ -66,16 +67,16 @@ export async function getDevelopmentSuggestions() {
   const prompt = developmentPrompt(normalizedResults, dashboards);
 
   // Gọi Gemini
-  const raw = await callGeminiForDashboard(prompt);
+  const responseText = await callGeminiServer(prompt);
 
   // Parse JSON từ Gemini
   try {
-    const jsonStart = raw.indexOf("[");
-    const jsonEnd = raw.lastIndexOf("]");
-    const cleaned = raw.slice(jsonStart, jsonEnd + 1);
+    const jsonStart = responseText.indexOf("[");
+    const jsonEnd = responseText.lastIndexOf("]");
+    const cleaned = responseText.slice(jsonStart, jsonEnd + 1);
     return JSON.parse(cleaned);
   } catch (e) {
-    console.error("Lỗi parse JSON từ Gemini:\n", raw);
+    console.error("Lỗi parse JSON từ Gemini:\n", responseText);
     throw new Error("Gemini trả về không phải JSON hợp lệ.");
   }
 }

@@ -38,7 +38,7 @@ Chỉ trả JSON hợp lệ.
   `;
 
   // 3. Gọi Gemini
-  const responseText = await callGeminiForDashboard(prompt);
+  const responseText = await callGeminiServer(prompt);
 
   const cleanedText = responseText.replace(/```json|```/g, "").trim();
 

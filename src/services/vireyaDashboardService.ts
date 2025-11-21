@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { callGeminiForDashboard } from "./geminiDashboardService";
 import { getAllScoreTypes } from "./scoreTypeService";
 import { getAllSubjects } from "./subjectService";
+import { callGeminiServer } from "./gemini";
 
 // ✅ Hàm 1: Gọi Gemini để tạo dashboard
 export const vireyaDashboardService = async (results: any[]) => {
@@ -76,9 +77,9 @@ Trả kết quả chỉ trả về theo định dạng JSON chuẩn như sau:
   }[];
 }`;
 
-  const raw = await callGeminiForDashboard(prompt);
+const responseText = await callGeminiServer(prompt);
 
-  const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
 
   if (!jsonMatch) {
     console.error("Không tìm thấy JSON hợp lệ trong phản hồi.");

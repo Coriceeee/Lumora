@@ -12,6 +12,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { LearningResult } from "../types/LearningResult";
+import { callGeminiServer } from "./gemini";
 
 // =========================
 // 🔥 FIRESTORE COLLECTION
@@ -204,7 +205,7 @@ export const getGeminiAnalysis = async (results: LearningResult[]) => {
   if (results.length === 0) throw new Error("Không có dữ liệu học tập");
 
   const prompt = buildPromptFromResults(results);
-  const responseText = await callGeminiForDashboard(prompt);
+  const responseText = await callGeminiServer(prompt);
 
   // Xóa markdown nếu có
   const cleanedText = responseText

@@ -51,5 +51,3 @@ const resizeObserverErr = (e: any) => {
     return;
   }
 };
-window.addEventListener("error", resizeObserverErr);
-window.addEventListener("unhandledrejection", resizeObserverErr);

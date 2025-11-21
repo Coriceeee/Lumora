@@ -12,6 +12,7 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 import { LearningResult } from "../types/LearningResult";
+import { callGeminiServer } from "./gemini";
 
 /**
  * Collection Firestore lưu kết quả học tập
@@ -165,7 +166,7 @@ export async function getGeminiAnalysisFromResults(results: LearningResult[]) {
 
   const prompt = buildLearningAnalysisPrompt(results);
 
-  const responseText = await callGeminiForDashboard(prompt);
+  const responseText = await callGeminiServer(prompt);
 
   // Loại bỏ markdown code block nếu có
   const cleanedText = responseText.replace(/```json|```/g, "").trim();
