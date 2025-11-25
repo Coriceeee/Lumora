@@ -92,7 +92,11 @@ const UserStressItemsWrapper = styled.div`
   gap: 1rem;
   max-width: 360px;
   width: 100%;
+
+  /* Ngăn việc bị đẩy */
+  flex-shrink: 0;
 `;
+
 
 const UserStressItem = styled(motion.div)`
   background-color: #facc15;
@@ -139,9 +143,13 @@ const ChatBox = styled.div`
   padding: 1rem;
   border-radius: 1rem;
   margin-top: 1rem;
-  max-height: 300px;
+
+  /* Giữ nguyên kích thước – không đẩy UserStressItems */
+  height: 320px;      
   overflow-y: auto;
 `;
+
+
 
 const ChatMessage = styled.div<{ $isUser: boolean }>`
   font-size: 0.875rem;
@@ -216,16 +224,28 @@ const VoidZone: React.FC = () => {
   };
 
   /* ---------------- Hover-to-Delete ---------------- */
-  const handleHoverIntoBlackhole = (event: MouseEvent, item: string) => {
-    const x = event.clientX;
-    const y = event.clientY;
+const deletedItemsRef = useRef<Set<string>>(new Set());
+ const handleHoverIntoBlackhole = (event: MouseEvent, item: string) => {
+  const x = event.clientX;
+  const y = event.clientY;
 
-    if (!pointInsideBlackhole(x, y)) return;
+  if (!pointInsideBlackhole(x, y)) return;
 
-    setUserStressItems((prev) => prev.filter((i) => i !== item));
-    updatePoint(-1);
-    addZenBotComfortMessage();
-  };
+  // Nếu item đã bị xoá rồi → block
+  if (deletedItemsRef.current.has(item)) return;
+
+  // Đánh dấu đã xoá
+  deletedItemsRef.current.add(item);
+
+  // Xóa khỏi giao diện
+  setUserStressItems((prev) => prev.filter((i) => i !== item));
+
+  // Update điểm
+  updatePoint(-1);
+
+  // Chỉ chạy 1 lần duy nhất
+  addZenBotComfortMessage();
+};
 
   /* ---------------- Manual Chat ---------------- */
   const handleAddMessage = async () => {
