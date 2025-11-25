@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "../../../utils/fakeMotion";
 import styled, { keyframes } from "styled-components";
 import {
-  getDatabase,  
+  getDatabase,
   ref,
   query,
   orderByChild,
@@ -11,7 +11,7 @@ import {
   update,
 } from "firebase/database";
 import { getAuth } from "firebase/auth";
-import { PanInfo } from "framer-motion";
+import { callGeminiServer } from "../../../services/gemini";
 
 /* ---------------- Animations ---------------- */
 const swirl = keyframes`
@@ -22,17 +22,8 @@ const glow = keyframes`
   from { opacity: 0.4; transform: scale(1); }
   to { opacity: 0.7; transform: scale(1.1); }
 `;
-const shake = keyframes`
-  from { transform: rotate(-3deg); }
-  to { transform: rotate(3deg); }
-`;
 
 /* ---------------- Styled Components ---------------- */
-/*
-  NOTE: cast motion.div as any to avoid styled-components<->framer-motion
-  type incompatibilities in some TypeScript setups. If your project
-  types are configured to accept this, you can remove the `as any` casts.
-*/
 const Container = styled.div`
   display: flex;
   flex-direction: column;
@@ -50,35 +41,15 @@ const Container = styled.div`
   }
 `;
 
-const StressItemsWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-/* cast motion.div as any to avoid type issues */
-const StressItem = styled(motion.div as any)`
-  background: linear-gradient(45deg, #ff85a2, #ff6188);
-  color: white;
-  padding: 14px 28px;
-  border-radius: 30px;
-  cursor: grab;
-  font-weight: bold;
-  font-size: 20px;
-  box-shadow: 0 5px 15px rgba(255, 75, 43, 0.6);
-  user-select: none;
-  &:hover {
-    animation: ${shake} 0.2s infinite alternate ease-in-out;
-  }
-`;
-
-const BlackholeWrapper = styled(motion.div as any)`
+/* ❗ MUST BE A REAL DOM ELEMENT → styled.div */
+const BlackholeWrapper = styled.div`
   position: relative;
   width: 600px;
   height: 500px;
   border-radius: 5%;
   box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
   overflow: hidden;
+
   &::before {
     content: "";
     position: absolute;
@@ -90,6 +61,7 @@ const BlackholeWrapper = styled(motion.div as any)`
     border-radius: 50%;
     animation: ${swirl} 5s linear infinite;
   }
+
   &::after {
     content: "";
     position: absolute;
@@ -101,6 +73,7 @@ const BlackholeWrapper = styled(motion.div as any)`
     border-radius: 50%;
     animation: ${glow} 2s infinite alternate ease-in-out;
   }
+
   video {
     position: absolute;
     top: 50%;
@@ -121,7 +94,7 @@ const UserStressItemsWrapper = styled.div`
   width: 100%;
 `;
 
-const UserStressItem = styled(motion.div as any)`
+const UserStressItem = styled(motion.div)`
   background-color: #facc15;
   color: black;
   padding: 0.75rem 1rem;
@@ -170,38 +143,12 @@ const ChatBox = styled.div`
   overflow-y: auto;
 `;
 
-const ChatMessage = styled.div<{ isUser: boolean }>`
+const ChatMessage = styled.div<{ $isUser: boolean }>`
   font-size: 0.875rem;
   margin-bottom: 0.5rem;
-  text-align: ${(p) => (p.isUser ? "right" : "left")};
-  color: ${(p) => (p.isUser ? "#93c5fd" : "#34d399")};
+  text-align: ${(p) => (p.$isUser ? "right" : "left")};
+  color: ${(p) => (p.$isUser ? "#93c5fd" : "#34d399")};
 `;
-
-/* ---------------- Icons ---------------- */
-const SpinnerIcon = ({ size = 40 }: { size?: number }) => (
-  <svg
-    className="animate-spin"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-  >
-    <circle
-      className="opacity-25"
-      cx="12"
-      cy="12"
-      r="10"
-      stroke="currentColor"
-      strokeWidth="4"
-    />
-    <path
-      className="opacity-75"
-      fill="currentColor"
-      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-    />
-  </svg>
-);
 
 const RobotIcon = ({ size = 24 }: { size?: number }) => (
   <svg
@@ -210,7 +157,6 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
     viewBox="0 0 24 24"
     width={size}
     height={size}
-    style={{ flexShrink: 0 }}
   >
     <path d="M7 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" />
     <path d="M12 2c-2.21 0-4 1.79-4 4v1H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6c0-2.21-1.79-4-4-4zm0 2c1.1 0 2 .9 2 2v1H10V6c0-1.1.9-2 2-2zM7 14v-4h10v4H7z" />
@@ -218,220 +164,183 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
 );
 
 /* ---------------- Main Component ---------------- */
-const API_KEY = process.env.REACT_APP_GEMINI_API_KEY; 
 const VoidZone: React.FC = () => {
   const [input, setInput] = useState("");
   const [userStressItems, setUserStressItems] = useState<string[]>([]);
-  const [firebaseStressItems, setFirebaseStressItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [chatMessages, setChatMessages] = useState<any[]>([
     {
       role: "system",
-      content:
-        "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
+      content: "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
     },
   ]);
+
   const [chatLoading, setChatLoading] = useState(false);
-  const [draggingItem, setDraggingItem] = useState<string | null>(null);
 
   const auth = getAuth();
   const user = auth.currentUser;
 
-  /* ---------- Firebase Fetch ---------- */
-  useEffect(() => {
-    if (!user) return;
-    const fetchStressItems = async () => {
-      const db = getDatabase();
-      const stressRef = ref(db, "stressItems");
-      const q = query(stressRef, orderByChild("createdBy"), equalTo(user.uid));
-      try {
-        const snapshot = await get(q);
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          setFirebaseStressItems(
-            Object.keys(data).map((key) => ({ id: key, ...data[key] }))
-          );
-        }
-      } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStressItems();
-  }, [user]);
+  const blackholeRef = useRef<HTMLDivElement | null>(null);
 
+  /* ---------------- Points ---------------- */
   const updatePoint = async (score: number) => {
     if (!user) return;
     const db = getDatabase();
     const pointRef = ref(db, `pointItems`);
     const q = query(pointRef, orderByChild("userId"), equalTo(user.uid));
     const snap = await get(q);
-    if (snap.exists()) {
-      const data = snap.val();
-      const id = Object.keys(data)[0];
-      const userData = Object.values(data)[0] as any;
-      const refToUpdate = ref(db, `pointItems/${id}`);
-      await update(refToUpdate, { points: userData.points + score });
-    }
-  };
+    if (!snap.exists()) return;
 
-  const handleDrop = async () => {
-    if (!draggingItem) return;
-    setFirebaseStressItems((items) =>
-      items.filter((item) => item.title !== draggingItem)
-    );
-    setUserStressItems((items) =>
-      items.filter((item) => item !== draggingItem)
-    );
-    await updatePoint(-1);
-    setDraggingItem(null);
-  };
+    const data = snap.val();
+    const id = Object.keys(data)[0];
+    const userData = Object.values(data)[0] as any;
 
-  /* ---------- Chat ---------- */
-  const handleAddMessage = async () => {
-  if (!input.trim()) return;
-
-  const newMessages = [...chatMessages, { role: "user", content: input }];
-  setChatMessages(newMessages);
-  setUserStressItems((prev) => [...prev, input]);
-  setInput("");
-  setChatLoading(true);
-
-  try {
-    // --- Prompt ZenBot CHUẨN ---
-    const chatHistory = newMessages
-      .map((m) =>
-        m.role === "user"
-          ? `User: ${m.content}`
-          : m.role === "assistant"
-          ? `ZenBot: ${m.content}`
-          : ""
-      )
-      .filter(Boolean)
-      .join("\n");
-
-    const promptText = `
-Bạn là ZenBot – AI trị liệu cảm xúc trong hệ thống Lumora, mặc định là tiếng việt.
-
-Phong cách trả lời:
-- Ngắn gọn (2–4 câu).
-- Không dùng bullet, không markdown, không liệt kê.
-- Giọng ấm, chậm, nhẹ nhàng như đang lắng nghe.
-- Không giảng dạy, không phân tích lý trí.
-- Tập trung phản hồi cảm xúc trước.
-- Cuối đoạn luôn hỏi một câu mở nhẹ nhàng.
-- Như một người bạn vô hình luôn bên cạnh.
-
-Dưới đây là toàn bộ hội thoại:
-${chatHistory}
-
-Hãy tạo câu trả lời tiếp theo của ZenBot.
-    `.trim();
-
-    // --- Gọi API Gemini ---
-    const GEMINI_API_URL =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
-
-    const API_KEY = "AIzaSyAYNlFuG-vxpaEz3_m-jjw-HftDA1H9gps";
-
-    const res = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: promptText }],
-          },
-        ],
-      }),
+    await update(ref(db, `pointItems/${id}`), {
+      points: userData.points + score,
     });
+  };
 
-    const data = await res.json();
+  /* ---------------- ZenBot Comfort ---------------- */
+  const addZenBotComfortMessage = () => {
+    const msg =
+      "Mình cảm nhận được bạn vừa bỏ đi một điều làm bạn nặng lòng. Hy vọng bạn thấy nhẹ hơn một chút. Mình luôn ở đây với bạn, và nếu muốn, bạn có thể tiếp tục thả mọi thứ vào hố đen nhé.";
+    setChatMessages((prev) => [...prev, { role: "assistant", content: msg }]);
+  };
 
-    const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Mình đang lắng nghe bạn, nhưng hơi khó để phản hồi lúc này…";
+  /* ---------------- Collision Detection ---------------- */
+  const pointInsideBlackhole = (x: number, y: number) => {
+    const el = blackholeRef.current;
+    if (!el) return false;
 
-    setChatMessages([...newMessages, { role: "assistant", content: reply }]);
-  } catch (err) {
-    console.error(err);
-    setChatMessages([
-      ...newMessages,
-      {
-        role: "assistant",
-        content: "Có chút trục trặc… mình xin lỗi nhé. Bạn thử lại được không?",
-      },
-    ]);
-  } finally {
+    const rect = el.getBoundingClientRect();
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+  };
+
+  /* ---------------- Hover-to-Delete ---------------- */
+  const handleHoverIntoBlackhole = (event: MouseEvent, item: string) => {
+    const x = event.clientX;
+    const y = event.clientY;
+
+    if (!pointInsideBlackhole(x, y)) return;
+
+    setUserStressItems((prev) => prev.filter((i) => i !== item));
+    updatePoint(-1);
+    addZenBotComfortMessage();
+  };
+
+  /* ---------------- Manual Chat ---------------- */
+  const handleAddMessage = async () => {
+    if (!input.trim()) return;
+
+    setUserStressItems((prev) => [...prev, input]);
+
+    const newMsgs = [...chatMessages, { role: "user", content: input }];
+    setChatMessages(newMsgs);
+    setInput("");
+    setChatLoading(true);
+
+    try {
+      const history = newMsgs
+        .map((m) =>
+          m.role === "user"
+            ? `User: ${m.content}`
+            : m.role === "assistant"
+            ? `ZenBot: ${m.content}`
+            : ""
+        )
+        .filter(Boolean)
+        .join("\n");
+
+      const prompt = `
+Bạn là ZenBot – AI trị liệu cảm xúc.
+Phong cách:
+- Nhẹ nhàng như một người bạn
+- Không phân tích lý trí
+- Không dạy đời
+- Không markdown
+- 2–4 câu
+- Câu cuối là 1 câu hỏi mở
+
+${history}
+
+Tạo câu trả lời tiếp theo:
+`;
+
+      const reply = await callGeminiServer(prompt);
+
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: reply.trim() },
+      ]);
+    } catch (err) {
+      console.log(err);
+    }
+
     setChatLoading(false);
-  }
-};
+  };
 
-
-  /* ---------- Render ---------- */
   return (
     <Container>
-      
-      <BlackholeWrapper
-        onDrop={(e: { preventDefault: () => void }) => {
-          e.preventDefault();
-          handleDrop();
-        }}
-        onDragOver={(e: { preventDefault: () => any }) => e.preventDefault()}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1.5, ease: "easeOut" }}
-      >
-        <video autoPlay loop muted playsInline>
-          <source src="/BlackHold.mp4" type="video/mp4" />
-        </video>
+      {/* Blackhole */}
+      <BlackholeWrapper ref={blackholeRef}>
+        {/* ⭐ DIV TRUNG GIAN — FIX ResizeObserver 100% */}
+        <div style={{ width: "100%", height: "100%" }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2 }}
+            style={{ width: "100%", height: "100%" }}
+          >
+            <video autoPlay muted loop playsInline>
+              <source src="/BlackHold.mp4" type="video/mp4" />
+            </video>
+          </motion.div>
+        </div>
       </BlackholeWrapper>
 
+      {/* Right Panel */}
       <UserStressItemsWrapper>
-        {userStressItems.map((item) => (
-          <UserStressItem
-            key={item}
-            drag
-            dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
-            onDragStart={(
-              _event: MouseEvent | TouchEvent | PointerEvent,
-              _info: PanInfo
-            ) => setDraggingItem(item)}
-            whileHover={{ scale: 1.1 }}
-          >
-            {item}
-          </UserStressItem>
-        ))}
+        <AnimatePresence>
+          {userStressItems.map((item, idx) => (
+            <UserStressItem
+              key={item + "_" + idx}
+              drag
+              onDragMove={(e: MouseEvent) => handleHoverIntoBlackhole(e, item)}
+              whileHover={{ scale: 1.1 }}
+              initial={{ opacity: 0, scale: 0.8, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0, y: 8 }}
+              transition={{ duration: 0.25 }}
+            >
+              {item}
+            </UserStressItem>
+          ))}
+        </AnimatePresence>
 
+        {/* Input */}
         <InputWrapper>
           <TextInput
             value={input}
-            onChange={(e) => setInput(e.target.value)}
             placeholder="Nhập cảm xúc hoặc câu hỏi..."
+            onChange={(e) => setInput(e.target.value)}
           />
-          <Button onClick={handleAddMessage}>Gửi đến ZenBot</Button>
+          <Button onClick={handleAddMessage}>Gửi qua ZenBot</Button>
         </InputWrapper>
 
+        {/* Chat */}
         <ChatBox>
-          <h3
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              marginBottom: "0.5rem",
-            }}
-          >
+          <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <RobotIcon size={24} /> ZenBot – Người bạn vô hình
           </h3>
+
           {chatMessages.slice(1).map((msg, idx) => (
-            <ChatMessage key={idx} isUser={msg.role === "user"}>
+            <ChatMessage key={idx} $isUser={msg.role === "user"}>
               {msg.role === "user" ? "Bạn" : "ZenBot"}: {msg.content}
             </ChatMessage>
           ))}
+
           {chatLoading && (
-            <div style={{ fontStyle: "italic", color: "#9ca3af" }}>
-              ZenBot đang suy nghĩ...
+            <div style={{ color: "#aaa", fontStyle: "italic" }}>
+              ZenBot đang suy nghĩ…
             </div>
           )}
         </ChatBox>

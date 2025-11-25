@@ -168,7 +168,7 @@ const SidebarGeneral: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          bottom: "80px",
+          bottom: "40px",
           left: 0,
           width: "100%",
           display: "flex",
@@ -179,7 +179,7 @@ const SidebarGeneral: React.FC = () => {
           src="/media/schools/Trường THPT.NK.jpg"
           style={{
             width: "88%",
-            height: "220px",
+            height: "120px",
             objectFit: "cover",
             borderRadius: "16px",
             boxShadow: "0 0 35px #0dcaf077",
