@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { motion, AnimatePresence } from "../../../utils/fakeMotion";
+import { motion } from "../../../utils/fakeMotion";
 import styled, { keyframes } from "styled-components";
 import {
   getDatabase,
@@ -12,6 +12,7 @@ import {
 } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { callGeminiServer } from "../../../services/gemini";
+import { v4 as uuid } from "uuid";
 
 /* ---------------- Animations ---------------- */
 const swirl = keyframes`
@@ -35,13 +36,13 @@ const Container = styled.div`
   position: relative;
   padding: 1rem;
   color: white;
+
   @media (min-width: 1024px) {
     flex-direction: row;
     gap: 2rem;
   }
 `;
 
-/* ❗ MUST BE A REAL DOM ELEMENT → styled.div */
 const BlackholeWrapper = styled.div`
   position: relative;
   width: 600px;
@@ -92,13 +93,10 @@ const UserStressItemsWrapper = styled.div`
   gap: 1rem;
   max-width: 360px;
   width: 100%;
-
-  /* Ngăn việc bị đẩy */
   flex-shrink: 0;
 `;
 
-
-const UserStressItem = styled(motion.div)`
+const UserStressItem = styled.div`
   background-color: #facc15;
   color: black;
   padding: 0.75rem 1rem;
@@ -106,6 +104,11 @@ const UserStressItem = styled(motion.div)`
   cursor: grab;
   font-weight: 600;
   user-select: none;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
 `;
 
 const InputWrapper = styled.div`
@@ -143,13 +146,9 @@ const ChatBox = styled.div`
   padding: 1rem;
   border-radius: 1rem;
   margin-top: 1rem;
-
-  /* Giữ nguyên kích thước – không đẩy UserStressItems */
-  height: 320px;      
+  height: 320px;
   overflow-y: auto;
 `;
-
-
 
 const ChatMessage = styled.div<{ $isUser: boolean }>`
   font-size: 0.875rem;
@@ -159,13 +158,7 @@ const ChatMessage = styled.div<{ $isUser: boolean }>`
 `;
 
 const RobotIcon = ({ size = 24 }: { size?: number }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="currentColor"
-    viewBox="0 0 24 24"
-    width={size}
-    height={size}
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" width={size} height={size}>
     <path d="M7 11a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" />
     <path d="M12 2c-2.21 0-4 1.79-4 4v1H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1V6c0-2.21-1.79-4-4-4zm0 2c1.1 0 2 .9 2 2v1H10V6c0-1.1.9-2 2-2zM7 14v-4h10v4H7z" />
   </svg>
@@ -174,7 +167,7 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
 /* ---------------- Main Component ---------------- */
 const VoidZone: React.FC = () => {
   const [input, setInput] = useState("");
-  const [userStressItems, setUserStressItems] = useState<string[]>([]);
+  const [userStressItems, setUserStressItems] = useState<{ id: string; text: string }[]>([]);
   const [chatMessages, setChatMessages] = useState<any[]>([
     {
       role: "system",
@@ -183,11 +176,54 @@ const VoidZone: React.FC = () => {
   ]);
 
   const [chatLoading, setChatLoading] = useState(false);
+  const deletedItemsRef = useRef<Set<string>>(new Set());
 
   const auth = getAuth();
   const user = auth.currentUser;
 
   const blackholeRef = useRef<HTMLDivElement | null>(null);
+
+  /* ---------------- Drag System ---------------- */
+  const dragRef = useRef<{
+    id: string;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+
+  const startDrag = (e: React.MouseEvent, id: string) => {
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+
+    dragRef.current = {
+      id,
+      offsetX: e.clientX - rect.left,
+      offsetY: e.clientY - rect.top,
+    };
+
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", endDrag);
+  };
+
+  const onDragMove = (e: MouseEvent) => {
+    if (!dragRef.current) return;
+
+    const item = document.getElementById(dragRef.current.id);
+    if (!item) return;
+
+    item.style.position = "fixed";
+    item.style.left = e.clientX - dragRef.current.offsetX + "px";
+    item.style.top = e.clientY - dragRef.current.offsetY + "px";
+    item.style.zIndex = "999";
+
+    handleHoverIntoBlackhole(e, dragRef.current.id);
+  };
+
+  const endDrag = () => {
+    window.removeEventListener("mousemove", onDragMove);
+    window.removeEventListener("mouseup", endDrag);
+
+    dragRef.current = null;
+  };
 
   /* ---------------- Points ---------------- */
   const updatePoint = async (score: number) => {
@@ -202,59 +238,51 @@ const VoidZone: React.FC = () => {
     const id = Object.keys(data)[0];
     const userData = Object.values(data)[0] as any;
 
-    await update(ref(db, `pointItems/${id}`), {
-      points: userData.points + score,
-    });
+    await update(ref(db, `pointItems/${id}`), { points: userData.points + score });
   };
 
-  /* ---------------- ZenBot Comfort ---------------- */
-  const addZenBotComfortMessage = () => {
-    const msg =
-      "Mình cảm nhận được bạn vừa bỏ đi một điều làm bạn nặng lòng. Hy vọng bạn thấy nhẹ hơn một chút. Mình luôn ở đây với bạn, và nếu muốn, bạn có thể tiếp tục thả mọi thứ vào hố đen nhé.";
-    setChatMessages((prev) => [...prev, { role: "assistant", content: msg }]);
-  };
-
-  /* ---------------- Collision Detection ---------------- */
+  /* ---------------- BlackHole HitTest ---------------- */
   const pointInsideBlackhole = (x: number, y: number) => {
     const el = blackholeRef.current;
     if (!el) return false;
-
     const rect = el.getBoundingClientRect();
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
   };
 
-  /* ---------------- Hover-to-Delete ---------------- */
-const deletedItemsRef = useRef<Set<string>>(new Set());
- const handleHoverIntoBlackhole = (event: MouseEvent, item: string) => {
-  const x = event.clientX;
-  const y = event.clientY;
+  const handleHoverIntoBlackhole = (event: MouseEvent, id: string) => {
+    const x = event.clientX;
+    const y = event.clientY;
 
-  if (!pointInsideBlackhole(x, y)) return;
+    if (!pointInsideBlackhole(x, y)) return;
+    if (deletedItemsRef.current.has(id)) return;
 
-  // Nếu item đã bị xoá rồi → block
-  if (deletedItemsRef.current.has(item)) return;
+    deletedItemsRef.current.add(id);
 
-  // Đánh dấu đã xoá
-  deletedItemsRef.current.add(item);
+    setUserStressItems((prev) => prev.filter((i) => i.id !== id));
 
-  // Xóa khỏi giao diện
-  setUserStressItems((prev) => prev.filter((i) => i !== item));
+    updatePoint(-1);
 
-  // Update điểm
-  updatePoint(-1);
+    setChatMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content:
+          "Mình cảm nhận được bạn vừa bỏ đi một điều làm bạn nặng lòng. Hy vọng bạn thấy nhẹ hơn một chút.",
+      },
+    ]);
+  };
 
-  // Chỉ chạy 1 lần duy nhất
-  addZenBotComfortMessage();
-};
-
-  /* ---------------- Manual Chat ---------------- */
+  /* ---------------- Chat System ---------------- */
   const handleAddMessage = async () => {
     if (!input.trim()) return;
 
-    setUserStressItems((prev) => [...prev, input]);
+    const text = input.trim();
+    const id = uuid();
 
-    const newMsgs = [...chatMessages, { role: "user", content: input }];
+    setUserStressItems((prev) => [...prev, { id, text }]);
+    const newMsgs = [...chatMessages, { role: "user", content: text }];
     setChatMessages(newMsgs);
+
     setInput("");
     setChatLoading(true);
 
@@ -272,13 +300,8 @@ const deletedItemsRef = useRef<Set<string>>(new Set());
 
       const prompt = `
 Bạn là ZenBot – AI trị liệu cảm xúc.
-Phong cách:
-- Nhẹ nhàng như một người bạn
-- Không phân tích lý trí
-- Không dạy đời
-- Không markdown
-- 2–4 câu
-- Câu cuối là 1 câu hỏi mở
+Nhẹ nhàng, không phân tích, không dạy đời, 2–4 câu.
+Câu cuối là 1 câu hỏi mở.
 
 ${history}
 
@@ -287,10 +310,7 @@ Tạo câu trả lời tiếp theo:
 
       const reply = await callGeminiServer(prompt);
 
-      setChatMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: reply.trim() },
-      ]);
+      setChatMessages((prev) => [...prev, { role: "assistant", content: reply.trim() }]);
     } catch (err) {
       console.log(err);
     }
@@ -302,13 +322,12 @@ Tạo câu trả lời tiếp theo:
     <Container>
       {/* Blackhole */}
       <BlackholeWrapper ref={blackholeRef}>
-        {/* ⭐ DIV TRUNG GIAN — FIX ResizeObserver 100% */}
         <div style={{ width: "100%", height: "100%" }}>
           <motion.div
+            style={{ width: "100%", height: "100%" }}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.2 }}
-            style={{ width: "100%", height: "100%" }}
           >
             <video autoPlay muted loop playsInline>
               <source src="/BlackHold.mp4" type="video/mp4" />
@@ -319,24 +338,18 @@ Tạo câu trả lời tiếp theo:
 
       {/* Right Panel */}
       <UserStressItemsWrapper>
-        <AnimatePresence>
-          {userStressItems.map((item, idx) => (
-            <UserStressItem
-              key={item + "_" + idx}
-              drag
-              onDragMove={(e: MouseEvent) => handleHoverIntoBlackhole(e, item)}
-              whileHover={{ scale: 1.1 }}
-              initial={{ opacity: 0, scale: 0.8, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0, y: 8 }}
-              transition={{ duration: 0.25 }}
-            >
-              {item}
-            </UserStressItem>
-          ))}
-        </AnimatePresence>
+        {/* Stress Items */}
 
-        {/* Input */}
+        {userStressItems.map((item) => (
+          <UserStressItem
+            key={item.id}
+            id={item.id}
+            onMouseDown={(e) => startDrag(e, item.id)}
+          >
+            {item.text}
+          </UserStressItem>
+        ))}
+
         <InputWrapper>
           <TextInput
             value={input}
@@ -346,7 +359,6 @@ Tạo câu trả lời tiếp theo:
           <Button onClick={handleAddMessage}>Gửi qua ZenBot</Button>
         </InputWrapper>
 
-        {/* Chat */}
         <ChatBox>
           <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <RobotIcon size={24} /> ZenBot – Người bạn vô hình
