@@ -1,4 +1,4 @@
-// ====================== PhanTichNangLucPage.tsx (FULL — Updated) ======================
+// ====================== PhanTichNangLucPage.tsx (FINAL 100% — AUTO-SYNC BY NAME + ONE BUTTON) ======================
 import * as React from "react";
 import { Container, Typography, Box, Snackbar, Alert } from "@mui/material";
 
@@ -12,27 +12,22 @@ import SubjectEvaluation from "./components_phantich/SubjectEvaluation";
 import RadarSubjectsChart from "./components_phantich/RadarSubjectsChart";
 import RadarSkillsChart from "./components_phantich/RadarSkillsChart";
 
-import {
-  addUserSkill,
-  addUserCertificate,
-} from "../../../services/userSkillCertService";
-
 import { getAllSkills, addSkill } from "../../../services/skillService";
+import { getAllCertificates, addCertificate } from "../../../services/certificateService";
 
-import {
-  getAllCertificates,
-  addCertificate,
-} from "../../../services/certificateService";
+import { getUserSkills } from "../../../services/userSkillService";
+import { getUserCertificates } from "../../../services/userCertificateService";
 
 import { getCareerDashboardsByUser } from "../../../services/careerDashboardService";
 import { CareerDashboard } from "../../../types/CareerDashboard";
 
+import { addDoc, collection } from "firebase/firestore";
+import { db } from "../../../firebase/firebase";
+
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 
-// -------------------- RADAR TYPE --------------------
 type RadarData = { labels: string[]; values: number[] };
 
-// Utility: tạo code chuẩn A2
 const generateCode = (text: string) =>
   text
     .normalize("NFD")
@@ -43,11 +38,12 @@ const generateCode = (text: string) =>
     .replace(/\s+/g, "_");
 
 export default function PhanTichNangLucPage() {
+  const { userId } = useFirebaseUser();
+
   const [dashboard, setDashboard] = React.useState<CareerDashboard | null>(null);
   const [value, setValue] = React.useState(0);
 
-  const [subjectsRadar, setSubjectsRadar] =
-    React.useState<RadarData | null>(null);
+  const [subjectsRadar, setSubjectsRadar] = React.useState<RadarData | null>(null);
   const [skillsRadar, setSkillsRadar] = React.useState<RadarData | null>(null);
 
   const [snackbar, setSnackbar] = React.useState({
@@ -56,18 +52,51 @@ export default function PhanTichNangLucPage() {
     severity: "success" as "success" | "error",
   });
 
-  const { userId } = useFirebaseUser();
+  const notify = (msg: string, severity: "success" | "error") =>
+    setSnackbar({ open: true, message: msg, severity });
 
-  // ================= LOAD DASHBOARD =================
+  // ======================================================================
+  //                     LOAD DASHBOARD + AUTO-SYNC THEO NAME
+  // ======================================================================
   const loadDashboards = async () => {
     if (!userId) return;
 
+    // 1. Load dashboard
     const list = await getCareerDashboardsByUser(userId);
-    if (list.length === 0) return;
+    if (!list || list.length === 0) return;
 
     const d = list[0];
-    setDashboard(d);
 
+    // 2. Load hồ sơ thực tế
+    const userSkills = await getUserSkills(userId);
+    const userCerts = await getUserCertificates(userId);
+
+    // 3. Load definitions để map id -> name
+    const skillDefs = await getAllSkills();
+    const certDefs = await getAllCertificates();
+
+    const userSkillNames = userSkills.map((s: any) => {
+      const def = skillDefs.find((d: any) => d.id === s.skillId);
+      return def ? def.name.toLowerCase().trim() : "";
+    });
+
+    const userCertNames = userCerts.map((c: any) => {
+      const def = certDefs.find((d: any) => d.id === c.certificateId);
+      return def ? def.name.toLowerCase().trim() : "";
+    });
+
+    // 4. AUTO SYNC — MATCH THEO NAME
+    d.skillsToImprove = d.skillsToImprove?.map((s: any) => {
+      const match = userSkillNames.includes(s.name.toLowerCase().trim());
+      return { ...s, status: match ? "existing" : "need" };
+    });
+
+    d.certificatesToAdd = d.certificatesToAdd?.map((c: any) => {
+      const match = userCertNames.includes(c.name.toLowerCase().trim());
+      return { ...c, status: match ? "existing" : "need" };
+    });
+
+    // 5. Radar update
     setSubjectsRadar({
       labels: d.subjectsToFocus?.map((s) => s.name) || [],
       values: d.subjectsToFocus?.map((s) => Number(s.score || 0)) || [],
@@ -75,23 +104,19 @@ export default function PhanTichNangLucPage() {
 
     setSkillsRadar({
       labels: d.skillsToImprove?.map((s) => s.name) || [],
-      values:
-        d.skillsToImprove?.map(
-          (s) =>
-            Number(s.priorityRatio) ||
-            Number(s.priority) * 10 ||
-            0
-        ) || [],
+      values: d.skillsToImprove?.map(
+        (s: any) =>
+          Number(s.priorityRatio) || Number(s.priority) * 10 || 0
+      ),
     });
+
+    setDashboard({ ...d });
   };
 
   React.useEffect(() => {
     if (!userId) return;
     loadDashboards();
   }, [userId]);
-
-  const notify = (msg: string, severity: "success" | "error") =>
-    setSnackbar({ open: true, message: msg, severity });
 
   if (!dashboard)
     return (
@@ -100,162 +125,123 @@ export default function PhanTichNangLucPage() {
       </Container>
     );
 
-  // =====================================================================
-  // ========================== UI =======================================
-  // =====================================================================
-
+  // ======================================================================
+  //                                UI
+  // ======================================================================
   return (
-    <Container maxWidth="lg" sx={{ mt: 5, pb: 12 }}>
+    <Container maxWidth="lg" sx={{ mt: 5 }}>
       <Typography variant="h4" sx={{ mb: 2 }} fontWeight={700}>
         🧭 NEOVANA — Phân tích năng lực cá nhân
       </Typography>
 
-      <TabsContainer value={value} onChange={(e: any, v: number) => setValue(v)} />
+      <TabsContainer
+        value={value}
+        onChange={(e: React.SyntheticEvent, v: number) => setValue(v)}
+      />
 
-      {/* TAB 1 — MÔN HỌC */}
+      {/* ====================== TAB 1 ====================== */}
       <TabPanel value={value} index={0}>
         <Box sx={{ bgcolor: "#FFEEDB", p: 2, borderRadius: 3 }}>
           <SubjectEvaluation data={dashboard.subjectsToFocus} />
 
-          {value === 0 && (subjectsRadar?.labels?.length ?? 0) > 0 && (
+          {subjectsRadar && (
             <Box sx={{ mt: 2 }}>
-              <RadarSubjectsChart key={"subjects" + value} data={subjectsRadar} />
+              <RadarSubjectsChart data={subjectsRadar} />
             </Box>
           )}
         </Box>
       </TabPanel>
 
-      {/* TAB 2 — KỸ NĂNG */}
+      {/* ====================== TAB 2 — KỸ NĂNG ====================== */}
       <TabPanel value={value} index={1}>
         <Box sx={{ bgcolor: "#E4EEFF", p: 2, borderRadius: 3 }}>
           <SkillEvaluation
             data={dashboard.skillsToImprove}
             onAdd={async (i: number) => {
+              if (!userId) return;
+
               const sk = dashboard.skillsToImprove[i];
 
-              // 1️⃣ THÊM VÀO DANH MỤC (nếu chưa có)
-              const list = await getAllSkills();
-              const exists = list.some(
+              let list = await getAllSkills();
+              let existing = list.find(
                 (x) => x.name.trim().toLowerCase() === sk.name.trim().toLowerCase()
               );
-              if (!exists) {
+
+              if (!existing) {
+                const newId = generateCode(sk.name);
                 await addSkill({
-                  code: generateCode(sk.name),
+                  id: newId,
+                  code: newId,
                   name: sk.name,
-                  description:
-                    "Kỹ năng được bổ sung tự động từ phân tích năng lực",
+                  description: "Tự động thêm từ phân tích",
                 });
+                existing = { id: newId, name: sk.name };
               }
 
-              // 2️⃣ THÊM VÀO HỒ SƠ
-              await addUserSkill(userId!, {
-                name: sk.name,
-                level: 2,
-                status: "existing",
+              await addDoc(collection(db, "userSkills"), {
+                userId,
+                skillId: existing!.id,
+                level: 4,
+                date: Date.now(),
+                description: "Thêm từ phân tích",
               });
 
-              // 3️⃣ UPDATE UI LOCAL
-              (dashboard.skillsToImprove[i] as any).status = "existing";
-              setDashboard({ ...dashboard });
-
-              notify(`Đã bổ sung kỹ năng "${sk.name}"`, "success");
-              loadDashboards();
-            }}
-            onMarkExisting={async (i: number) => {
-              const sk = dashboard.skillsToImprove[i];
-
-              const list = await getAllSkills();
-              const exists = list.some(
-                (x) => x.name.trim().toLowerCase() === sk.name.trim().toLowerCase()
-              );
-              if (!exists) {
-                await addSkill({
-                  name: sk.name,
-                  description:
-                    "Kỹ năng được đánh dấu đã có từ phân tích năng lực",
-                });
-              }
-              await addUserSkill(userId!, {
-                name: sk.name,
-                level: 3,
-                status: "existing",
-              });
-
-              (dashboard.skillsToImprove[i] as any).status = "existing";
-              setDashboard({ ...dashboard });
-
-              notify(`"${sk.name}" đã được đánh dấu là đã có`, "success");
+              notify(`Đã thêm kỹ năng "${sk.name}"`, "success");
               loadDashboards();
             }}
           />
 
-          {value === 1 && (skillsRadar?.labels?.length ?? 0) > 0 && (
+          {skillsRadar && (
             <Box sx={{ mt: 2 }}>
-              <RadarSkillsChart key={"skills" + value} data={skillsRadar} />
+              <RadarSkillsChart data={skillsRadar} />
             </Box>
           )}
         </Box>
       </TabPanel>
 
-      {/* TAB 3 — CHỨNG CHỈ */}
+      {/* ====================== TAB 3 — CHỨNG CHỈ ====================== */}
       <TabPanel value={value} index={2}>
         <Box sx={{ bgcolor: "#E8FBD8", p: 2, borderRadius: 3 }}>
           <CertificateEvaluation
             data={dashboard.certificatesToAdd}
             onAdd={async (i: number) => {
+              if (!userId) return;
+
               const c = dashboard.certificatesToAdd[i];
 
-              const list = await getAllCertificates();
-              const exists = list.some(
-                (x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase()
+              let list = await getAllCertificates();
+              let existing = list.find(
+                (x) =>
+                  x.name.trim().toLowerCase() === c.name.trim().toLowerCase()
               );
 
-              if (!exists) {
+              if (!existing) {
+                const newId = generateCode(c.name);
                 await addCertificate({
-                  code: generateCode(c.name),
+                  id: newId,
+                  code: newId,
                   name: c.name,
-                  description:
-                    "Chứng chỉ được bổ sung tự động từ phân tích năng lực",
+                  description: "Tự động thêm từ phân tích",
                 });
+                existing = { id: newId, name: c.name };
               }
 
-              await addUserCertificate(userId!, {
-                name: c.name,
-                status: "existing",
+              await addDoc(collection(db, "userCertificates"), {
+                userId,
+                certificateId: existing!.id,
+                date: Date.now(),
+                issuer: "",
+                result: "",
+                description: "Thêm từ phân tích",
               });
 
-              notify(`Đã bổ sung chứng chỉ "${c.name}"`, "success");
-              loadDashboards();
-            }}
-            onMarkExisting={async (i: number) => {
-              const c = dashboard.certificatesToAdd[i];
-
-              const list = await getAllCertificates();
-              const exists = list.some(
-                (x) => x.name.trim().toLowerCase() === c.name.trim().toLowerCase()
-              );
-
-              if (!exists) {
-                await addCertificate({
-                  code: generateCode(c.name),
-                  name: c.name,
-                  description:
-                    "Chứng chỉ được đánh dấu đã có từ phân tích năng lực",
-                });
-              }
-              await addUserCertificate(userId!, {
-                name: c.name,
-                status: "existing",
-              });
-
-              notify(`"${c.name}" đã có`, "success");
+              notify(`Đã thêm chứng chỉ "${c.name}"`, "success");
               loadDashboards();
             }}
           />
         </Box>
       </TabPanel>
 
-      {/* SNACKBAR */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={2500}

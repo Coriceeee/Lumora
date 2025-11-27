@@ -10,42 +10,31 @@ import {
   Button,
 } from "@mui/material";
 
-/**
- * PRO VERSION — SkillEvaluation.tsx
- * - Insight đặt đúng vị trí chip bên phải
- * - Khi status = existing → chip insight thay “Chưa đánh giá”
- * - Giao diện sạch đẹp
- */
-
 export default function SkillEvaluation({
   data,
   onAdd,
-  onMarkExisting,
 }: {
   data: any[];
   onAdd: (index: number) => void;
-  onMarkExisting: (index: number) => void;
 }) {
   if (!data || !data.length) return null;
 
-  // Tính điểm ưu tiên
   const getPriorityScore = (item: any): number => {
     if (typeof item.priorityRatio === "number") return item.priorityRatio;
     if (typeof item.priority === "number") return item.priority * 10;
     return 0;
   };
 
-  // Insight chip
   const getInsightChip = (item: any) => {
     const score = getPriorityScore(item);
 
-    if (score >= 70)
-      return { label: "Ưu tiên cao", color: "error" } as const;
+    if (item.status === "existing")
+      return { label: "Đã đáp ứng", color: "success" };
 
-    if (score >= 40)
-      return { label: "Cần chú ý", color: "warning" } as const;
+    if (score >= 70) return { label: "Ưu tiên cao", color: "error" };
+    if (score >= 40) return { label: "Cần chú ý", color: "warning" };
 
-    return { label: "Mức ổn định", color: "success" } as const;
+    return { label: "Mức ổn", color: "success" };
   };
 
   return (
@@ -55,62 +44,32 @@ export default function SkillEvaluation({
       <CardContent>
         <Stack spacing={2}>
           {data.map((item, index) => {
-            const isExisting = item.status === "existing";
             const insight = getInsightChip(item);
-
-            const rightChip = isExisting ? (
-              <Chip
-                size="small"
-                variant="outlined"
-                color={insight.color}
-                label={insight.label}
-              />
-            ) : (
-              <Chip
-                size="small"
-                label={
-                  item.status === "need"
-                    ? "Cần học thêm"
-                    : "Chưa đánh giá"
-                }
-                color={
-                  item.status === "need"
-                    ? "warning"
-                    : "default"
-                }
-              />
-            );
+            const isExisting = item.status === "existing";
 
             return (
               <Stack key={index} spacing={1}>
-                {/* Name + chip */}
                 <Stack direction="row" justifyContent="space-between">
                   <Typography>{item.name}</Typography>
-                  {rightChip}
+
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    color={insight.color as any}
+                    label={insight.label}
+                  />
                 </Stack>
 
-                {/* Action buttons */}
-                <Stack direction="row" spacing={1}>
-                  {item.status === "need" && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={() => onAdd(index)}
-                    >
-                      Bổ sung trực tiếp
-                    </Button>
-                  )}
-
-                  {!isExisting && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => onMarkExisting(index)}
-                    >
-                      Đã có
-                    </Button>
-                  )}
-                </Stack>
+                {/* ⭐ Only one button left */}
+                {!isExisting && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => onAdd(index)}
+                  >
+                    Thêm vào hồ sơ
+                  </Button>
+                )}
 
                 <Divider />
               </Stack>

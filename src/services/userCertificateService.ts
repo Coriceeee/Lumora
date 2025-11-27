@@ -11,3 +11,7 @@ export const getUserCertificates = async (userId: string) => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserCertificate[];
 };
+export const getCertificateDefinitions = async () => {
+  const snap = await getDocs(collection(db, "certificates"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};

@@ -1,4 +1,4 @@
-// HoSoCaNhan.tsx — FULL VERSION (Fixed close/purple warnings + realtime sync)
+// HoSoCaNhan.tsx — FINAL VERSION (AUTO-SYNC NAME-BASED + ORIGINAL UI PRESERVED)
 
 import React, { useEffect, useState } from "react";
 import styled, { keyframes } from "styled-components";
@@ -10,12 +10,12 @@ import { UserCertificate } from "../../../types/UserCertificate";
 import { UserCertificateForm } from "./UserCertificateForm";
 import { UserSkillForm } from "./UserSkillForm";
 
-import { getAuth } from "firebase/auth";
-import { db } from "../../../firebase/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { useFirebaseUser } from "../../hooks/useFirebaseUser";
+import { getUserSkills } from "../../../services/userSkillService";
+import { getUserCertificates } from "../../../services/userCertificateService";
 
-/* USER ID */
-const userId = getAuth().currentUser?.uid || "";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../../firebase/firebase";
 
 /* ================= Animations ================= */
 const gradientAnimation = keyframes`
@@ -60,7 +60,6 @@ const BtnGroup = styled.div`
 
 interface BtnProps { close?: boolean; }
 
-/* FIXED: shouldForwardProp → không truyền close xuống DOM */
 const Btn = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== "close"
 })<BtnProps>`
@@ -87,7 +86,6 @@ const Btn = styled.button.withConfig({
   &:hover { transform:scale(1.07); }
 `;
 
-/* FIXED: ShouldForwardProp để ngăn warning purple */
 const FormWrapper = styled.div.withConfig({
   shouldForwardProp: (prop) => prop !== "purple"
 })<{purple?:boolean}>`
@@ -176,50 +174,51 @@ const TextMuted = styled.p`
 /* ================= COMPONENT ================= */
 
 export default function HoSoCaNhan() {
+  const { userId } = useFirebaseUser();
+  
   const [skills, setSkills] = useState<UserSkill[]>([]);
   const [certificates, setCertificates] = useState<UserCertificate[]>([]);
+
+  const [skillDefs, setSkillDefs] = useState<any[]>([]);
+  const [certDefs, setCertDefs] = useState<any[]>([]);
+
   const [showSkillForm, setShowSkillForm] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* Real-time Listener */
+  /* Load dữ liệu */
   useEffect(() => {
     if (!userId) return;
 
-    /* Kỹ năng */
-    const skillQuery = query(
-      collection(db, "userSkills"),
-      where("userId", "==", userId)
-    );
+    const fetchData = async () => {
+      // Load hồ sơ kỹ năng
+      const userSkills = await getUserSkills(userId);
+      setSkills(userSkills);
 
-    const unsubSkills = onSnapshot(skillQuery, (snap) => {
-      const arr: UserSkill[] = [];
-      snap.forEach((doc) =>
-        arr.push({ id: doc.id, ...(doc.data() as UserSkill) })
-      );
-      setSkills(arr);
+      // Load hồ sơ chứng chỉ
+      const userCerts = await getUserCertificates(userId);
+      setCertificates(userCerts);
+
+      // ⭐ Load danh sách skill để đổi ID -> tên
+      const skillSnap = await getDocs(collection(db, "skills"));
+      setSkillDefs(skillSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      // ⭐ Load danh sách certificate để đổi ID -> tên
+      const certSnap = await getDocs(collection(db, "certificates"));
+      setCertDefs(certSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+
       setLoading(false);
-    });
-
-    /* Chứng chỉ */
-    const certQuery = query(
-      collection(db, "userCertificates"),
-      where("userId", "==", userId)
-    );
-
-    const unsubCert = onSnapshot(certQuery, (snap) => {
-      const arr: UserCertificate[] = [];
-      snap.forEach((doc) =>
-        arr.push({ id: doc.id, ...(doc.data() as UserCertificate) })
-      );
-      setCertificates(arr);
-    });
-
-    return () => {
-      unsubSkills();
-      unsubCert();
     };
-  }, []);
+
+    fetchData();
+  }, [userId]);
+
+  /* ID → Name */
+  const getSkillName = (id: string) =>
+    skillDefs.find(s => s.id === id)?.name || id;
+
+  const getCertificateName = (id: string) =>
+    certDefs.find(c => c.id === id)?.name || id;
 
   return (
     <Container>
@@ -241,13 +240,13 @@ export default function HoSoCaNhan() {
       {/* FORMS */}
       {showSkillForm && (
         <FormWrapper purple>
-          <UserSkillForm userId={userId} onSaved={() => {}} />
+          <UserSkillForm userId={userId || ""} onSaved={() => {}} />
         </FormWrapper>
       )}
 
       {showCertForm && (
         <FormWrapper>
-          <UserCertificateForm userId={userId} onSaved={() => {}} />
+          <UserCertificateForm userId={userId || ""} onSaved={() => {}} />
         </FormWrapper>
       )}
 
@@ -278,7 +277,7 @@ export default function HoSoCaNhan() {
               <tbody>
                 {skills.map((s) => (
                   <tr key={s.id}>
-                    <td>{s.skillId}</td>
+                    <td>{getSkillName(s.skillId)}</td>
                     <td>{s.level}</td>
                     <td>{new Date(s.date).toLocaleDateString()}</td>
                     <td>{s.description}</td>
@@ -314,7 +313,7 @@ export default function HoSoCaNhan() {
               <tbody>
                 {certificates.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.certificateId}</td>
+                    <td>{getCertificateName(c.certificateId)}</td>
                     <td>{c.result}</td>
                     <td>{new Date(c.date).toLocaleDateString()}</td>
                     <td>{c.issuer}</td>
@@ -325,6 +324,7 @@ export default function HoSoCaNhan() {
             </Table>
           )}
         </Card>
+
       </Grid2Col>
     </Container>
   );

@@ -15,9 +15,51 @@ const generateCode = (text: string) =>
 
 function SkillCard({ skill, onDelete }: any) {
   return (
-    <div className="card h-100 shadow" style={{ borderRadius: 18, border: "3px solid" }}>
-      {/* UI giữ nguyên */}
-      {/* ... */}
+     <div
+      className="card h-100 shadow"
+      style={{
+        borderRadius: 18,
+        border: `3px solid`,
+        cursor: "default",
+        transition: "transform 0.3s ease",
+        backgroundColor: "#fff8f0",
+      }}
+      title={skill.description || "Không có mô tả"}      
+    >
+      <div className="card-body d-flex flex-column">
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <h5
+            className="fw-bold"
+            style={{ fontSize: "1.5rem" }}
+          >
+            <i className="bi bi-stars me-2"></i>
+            {skill.name}
+          </h5>
+          <button
+            className="btn btn-sm btn-outline-danger"
+            title="Xóa kỹ năng"
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Bạn có chắc muốn xóa kỹ năng "${skill.name}"?`
+                )
+              ) {
+                onDelete(skill.id);
+              }
+            }}
+            style={{ transition: "all 0.3s ease" }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "#d6336c")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "")}
+          >
+            <i className="bi bi-trash3"></i>
+          </button>
+        </div>
+        {/* Bỏ hiển thị mã kỹ năng */}
+        {/* <p className="text-muted small mb-1" style={{ userSelect: "none" }}>
+          Mã: <span className="fw-semibold">{skill.code}</span>
+        </p> */}
+        <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>       
+      </div>
     </div>
   );
 }

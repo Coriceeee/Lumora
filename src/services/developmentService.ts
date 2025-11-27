@@ -1,6 +1,5 @@
 import { getVireyaDashboards } from "./vireyaDashboardService";
-import { getLearningResultsByUser } from "./learningResultService";
-import { callGeminiForDashboard } from "./geminiDashboardService";
+import { getLearningResultsBySubjects } from "./learningResultService";
 import { getAllSubjects } from "./subjectService";
 import { getAllScoreTypes } from "./scoreTypeService";
 import { getAuth } from "firebase/auth";
@@ -46,7 +45,7 @@ export async function getDevelopmentSuggestions() {
 
   // Lấy dữ liệu kết quả học tập và kế hoạch học tập
   const [results, dashboards] = await Promise.all([
-    getLearningResultsByUser(userId),
+    getLearningResultsBySubjects(userId),
     getVireyaDashboards(userId),
   ]);
 

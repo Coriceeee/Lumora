@@ -10,37 +10,36 @@ import {
   Button,
 } from "@mui/material";
 
-/**
- * PRO VERSION — CertificateEvaluation.tsx
- * - Insight hoạt động như kỹ năng
- * - Trạng thái = existing sẽ đổi chip
- * - Giao diện sang trọng, đầy đủ logic
- */
-
-export default function CertificateEvaluation({
+export default function SkillEvaluation({
   data,
   onAdd,
-  onMarkExisting,
 }: {
   data: any[];
   onAdd: (index: number) => void;
-  onMarkExisting: (index: number) => void;
 }) {
   if (!data || !data.length) return null;
 
+  const getPriorityScore = (item: any): number => {
+    if (typeof item.priorityRatio === "number") return item.priorityRatio;
+    if (typeof item.priority === "number") return item.priority * 10;
+    return 0;
+  };
+
   const getInsightChip = (item: any) => {
+    const score = getPriorityScore(item);
+
     if (item.status === "existing")
-      return { label: "Đã đáp ứng", color: "success" } as const;
+      return { label: "Đã đáp ứng", color: "success" };
 
-    if (item.status === "need")
-      return { label: "Cần bổ sung", color: "warning" } as const;
+    if (score >= 70) return { label: "Ưu tiên cao", color: "error" };
+    if (score >= 40) return { label: "Cần chú ý", color: "warning" };
 
-    return { label: "Chưa đánh giá", color: "default" } as const;
+    return { label: "Mức ổn", color: "success" };
   };
 
   return (
     <Card sx={{ borderRadius: 3 }}>
-      <CardHeader title="Đánh giá Chứng chỉ" />
+      <CardHeader title="Đánh giá Kỹ năng" />
 
       <CardContent>
         <Stack spacing={2}>
@@ -49,41 +48,28 @@ export default function CertificateEvaluation({
             const isExisting = item.status === "existing";
 
             return (
-              <Stack key={index} spacing={1.2}>
-                {/* Name + chip */}
+              <Stack key={index} spacing={1}>
                 <Stack direction="row" justifyContent="space-between">
                   <Typography>{item.name}</Typography>
 
                   <Chip
                     size="small"
                     variant="outlined"
-                    label={insight.label}
                     color={insight.color as any}
+                    label={insight.label}
                   />
                 </Stack>
 
-                {/* Buttons */}
-                <Stack direction="row" spacing={1}>
-                  {item.status === "need" && (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => onAdd(index)}
-                    >
-                      Bổ sung trực tiếp
-                    </Button>
-                  )}
-
-                  {!isExisting && (
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => onMarkExisting(index)}
-                    >
-                      Đã có
-                    </Button>
-                  )}
-                </Stack>
+                {/* ⭐ Only one button left */}
+                {!isExisting && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => onAdd(index)}
+                  >
+                    Thêm vào hồ sơ
+                  </Button>
+                )}
 
                 <Divider />
               </Stack>

@@ -11,3 +11,7 @@ export const getUserSkills = async (userId: string) => {
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserSkill[];
 };
+export const getSkillDefinitions = async () => {
+  const snap = await getDocs(collection(db, "skills"));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};

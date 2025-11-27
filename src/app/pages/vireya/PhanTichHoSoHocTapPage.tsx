@@ -2,19 +2,18 @@ import React, { useEffect, useMemo, useState } from "react";
 import { toast } from "react-toastify";
 import * as Recharts from "recharts";
 import "react-toastify/dist/ReactToastify.css";
-import { motion, AnimatePresence } from "../../../utils/fakeMotion";
+import { motion } from "../../../utils/fakeMotion";
 
-
-import { getAllLearningResults, getGeminiAnalysis } from "../../../services/learningResultService";
+import { getAllLearningResults } from "../../../services/learningResultService";
 import { getAllSubjects } from "../../../services/subjectService";
 import { getAllScoreTypes } from "../../../services/scoreTypeService";
+import { callGeminiServer } from "../../../services/gemini";
+
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 
-/**
- * File: PhanTichHoSoHocTapPage.tsx
- * - Đã mở rộng: KPI cards, sparkline per subject, time-range filter + compare, export PDF/Excel
- * - Lưu ý: import html2canvas / jspdf / xlsx được load động trong handler export (giảm bundle size / SSR safe)
- */
+/* -------------------------------------------------- */
+/* ----------------------- TYPES --------------------- */
+/* -------------------------------------------------- */
 
 type SubjectInsight = {
   subjectName: string;
@@ -26,16 +25,24 @@ type SubjectInsight = {
 
 type TrendDataPoint = { name: string; [key: string]: number | string };
 
-type GeminiResponse = {
-  subjectInsights: SubjectInsight[];
-  radarChartData?: { subject: string; score: number }[];
-  trendChartData?: TrendDataPoint[];
-  overallSummary?: string;
-};
+const mandatorySubjects = ["Toán", "Văn"];
+const normalize = (str: string) =>
+  (str || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+ const normalizeScoreType = (str: string) =>
+  normalize(str)
+    .replace(/15p|15ph|k15p/g, "kt15p")
+    .replace(/tx|ktx/g, "kttx")
+    .replace(/gk|giuaky/g, "giuaki")
+    .replace(/ck|cuoiky/g, "cuoiki");
 
-const mandatorySubjects = ["Toán", "Văn"]; // đảm bảo có mặt
 
-// Recharts components typing shim
+/* -------------------------------------------------- */
+/* --------------------- RECHARTS -------------------- */
+/* -------------------------------------------------- */
+
 const {
   ResponsiveContainer,
   RadarChart,
@@ -51,24 +58,23 @@ const {
   Tooltip
 } = Recharts as unknown as any;
 
-// alias for Tooltip when we want a distinct variable name
 const ReTooltip = Tooltip;
 
-// Helpers
+/* -------------------------------------------------- */
+/* ---------------------- HELPERS -------------------- */
+/* -------------------------------------------------- */
+
 function filterByDateRange(results: any[], range: string) {
   if (!range || range === "all") return results;
+
   const now = new Date();
   let from = new Date(0);
-  if (range === "1m") {
-    from = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-  } else if (range === "3m") {
-    from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-  } else if (range === "6m") {
-    from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-  } else if (range === "semester") {
-    // assume semester ~ 6 months
-    from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-  }
+
+  if (range === "1m") from = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+  if (range === "3m") from = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+  if (range === "6m") from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+  if (range === "semester") from = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+
   return results.filter((r) => {
     const d = r.date ? new Date(r.date) : null;
     return d ? d >= from && d <= now : false;
@@ -80,492 +86,578 @@ function avg(arr: number[]) {
   return arr.reduce((s, v) => s + v, 0) / arr.length;
 }
 
-async function formatTrendDataByScoreType(results: any[], subjects: { id: string; name: string }[]) {
+async function formatTrendDataByScoreType(results: any[], subjects: any[]) {
   const scoreTypes = await getAllScoreTypes();
 
-  return scoreTypes.map((scoreType) => {
-    const dataPoint: TrendDataPoint = { name: scoreType.name };
-    subjects.forEach((subject) => {
-      const scoresForSubjectAndType = results
-        .filter((r) => r.subjectId === subject.id && r.scoreTypeId === scoreType.id)
-        .map((r) => r.score)
-        .filter((score) => typeof score === "number") as number[];
+  return scoreTypes.map((type) => {
+    const data: any = { name: type.name };
 
-      const avgScore =
-        scoresForSubjectAndType.reduce((sum, val) => sum + val, 0) / (scoresForSubjectAndType.length || 1);
-      dataPoint[subject.name] = Number(avgScore.toFixed(2));
+    subjects.forEach((s) => {
+      const values = results
+        .filter((r) => r.subjectId === s.id && r.scoreTypeId === type.id)
+        .map((r) => Number(r.score));
+
+      const value = values.length ? avg(values) : 0;
+      data[s.name] = Number(value.toFixed(2));
     });
-    return dataPoint;
+
+    return data;
   });
 }
 
-function getRadarData(results: any[], subjects: { id: string; name: string }[]) {
-  return subjects.map((subj) => {
-    const subjectResults = results.filter((r) => r.subjectId === subj.id);
-    const avgScore =
-      subjectResults.length > 0
-        ? subjectResults.reduce((sum, r) => sum + (r.score ?? 0), 0) / subjectResults.length
-        : 0;
-    return { subject: subj.name, score: Number(avgScore.toFixed(2)) };
+function getRadarData(results: any[], subjects: any[]) {
+  return subjects.map((s) => {
+    const subset = results.filter((r) => r.subjectId === s.id);
+    const value = subset.length
+      ? subset.reduce((sum, r) => sum + (r.score ?? 0), 0) / subset.length
+      : 0;
+
+    return {
+      subject: s.name,
+      score: Number(value.toFixed(2)),
+    };
   });
 }
 
-function extractSparklineDataForSubject(results: any[], subjectId: string, limit = 6) {
+function extractSparklineData(results: any[], subjectId: string) {
   const arr = results
-    .filter((r) => r.subjectId === subjectId && typeof r.score === "number")
-    .slice()
-    .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime())
-    .map((r) => ({ name: new Date(r.date || 0).toLocaleDateString(), value: r.score }));
-  const tail = arr.slice(-limit);
-  // ensure at least 1 point for chart
-  return tail.length ? tail : [{ name: "-", value: 0 }];
+    .filter((r) => r.subjectId === subjectId)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .map((r) => ({ name: new Date(r.date).toLocaleDateString(), value: r.score }));
+
+  return arr.length ? arr.slice(-6) : [{ name: "-", value: 0 }];
 }
 
 const lineColors = ["#2563eb", "#ff6347", "#22c55e", "#f59e0b", "#8b5cf6"];
 
+/* -------------------------------------------------- */
+/* --------------------- MAIN PAGE ------------------- */
+/* -------------------------------------------------- */
+
 const PhanTichHoSoHocTapPage: React.FC = () => {
-  // UI state
+  /* ---------------------- STATE ---------------------- */
+
   const [customCombinations, setCustomCombinations] = useState<Record<string, string[]>>({});
-  const [selectedCombination, setSelectedCombination] = useState<string>("");
+  const [selectedCombination, setSelectedCombination] = useState("");
 
-  // subject chips
-  const [selectedCustomSubjects, setSelectedCustomSubjects] = useState<string[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
 
-  // data state
-  const [allSubjectsState, setAllSubjectsState] = useState<{ id: string; name: string }[]>([]);
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [radarData, setRadarData] = useState<any[]>([]);
+  const [trendData, setTrendData] = useState<any[]>([]);
   const [insights, setInsights] = useState<SubjectInsight[]>([]);
-  const [radarData, setRadarData] = useState<{ subject: string; score: number }[]>([]);
-  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
-  const [aiSummary, setAiSummary] = useState<string>("");
 
   const [selectedInsight, setSelectedInsight] = useState<SubjectInsight | null>(null);
+
+  const [aiSummary, setAiSummary] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // KPI + filter
-  const [dateRange, setDateRange] = useState<string>("3m"); // 1m / 3m / 6m / semester / all
-  const [comparePrevious, setComparePrevious] = useState<boolean>(false);
+  const [dateRange, setDateRange] = useState("3m");
+  const [filteredResults, setFilteredResults] = useState<any[]>([]);
 
-  const [currentFilteredResults, setCurrentFilteredResults] = useState<any[]>([]);
-
-  const allCombinations = { ...customCombinations };
-
-  // 🔥 Hook lấy userId
   const { userId } = useFirebaseUser();
 
+  const combos = { ...customCombinations };
+
+  /* ------------------------ INIT ---------------------- */
+
   useEffect(() => {
-    const fetchSubjects = async () => {
+    const load = async () => {
       try {
-        const subjects = await getAllSubjects();
-        const validSubjects = subjects
-          .filter((s): s is { id: string; name: string } => !!s.id)
-          .map((s) => ({ id: s.id, name: s.name }));
-        setAllSubjectsState(validSubjects);
-      } catch (e) {
-        toast.error("Không thể tải danh sách môn.");
-      }
-    };
-    fetchSubjects();
-  }, []);
+        const subs = await getAllSubjects();
 
-  // Fetch phân tích AI
-  useEffect(() => {    
-    if (!userId) return;                // ⛔ Không có userId → không fetch
-    
-    const fetchAnalysis = async () => {
-      if (!selectedCombination || !allCombinations[selectedCombination]) return;
+        // ❗ FIX 1A: GHÉP TÊN MÔN CHUẨN (Toán / Văn)
+        const normalized = subs.map((s) => ({
+          ...s,
+          name: s.name.trim()
+        }));
 
-      setLoading(true);
-      try {
-        const [results] = await Promise.all([getAllLearningResults(userId)]);
-        if (!results.length) {
-          toast.info("Chưa có dữ liệu học tập để phân tích.");
-          setLoading(false);
-          return;
-        }
-
-        // chosenSubjects dựa trên tổ hợp (Toán, Văn + 2 môn chọn)
-        const chosenSubjects = [...mandatorySubjects, ...allCombinations[selectedCombination]];
-
-        // Lọc kết quả theo tổ hợp (match name includes)
-        const chosenIds = allSubjectsState
-          .filter((s) => chosenSubjects.some((name) => s.name.includes(name)))
-          .map((s) => s.id);
-
-        const filteredAll = results.filter((r) => chosenIds.includes(r.subjectId));
-
-        // apply date range
-        const filteredByRange = filterByDateRange(filteredAll, dateRange);
-        setCurrentFilteredResults(filteredByRange);
-
-        // --- đảm bảo Toán & Văn luôn có trong filteredSubjects ---
-        const subjectMap = new Map<string, { id: string; name: string }>();
-        mandatorySubjects.forEach((m) => {
-          const matched = allSubjectsState.find((s) => s.name.includes(m));
-          if (matched) subjectMap.set(matched.id, matched);
-        });
-        allCombinations[selectedCombination]?.forEach((name) => {
-          const matched = allSubjectsState.find((s) => s.name === name || s.name.includes(name));
-          if (matched) subjectMap.set(matched.id, matched);
-        });
-        filteredByRange.forEach((r) => {
-          const subj = allSubjectsState.find((s) => s.id === r.subjectId);
-          if (subj) subjectMap.set(subj.id, subj);
-        });
-        const filteredSubjects = Array.from(subjectMap.values());
-
-        // Chart data
-        setRadarData(getRadarData(filteredByRange, filteredSubjects));
-        setTrendData(await formatTrendDataByScoreType(filteredByRange, filteredSubjects));
-
-        // Gọi Gemini với tuỳ chọn mặc định
-        const basicAnalysis: GeminiResponse = await getGeminiAnalysis(filteredByRange);
-        setInsights(basicAnalysis.subjectInsights || []);
-        setAiSummary(basicAnalysis.overallSummary || "");
+        setAllSubjects(normalized);
       } catch (err) {
-        console.error(err);
-        toast.error("Không thể tải dữ liệu phân tích từ AI.");
-      } finally {
+        toast.error("Không thể tải danh sách môn");
+      }
+    };
+    load();
+  }, []);
+/* -------------------------------------------------- */
+/* -------------------- AI PROCESS ------------------- */
+/* -------------------------------------------------- */
+
+useEffect(() => {
+  if (!userId) return;
+  if (!selectedCombination || !combos[selectedCombination]) return;
+
+  const run = async () => {
+    setLoading(true);
+
+    try {
+      const all = await getAllLearningResults(userId);
+      if (!all.length) {
+        toast.info("Không có dữ liệu để phân tích");
         setLoading(false);
+        return;
       }
-    };
 
-    fetchAnalysis();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCombination, customCombinations, dateRange, comparePrevious, allSubjectsState]);
+      /* -------------------------------------------------- */
+      /*  FIX 1B — ĐẢM BẢO GHÉP TÊN MÔN ĐÚNG CHO TOÁN / VĂN */
+      /* -------------------------------------------------- */
 
-  // Tag/chip selection handler (chọn tối đa 2 môn tự chọn)
-  const toggleSubjectChip = (name: string) => {
-    setSelectedCustomSubjects((prev) => {
-      const exists = prev.includes(name);
-      if (exists) return prev.filter((p) => p !== name);
-      if (prev.length >= 2) {
-        toast.info("Bạn chỉ được chọn tối đa 2 môn tự chọn.");
-        return prev;
-      }
-      return [...prev, name];
-    });
-  };
+      const chosenNames = [...mandatorySubjects, ...combos[selectedCombination]];
 
-  const handleAddCombination = () => {
-    if (selectedCustomSubjects.length !== 2) {
-      toast.error("Vui lòng chọn đúng 2 môn tự chọn bằng tag ở trên.");
-      return;
-    }
+      const normalize = (str: string) =>
+  str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    const name = `Tổ hợp ${mandatorySubjects.join(", ")} + ${selectedCustomSubjects.join(", ")}`;
-    setCustomCombinations((prev) => ({ ...prev, [name]: [...selectedCustomSubjects] }));
-    setSelectedCombination(name);
-    setSelectedCustomSubjects([]);
-  };
+const chosenIds = allSubjects
+  .filter((s) =>
+    chosenNames.some((name) =>
+      normalize(s.name).includes(normalize(name))
+    )
+  )
+  .map((s) => s.id);
 
-  // KPI calculations
-  const kpi = useMemo(() => {
-    const results = currentFilteredResults;
-    const subjects = Array.from(new Set(results.map((r) => r.subjectId)));
-    const subjectAvgs = subjects.map((sid) => {
-      const arr = results.filter((r) => r.subjectId === sid).map((r) => r.score).filter((s) => typeof s === "number");
-      return { subjectId: sid, avg: avg(arr) };
-    });
 
-    const overallGPA = avg(subjectAvgs.map((s) => s.avg)).toFixed(2);
+      const filtered = all.filter((r) => chosenIds.includes(r.subjectId));
 
-    // compare with previous period if requested
-    let progressPct = 0;
-    if (comparePrevious) {
-      // compute previous range by shifting back same length (best effort)
-      // simple heuristic: compare last 2 ranges using dates
-      // For speed, we don't refetch; use all results (not filteredByRange) to compute prev.
-      // This is a heuristic — adjust server-side for exactness.
-      // For now set to 0 if not enough data.
-      progressPct = 0;
-    }
+      const ranged = filterByDateRange(filtered, dateRange);
+      setFilteredResults(ranged);
 
-    const improvedCount = subjectAvgs.filter((s) => s.avg >= 6.5).length; // heuristic
-    const warningCount = subjectAvgs.filter((s) => s.avg < 5).length;
+     const finalSubjects = allSubjects.filter((s) =>
+  chosenNames.some((name) => normalize(s.name).includes(normalize(name)))
+);
 
-    return {
-      overallGPA,
-      progressPct,
-      improvedCount,
-      warningCount,
-    };
-  }, [currentFilteredResults, comparePrevious]);
 
-  const subjectsInTrend = trendData.length ? Object.keys(trendData[0]).filter((k) => k !== "name") : [];
+      setRadarData(getRadarData(ranged, finalSubjects));
+      setTrendData(await formatTrendDataByScoreType(ranged, finalSubjects));
 
-  // Export handlers
-  const handleExportPDF = async () => {
-    try {
-      // @ts-ignore
-      const html2canvas = (await import('html2canvas')).default;
-      // @ts-ignore
-      const jsPDF = (await import('jspdf')).jsPDF;
+      /* -------------------------------------------------- */
+      /*  AI SUMMARY (GIỌNG VOIDZONE – NGẮN, 2–3 CÂU, CÓ EMOJI)  */
+      /* -------------------------------------------------- */
 
-      const el = document.getElementById('phan-tich-root') as HTMLElement;
-      if (!el) return toast.error('Không tìm thấy nội dung để xuất.');
-      const canvas = await html2canvas(el, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width, canvas.height] });
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-      pdf.save('phan-tich-ho-so-hoc-tap.pdf');
+      const prompt = `
+Bạn là StudyBot – trợ lý phân tích học tập.
+
+YÊU CẦU:
+- Viết bằng tiếng Việt.
+- Giọng văn nhẹ nhàng, động viên, giống VoidZone.
+- Chỉ 2 câu, có emoji.
+- Tuyệt đối không dùng markdown.
+- Văn phong tích cực.
+- Không được dài dòng.
+
+DỮ LIỆU:
+- Môn học: ${finalSubjects.map((s) => s.name).join(", ")}
+- Điểm số (JSON): ${JSON.stringify(ranged, null, 2)}
+
+Hãy trả lời 3 mục:
+1) Nhận xét tổng quát  
+2) Gợi ý cải thiện cá nhân hoá  
+3) Dự đoán xu hướng tháng tới  
+
+Chỉ trả về VĂN BẢN THUẦN.
+`;
+
+      const raw = await callGeminiServer(prompt);
+
+      const cleaned = raw
+        .replace(/```/g, "")
+        .replace(/\*/g, "")
+        .trim();
+
+      setAiSummary(cleaned || "(AI không phản hồi)");
     } catch (err) {
+      toast.error("Không thể phân tích AI");
       console.error(err);
-      toast.error('Xuất PDF thất bại. Hãy đảm bảo html2canvas và jspdf được cài.');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleExportExcel = async () => {
-    try {
-      // @ts-ignore
-      const XLSX = await import('xlsx');
-      const wb = XLSX.utils.book_new();
+  run();
+}, [selectedCombination, dateRange, allSubjects, userId]);
 
-      // Radar data
-      const wsRadar = XLSX.utils.json_to_sheet(radarData);
-      XLSX.utils.book_append_sheet(wb, wsRadar, 'Radar');
+/* -------------------------------------------------- */
+/* ---------------------- KPI ------------------------ */
+/* -------------------------------------------------- */
 
-      // Trend
-      const wsTrend = XLSX.utils.json_to_sheet(trendData);
-      XLSX.utils.book_append_sheet(wb, wsTrend, 'Trend');
+const kpi = useMemo(() => {
+  const res = filteredResults;
+  const ids = [...new Set(res.map((r) => r.subjectId))];
 
-      // Insights
-      const insightRows = insights.map((i) => ({ subject: i.subjectName, trend: i.trend, strength: i.strength, weakness: i.weakness, suggestion: i.suggestion }));
-      const wsInsights = XLSX.utils.json_to_sheet(insightRows);
-      XLSX.utils.book_append_sheet(wb, wsInsights, 'Insights');
+  const avgs = ids.map((id) => {
+    const arr = res.filter((r) => r.subjectId === id).map((r) => r.score);
+    return avg(arr);
+  });
 
-      XLSX.writeFile(wb, 'phan-tich-ho-so-hoc-tap.xlsx');
-    } catch (err) {
-      console.error(err);
-      toast.error('Xuất Excel thất bại. Hãy đảm bảo xlsx (sheetjs) được cài.');
-    }
+  return {
+    gpa: avg(avgs).toFixed(2),
+    improved: avgs.filter((v) => v >= 6.5).length,
+    warning: avgs.filter((v) => v < 5).length,
   };
+}, [filteredResults]);
 
-  return (
-    <div id="phan-tich-root" style={styles.page}>
-      <h2 style={styles.title}>📊 Phân Tích Hồ Sơ Học Tập</h2>
+/* -------------------------------------------------- */
+/* ---------------------- UI ------------------------- */
+/* -------------------------------------------------- */
 
-      {/* KPI cards + controls row */}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', flex: 1 }}>
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiIcon}>🎓</div>
-            <div>
-              <div style={styles.kpiValue}>{kpi.overallGPA}</div>
-              <div style={styles.kpiLabel}>GPA hiện tại</div>
-            </div>
-          </div>
+return (
+  <div id="phan-tich-root" style={styles.page}>
+    <h2 style={styles.title}>📊 Phân Tích Hồ Sơ Học Tập</h2>
 
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiIcon}>⚡</div>
-            <div>
-              <div style={styles.kpiValue}>{kpi.progressPct}%</div>
-              <div style={styles.kpiLabel}>% tiến bộ (so sánh)</div>
-            </div>
-          </div>
-
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiIcon}>📈</div>
-            <div>
-              <div style={styles.kpiValue}>{kpi.improvedCount}</div>
-              <div style={styles.kpiLabel}>Số môn cải thiện</div>
-            </div>
-          </div>
-
-          <div style={styles.kpiCard}>
-            <div style={styles.kpiIcon}>⚠️</div>
-            <div>
-              <div style={styles.kpiValue}>{kpi.warningCount}</div>
-              <div style={styles.kpiLabel}>Số môn cần lưu ý</div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <label style={{ color: '#374151', marginRight: 6 }}>Phạm vi:</label>
-            <select value={dateRange} onChange={(e) => setDateRange(e.target.value)}>
-              <option value="1m">1 tháng</option>
-              <option value="3m">3 tháng</option>
-              <option value="6m">6 tháng</option>
-              <option value="semester">Năm học</option>
-              <option value="all">Tất cả</option>
-            </select>
-          </div>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" checked={comparePrevious} onChange={(e) => setComparePrevious(e.target.checked)} />
-            So sánh với kỳ trước
-          </label>
-
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={handleExportPDF} style={styles.exportBtn}>Xuất PDF</button>
-            <button onClick={handleExportExcel} style={styles.exportBtn}>Xuất Excel</button>
-          </div>
+    {/* KPI */}
+    <div style={styles.kpiRow}>
+      <div style={styles.kpiCard}>
+        <div style={styles.kpiIcon}>🎓</div>
+        <div>
+          <div style={styles.kpiValue}>{kpi.gpa}</div>
+          <div style={styles.kpiLabel}>GPA hiện tại</div>
         </div>
       </div>
 
-      {/* Tag-based subject picker */}
-      <motion.div style={styles.comboForm} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <p style={styles.comboLabel}>Toán & Văn là môn bắt buộc — chọn 2 môn tự chọn bằng tag</p>
-
-        <div style={{ marginBottom: 10 }}>
-          <div style={styles.chipsWrap}>
-            {allSubjectsState
-              .filter((s) => !mandatorySubjects.some((m) => s.name.includes(m)))
-              .map((s) => {
-                const selected = selectedCustomSubjects.includes(s.name);
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => toggleSubjectChip(s.name)}
-                    style={{
-                      ...styles.chip,
-                      ...(selected ? styles.chipSelected : {}),
-                      borderColor: selected ? styles.chipSelected.borderColor : styles.chip.borderColor,
-                    }}
-                  >
-                    {s.name}
-                  </button>
-                );
-              })}
-          </div>
+      <div style={styles.kpiCard}>
+        <div style={styles.kpiIcon}>📈</div>
+        <div>
+          <div style={styles.kpiValue}>{kpi.improved}</div>
+          <div style={styles.kpiLabel}>Số môn cải thiện</div>
         </div>
+      </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <button onClick={handleAddCombination} style={styles.addBtn}>+ Thêm tổ hợp</button>
-
-          <div style={{ color: "#6b7280" }}>
-            Đã chọn: {selectedCustomSubjects.length ? selectedCustomSubjects.join(", ") : "(chưa chọn)"}
-          </div>
+      <div style={styles.kpiCard}>
+        <div style={styles.kpiIcon}>⚠️</div>
+        <div>
+          <div style={styles.kpiValue}>{kpi.warning}</div>
+          <div style={styles.kpiLabel}>Số môn cần chú ý</div>
         </div>
+      </div>
+
+      <select
+        value={dateRange}
+        onChange={(e) => setDateRange(e.target.value)}
+        style={styles.select}
+      >
+        <option value="1m">1 tháng</option>
+        <option value="3m">3 tháng</option>
+        <option value="6m">6 tháng</option>
+        <option value="semester">Học kỳ</option>
+        <option value="all">Tất cả</option>
+      </select>
+    </div>
+
+    {/* Tag-based subject picker */}
+    <motion.div
+      style={{
+        marginBottom: 18,
+        padding: 16,
+        background: "linear-gradient(135deg,#f8fafc,#eef2ff)",
+        borderRadius: 12,
+        boxShadow: "0 8px 30px rgba(15,23,42,0.06)",
+      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      <p style={{ fontWeight: 700, marginBottom: 8, color: "#0f172a" }}>
+        Toán & Văn là môn bắt buộc — chọn 2 môn tự chọn bằng tag
+      </p>
+
+      <div style={{ marginBottom: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          {allSubjects
+            .filter((s) => !mandatorySubjects.includes(s.name))
+            .map((s) => {
+              const selected = selectedSubjects.includes(s.name);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => {
+                    setSelectedSubjects((prev) => {
+                      const exists = prev.includes(s.name);
+                      if (exists) return prev.filter((p) => p !== s.name);
+                      if (prev.length >= 2) {
+                        toast.info("Bạn chỉ được chọn tối đa 2 môn tự chọn.");
+                        return prev;
+                      }
+                      return [...prev, s.name];
+                    });
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border: "2px solid #e6eaf6",
+                    background: selected
+                      ? "linear-gradient(90deg,#eef2ff,#e0f2fe)"
+                      : "transparent",
+                    cursor: "pointer",
+                    boxShadow: selected
+                      ? "0 6px 18px rgba(37,99,235,0.08)"
+                      : "none",
+                    transform: selected ? "translateY(-2px)" : "none",
+                    borderColor: selected ? "#60a5fa" : "#e6eaf6",
+                    transition: "all 0.15s",
+                    color: "#0f172a",
+                  }}
+                >
+                  {s.name}
+                </button>
+              );
+            })}
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button
+          onClick={() => {
+            if (selectedSubjects.length !== 2) {
+              toast.error("Vui lòng chọn đúng 2 môn tự chọn bằng tag.");
+              return;
+            }
+            const name = `Tổ hợp ${mandatorySubjects.join(", ")} + ${selectedSubjects.join(", ")}`;
+            setCustomCombinations((prev) => ({
+              ...prev,
+              [name]: [...selectedSubjects],
+            }));
+            setSelectedCombination(name);
+            setSelectedSubjects([]);
+          }}
+          style={{
+            background: "#2563eb",
+            color: "#fff",
+            padding: "8px 14px",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          + Thêm tổ hợp
+        </button>
+
+        <div style={{ color: "#6b7280" }}>
+          Đã chọn: {selectedSubjects.length ? selectedSubjects.join(", ") : "(chưa chọn)"}
+        </div>
+      </div>
+    </motion.div>
+
+    {/* Tổ hợp selector */}
+    <div style={styles.comboWrap}>
+      <label>Chọn tổ hợp:</label>
+      <select
+        value={selectedCombination}
+        onChange={(e) => setSelectedCombination(e.target.value)}
+      >
+        <option value="">-- Chưa chọn --</option>
+        {Object.keys(combos).map((c) => (
+          <option key={c}>{c}</option>
+        ))}
+      </select>
+    </div>
+
+    {/* Charts */}
+    <div style={styles.chartRow}>
+      <motion.div style={styles.chartCard}>
+        <h3>Tổng quan năng lực</h3>
+
+        {loading ? (
+          <p>Đang tải...</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <RadarChart data={radarData} outerRadius={110}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey="subject" />
+              <PolarRadiusAxis angle={30} domain={[0, 10]} />
+              <Radar dataKey="score" fill="#2563eb" fillOpacity={0.6} />
+            </RadarChart>
+          </ResponsiveContainer>
+        )}
       </motion.div>
 
-      {/* Chọn tổ hợp */}
-      <div style={{ display: "flex", gap: 16, alignItems: "center", marginBottom: 18 }}>
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <label>Chọn tổ hợp xét tuyển:</label>
-          <select value={selectedCombination} onChange={(e) => setSelectedCombination(e.target.value)}>
-            <option value="">-- Chưa chọn --</option>
-            {Object.keys(allCombinations).map((combo) => (
-              <option key={combo} value={combo}>{combo}</option>
-            ))}
-          </select>
-        </div>
+      <motion.div style={styles.chartCard}>
+        <h3>Biểu đồ xu hướng</h3>
+        {loading ? (
+          <p>Đang tải...</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis domain={[0, 10]} />
+              <ReTooltip />
 
-        <div style={{ marginLeft: "auto", color: "#6b7280" }}>
-          (Tag UI đã bật — click vào tên môn để chọn/huỷ chọn)
-        </div>
-      </div>
-
-      {/* Charts */}
-      <div style={styles.chartsContainer}>
-        <motion.section style={styles.chartCard} initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <h3>Tổng quan năng lực</h3>
-          {loading ? <p>Đang tải dữ liệu...</p> : (
-            <ResponsiveContainer width="100%" height={300}>
-              <RadarChart outerRadius={110} data={radarData}>
-                <PolarGrid />
-                <PolarAngleAxis dataKey="subject" />
-                <PolarRadiusAxis angle={30} domain={[0, 10]} />
-                <Radar name="Học lực" dataKey="score" stroke="#2563eb" fill="#3b82f6" fillOpacity={0.6} />
-              </RadarChart>
-            </ResponsiveContainer>
-          )}
-        </motion.section>
-
-        <motion.section style={styles.chartCard} initial={{ y: 12, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-          <h3>Biểu đồ xu hướng theo loại điểm</h3>
-          {loading ? <p>Đang tải dữ liệu...</p> : (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis domain={[0, 10]} />
-                <ReTooltip />
-                {subjectsInTrend.map((s, i) => (
-                  <Line key={s} type="monotone" dataKey={s} stroke={lineColors[i % lineColors.length]} strokeWidth={2} />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </motion.section>
-      </div>
-
-      {/* Insights with small sparkline next to subject names */}
-      <section style={styles.insights}>
-        {insights.map((insight, idx) => {
-          // find subject id
-          const subjObj = allSubjectsState.find((s) => s.name.includes(insight.subjectName) || s.name === insight.subjectName);
-          const sparkData = subjObj ? extractSparklineDataForSubject(currentFilteredResults, subjObj.id, 6) : [{ name: '-', value: 0 }];
-
-          return (
-            <motion.div key={idx} onClick={() => setSelectedInsight(insight)} whileHover={{ scale: 1.03 }} style={styles.insightCard}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ margin: 0 }}>{insight.subjectName}</h4>
-                  <p style={{ margin: '6px 0 0 0', color: '#334155' }}>📈 Xu hướng: {insight.trend}</p>
-                </div>
-
-                <div style={{ width: 100, height: 40 }}>
-                  <ResponsiveContainer width="100%" height={40}>
-                    <LineChart data={sparkData} margin={{ top: 2, right: 2, left: 0, bottom: 2 }}>
-                      <Line type="monotone" dataKey="value" stroke="#2563eb" dot={false} strokeWidth={2} isAnimationActive={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </section>
-
-      {/* Chi tiết môn */}
-      {selectedInsight && (
-        <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} style={styles.detailCard}>
-          <h4>{selectedInsight.subjectName}</h4>
-          <ul>
-            <li>✔ Ưu điểm: {selectedInsight.strength}</li>
-            <li>⚠ Nhược điểm: {selectedInsight.weakness}</li>
-            <li>📈 Xu hướng: {selectedInsight.trend}</li>
-            <li>💡 Gợi ý: {selectedInsight.suggestion}</li>
-          </ul>
-          <button onClick={() => setSelectedInsight(null)} style={styles.closeBtn}>Đóng</button>
-        </motion.section>
-      )}
-
-      {aiSummary && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.aiSummary}>
-          🧠 <strong>Nhận xét tổng quát:</strong> {aiSummary}
-        </motion.div>
-      )}
+              {/* Vẽ các đường theo môn */}
+              {trendData.length > 0 &&
+                Object.keys(trendData[0])
+                  .filter((k) => k !== "name")
+                  .map((subj, idx) => (
+                    <Line
+                      key={subj}
+                      type="monotone"
+                      dataKey={subj}
+                      stroke={lineColors[idx % lineColors.length]}
+                      strokeWidth={2}
+                    />
+                  ))}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </motion.div>
     </div>
-  );
+
+    {/* Insights */}
+    <div style={styles.insightGrid}>
+      {insights.map((ins, idx) => {
+        const subj = allSubjects.find((s) => s.name === ins.subjectName);
+        const spark =
+          subj ? extractSparklineData(filteredResults, subj.id) : [{ name: "-", value: 0 }];
+
+        return (
+          <motion.div
+            key={idx}
+            whileHover={{ scale: 1.03 }}
+            style={styles.insightCard}
+            onClick={() => setSelectedInsight(ins)}
+          >
+            <h4>{ins.subjectName}</h4>
+            <p>📈 Xu hướng: {ins.trend}</p>
+
+            <div style={{ width: "100%", height: 40 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={spark}>
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#2563eb"
+                    dot={false}
+                    strokeWidth={2}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+
+    {/* Insight Detail */}
+    {selectedInsight && (
+      <div style={styles.detailCard}>
+        <h4>{selectedInsight.subjectName}</h4>
+        <ul>
+          <li>✔ {selectedInsight.strength}</li>
+          <li>⚠ {selectedInsight.weakness}</li>
+          <li>📈 {selectedInsight.trend}</li>
+          <li>💡 {selectedInsight.suggestion}</li>
+        </ul>
+
+        <button style={styles.closeBtn} onClick={() => setSelectedInsight(null)}>
+          Đóng
+        </button>
+      </div>
+    )}
+
+    {/* AI Summary */}
+    {aiSummary && (
+      <motion.div style={styles.aiSummary}>
+        <strong>🧠 Nhận xét tổng quát:</strong>
+        <br />
+        {aiSummary}
+      </motion.div>
+    )}
+  </div>
+);
 };
 
 export default PhanTichHoSoHocTapPage;
 
-// CSS in JS
-const styles: Record<string, React.CSSProperties> = {
-  page: { maxWidth: 1200, margin: "20px auto", padding: 20, fontFamily: `"Segoe UI", Tahoma, sans-serif` },
-  title: { textAlign: "center", fontSize: "2.2rem", fontWeight: 700, color: "#0f172a", marginBottom: 20 },
-  comboForm: { marginBottom: 18, padding: 16, background: "linear-gradient(135deg,#f8fafc,#eef2ff)", borderRadius: 12, boxShadow: "0 8px 30px rgba(15,23,42,0.06)" },
-  comboLabel: { fontWeight: 700, marginBottom: 8, color: "#0f172a" },
-  chipsWrap: { display: "flex", gap: 8, flexWrap: "wrap" },
-  chip: { padding: "8px 12px", borderRadius: 999, border: "2px solid #e6eaf6", background: "transparent", cursor: "pointer", transition: "transform 0.12s, box-shadow 0.12s", color: "#0f172a" },
-  chipSelected: { background: "linear-gradient(90deg,#eef2ff,#e0f2fe)", boxShadow: "0 6px 18px rgba(37,99,235,0.08)", transform: "translateY(-2px)", borderColor: "#60a5fa" },
-  addBtn: { background: "#2563eb", color: "#fff", padding: "8px 14px", borderRadius: 10, border: "none", cursor: "pointer" },
-  chartsContainer: { display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "space-between" },
-  chartCard: { flex: "1 1 48%", background: "#fff", padding: 18, borderRadius: 14, boxShadow: "0 10px 30px rgba(2,6,23,0.06)" },
-  insights: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20, marginTop: 22 },
-  insightCard: { background: "linear-gradient(to right, #dbeafe, #e0f2fe)", padding: 14, borderRadius: 12, boxShadow: "0 6px 18px rgba(2,6,23,0.06)", cursor: "pointer" },
-  detailCard: { background: "#fff", padding: 20, borderRadius: 12, boxShadow: "0 12px 40px rgba(2,6,23,0.08)", marginTop: 16 },
-  closeBtn: { marginTop: 12, padding: "8px 12px", borderRadius: 10, border: "none", background: "#ef4444", color: "#fff", cursor: "pointer" },
-  aiSummary: { background: "#fffbeb", borderLeft: "5px solid #f59e0b", padding: 12, borderRadius: 10, marginTop: 18, color: "#92400e" },
+/* -------------------------------------------------- */
+/* ---------------------- STYLES --------------------- */
+/* -------------------------------------------------- */
 
-  // KPI styles
-  kpiCard: { display: 'flex', gap: 12, alignItems: 'center', padding: 12, borderRadius: 12, background: '#fff', boxShadow: '0 8px 30px rgba(2,6,23,0.04)', minWidth: 160 },
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    maxWidth: 1200,
+    margin: "0 auto",
+    padding: 20,
+    fontFamily: `"Segoe UI", sans-serif`,
+  },
+  title: {
+    textAlign: "center",
+    fontSize: "2rem",
+    fontWeight: 700,
+    marginBottom: 20,
+  },
+
+  kpiRow: { display: "flex", gap: 12, marginBottom: 18 },
+  kpiCard: {
+    display: "flex",
+    gap: 12,
+    padding: 12,
+    background: "#fff",
+    borderRadius: 12,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+  },
   kpiIcon: { fontSize: 22 },
   kpiValue: { fontSize: 20, fontWeight: 700 },
-  kpiLabel: { color: '#6b7280', fontSize: 12 },
-  exportBtn: { padding: '8px 10px', borderRadius: 10, border: '1px solid #e6eaf6', background: '#fff', cursor: 'pointer' },
+  kpiLabel: { fontSize: 12, color: "#666" },
+
+  select: { padding: 8, borderRadius: 8, border: "1px solid #ccc" },
+
+  comboWrap: { marginBottom: 20 },
+
+  chartRow: {
+    display: "flex",
+    gap: 20,
+    flexWrap: "wrap",
+  },
+
+  chartCard: {
+    flex: "1 1 48%",
+    background: "#fff",
+    padding: 18,
+    borderRadius: 14,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+  },
+
+  insightGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))",
+    gap: 20,
+    marginTop: 20,
+  },
+
+  insightCard: {
+    background: "linear-gradient(90deg,#dbeafe,#eff6ff)",
+    padding: 14,
+    borderRadius: 14,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+    cursor: "pointer",
+  },
+
+  detailCard: {
+    background: "#fff",
+    padding: 20,
+    borderRadius: 12,
+    marginTop: 20,
+    boxShadow: "0 6px 20px rgba(0,0,0,0.06)",
+  },
+
+  closeBtn: {
+    padding: "6px 10px",
+    background: "#ef4444",
+    color: "#fff",
+    borderRadius: 6,
+    border: "none",
+    marginTop: 10,
+  },
+
+  aiSummary: {
+    marginTop: 24,
+    padding: 16,
+    background: "#fff7e6",
+    borderLeft: "4px solid #f59e0b",
+    borderRadius: 10,
+    fontSize: 15,
+    lineHeight: 1.6,
+  },
 };
