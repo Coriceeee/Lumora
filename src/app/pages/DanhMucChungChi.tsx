@@ -1,3 +1,4 @@
+// DanhMucChungChi.tsx — FULL VERSION FIXED
 import { useEffect, useState } from "react";
 import {
   getAllCertificates,
@@ -5,6 +6,19 @@ import {
   updateCertificate,
 } from "../../services/certificateService";
 import { Certificate } from "../../types/Certificate";
+
+import { addUserCertificate } from "../../services/userSkillCertService";
+import { getAuth } from "firebase/auth";
+
+// AUTO CODE GEN
+const generateCode = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "_");
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -15,23 +29,36 @@ export default function CertificatesPage() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const userId = getAuth().currentUser?.uid || "";
+
   const fetchCertificates = async () => {
     setLoading(true);
     try {
       const data = await getAllCertificates();
-      setCertificates(data);
+      setCertificates(data || []);
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdd = async () => {
-    if ( !newCert.name.trim()) {
-      alert("Mã và tên chứng chỉ không được để trống.");
-      return;
-    }
+    if (!newCert.name.trim())
+      return alert("Tên chứng chỉ không được để trống.");
+
     try {
-      await addCertificate(newCert);
+      // 1️⃣ THÊM VÀO DANH MỤC
+      await addCertificate({
+        code: generateCode(newCert.name),
+        name: newCert.name,
+        description: newCert.description,
+      });
+
+      // 2️⃣ LƯU VÀO HỒ SƠ
+      await addUserCertificate(userId, {
+        name: newCert.name,
+        status: "existing",
+      });
+
       setNewCert({ name: "", description: "" });
       setShowForm(false);
       fetchCertificates();
@@ -44,6 +71,7 @@ export default function CertificatesPage() {
   const handleDelete = async (id?: string) => {
     if (!id) return;
     if (!window.confirm("Bạn có chắc muốn xóa chứng chỉ này?")) return;
+
     try {
       await updateCertificate(id, { deleted: true });
       fetchCertificates();
@@ -73,19 +101,17 @@ export default function CertificatesPage() {
         >
           🎖 Danh Mục Chứng Chỉ
         </h2>
+
         <button
           className="btn btn-lg btn-gradient"
           style={{
-            background:
-              "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+            background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
             color: "white",
             fontWeight: "600",
             boxShadow: "0 4px 15px rgba(101, 71, 255, 0.4)",
             border: "none",
           }}
           onClick={() => setShowForm((v) => !v)}
-          aria-expanded={showForm}
-          aria-controls="cert-form"
         >
           {showForm ? (
             <>
@@ -109,13 +135,11 @@ export default function CertificatesPage() {
             borderRadius: 16,
           }}
         >
-
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên chứng chỉ *</label>
             <input
               type="text"
               className="form-control form-control-lg"
-              placeholder="Nhập tên chứng chỉ"
               value={newCert.name}
               onChange={(e) =>
                 setNewCert({ ...newCert, name: e.target.value })
@@ -128,7 +152,6 @@ export default function CertificatesPage() {
             <textarea
               className="form-control"
               rows={3}
-              placeholder="Mô tả ngắn gọn về chứng chỉ"
               value={newCert.description}
               onChange={(e) =>
                 setNewCert({ ...newCert, description: e.target.value })
@@ -140,8 +163,7 @@ export default function CertificatesPage() {
             className="btn btn-gradient btn-lg w-100"
             onClick={handleAdd}
             style={{
-              background:
-                "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
+              background: "linear-gradient(45deg, #6a11cb 0%, #2575fc 100%)",
               color: "white",
               fontWeight: "700",
               borderRadius: 12,
@@ -154,7 +176,7 @@ export default function CertificatesPage() {
 
       {loading ? (
         <div className="text-center py-5">
-          <div className="spinner-border text-info" role="status" />
+          <div className="spinner-border text-info"></div>
           <p className="mt-3 text-info">Đang tải danh sách chứng chỉ...</p>
         </div>
       ) : certificates.length === 0 ? (
@@ -169,67 +191,29 @@ export default function CertificatesPage() {
                 className="card h-100 shadow"
                 style={{
                   borderRadius: 18,
-                  border: "2px solid transparent",
-                  transition: "all 0.3s ease",
-                  cursor: "default",
                   backgroundColor: "#faf8ff",
-                  boxShadow:
-                    "0 0 15px 2px rgba(106, 17, 203, 0.15), 0 4px 20px rgba(37, 117, 252, 0.15)",
                 }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.transform = "translateY(-6px)";
-                  el.style.borderColor = "#6a11cb";
-                  el.style.boxShadow =
-                    "0 0 20px 4px rgba(106, 17, 203, 0.3), 0 8px 30px rgba(37, 117, 252, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.transform = "none";
-                  el.style.borderColor = "transparent";
-                  el.style.boxShadow =
-                    "0 0 15px 2px rgba(106, 17, 203, 0.15), 0 4px 20px rgba(37, 117, 252, 0.15)";
-                }}
-                title={String(cert.description || "Không có mô tả")}
               >
                 <div className="card-body d-flex flex-column">
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <h5
-                      className="card-title text-gradient"
-                      style={{
-                        background:
-                          "linear-gradient(90deg, #5a2a83 0%, #8b40f4 50%, #c380ff 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        fontWeight: "800",
-                        fontSize: "1.4rem",
-                        marginBottom: 0,
-                      }}
+                      className="card-title fw-bold"
+                      style={{ fontSize: "1.4rem" }}
                     >
                       <i className="bi bi-award me-2"></i>
                       {cert.name}
                     </h5>
+
                     <button
                       className="btn btn-sm btn-outline-danger"
-                      title="Xóa chứng chỉ"
                       onClick={() => handleDelete(cert.id)}
-                      aria-label={`Xóa chứng chỉ ${cert.name}`}
-                      style={{
-                        transition: "all 0.3s ease",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = "#d6336c")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.color = "")
-                      }
                     >
                       <i className="bi bi-trash3"></i>
                     </button>
                   </div>
-                  
-                  <p className="flex-grow-1 text-secondary" style={{minHeight: "3.6rem"}}>
-                    {cert.description || <i>Chưa có mô tả.</i>}
+
+                  <p className="text-secondary flex-grow-1">
+                    {cert.description || <i>Không có mô tả.</i>}
                   </p>
                 </div>
               </div>

@@ -19,7 +19,7 @@ import classNames from "classnames";
 import { KTSVG } from "../../../_start/helpers";
 import { Dropdown1 } from "../../../_start/partials";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
-
+import { getAllSubjects } from "../../../services/subjectService";
 const {
   BarChart,
   Bar,
@@ -502,10 +502,12 @@ const LearningDashboardPage: React.FC = () => {
     }
   }
 
-  const handleSelectSubjectDetail = async (subjectName: string) => {
-    setSelectedSubjectDetail(subjectName);
-    
-  };
+const handleSelectSubjectDetail = (subject: string) => {
+  setSelectedSubjectDetail(prev =>
+    prev === subject ? null : subject
+  );
+};
+
 
   // Filter subjectInsights to avoid showing AI-only subjects unless they appear in real results or importantSubjects
   const filteredSubjectInsights = useMemo(() => {
@@ -655,50 +657,77 @@ const LearningDashboardPage: React.FC = () => {
               </div>
 
               <div className="ld-card">
+               {/* 🎯 CÁC MÔN CHỦ CHỐT */}
                 <div className="ld-section-title">🎯 Các môn chủ chốt</div>
 
-                {subjectsData.length > 0 ? (
+                {!dashboardToShow?.importantSubjects?.subjects ||
+                Object.keys(dashboardToShow.importantSubjects.subjects).length !== 3 ? (
+                  // ❗ CHƯA CHỌN 3 MÔN
+                  <p className="ld-empty italic">
+                    Bạn chưa chọn <b>3 môn chủ chốt</b>. Hãy lựa chọn để hệ thống phân tích chính xác hơn.
+                  </p>
+                ) : subjectsData.length === 0 ? (
+                  // ❗ ĐÃ CHỌN 3 MÔN NHƯNG CHƯA CÓ DỮ LIỆU
+                  <p className="ld-empty italic">
+                    Chưa có điểm số cho 3 môn chủ chốt. Vui lòng cập nhật kết quả học tập.
+                  </p>
+                ) : (
+                  // ✅ ĐÃ CHỌN & CÓ DỮ LIỆU → HIỂN THỊ PHÂN TÍCH
                   <div className="ld-infobox">
+                    {/* --- Biểu đồ --- */}
                     <div className="ld-chart-wrap">
                       <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={subjectsData} margin={{ top: 18, right: 20, left: 0, bottom: 6 }}>
+                        <BarChart
+                          data={subjectsData}
+                          margin={{ top: 18, right: 20, left: 0, bottom: 6 }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="subject" tick={{ fontSize: 12 }} />
                           <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
                           <Tooltip />
                           <Legend verticalAlign="top" />
-                          <Bar dataKey="Thường xuyên" fill="#4f46e5" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                          <Bar dataKey="Giữa kỳ" fill="#22c55e" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
-                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" isAnimationActive={true} animationDuration={900} animationEasing="ease-out" />
+
+                          <Bar dataKey="Thường xuyên" fill="#4f46e5" animationDuration={800} />
+                          <Bar dataKey="Giữa kỳ" fill="#22c55e" animationDuration={800} />
+                          <Bar dataKey="Cuối kỳ" fill="#f59e0b" animationDuration={800} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
 
+                    {/* --- Fallback note nếu dữ liệu thiếu --- */}
                     {anyFallback && (
                       <div className="ld-fallback-note">
-                        Một số môn chưa có dữ liệu trong phân tích quan trọng. Biểu đồ đang hiển thị từ dữ liệu tổng hợp (fallback) hoặc mặc định 0.
+                        Một số môn thiếu dữ liệu chi tiết. Biểu đồ đang hiển thị điểm mặc định hoặc dữ liệu tổng hợp.
                       </div>
                     )}
 
+                    {/* --- 3 nội dung phân tích chính --- */}
                     <div className="ld-rows3">
                       <div className="ld-col">
                         <div className="ld-col-title">Điểm mạnh</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallStrengths || "Chưa có dữ liệu"}</div>
+                        <div className="ld-col-text">
+                          {dashboardToShow.importantSubjects?.overallStrengths || "Chưa có dữ liệu"}
+                        </div>
                       </div>
+
                       <div className="ld-col">
                         <div className="ld-col-title">Điểm yếu</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.overallWeaknesses || "Chưa có dữ liệu"}</div>
+                        <div className="ld-col-text">
+                          {dashboardToShow.importantSubjects?.overallWeaknesses || "Chưa có dữ liệu"}
+                        </div>
                       </div>
+
                       <div className="ld-col">
                         <div className="ld-col-title">Chiến lược</div>
-                        <div className="ld-col-text">{dashboardToShow.importantSubjects?.learningAdvice || "Chưa có dữ liệu"}</div>
+                        <div className="ld-col-text">
+                          {dashboardToShow.importantSubjects?.learningAdvice || "Chưa có dữ liệu"}
+                        </div>
                       </div>
                     </div>
                   </div>
-                ) : (
-                  <p className="ld-empty italic">Chưa có dữ liệu để hiển thị. Hãy chọn tối đa 3 môn chủ chốt.</p>
                 )}
               </div>
+
 
               {/* NEW: Separate card for Suggestion Priority showing ALL subjects */}
               <div className="ld-card">
@@ -768,409 +797,311 @@ const LearningDashboardPage: React.FC = () => {
                 )}
               </div>
 
-<div className="ld-card">
-            <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Kết quả học tập (Chọn để xem chi tiết)</div>
-            {subjectsFromResults.length === 0 ? (
-              <div className="ld-empty">Chưa có kết quả học tập.</div>
-            ) : (
-              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {subjectsFromResults.map((s, idx) => (
-                  // use index fallback to guarantee uniqueness
-                  <li key={`${String(s)}-${idx}`} style={{ marginBottom: 8 }}>
-                    <button
-                      aria-label={`Mở chi tiết môn ${s}`}
-                      className="subject-button-compact"
-                      onClick={() => handleSelectSubjectDetail(s)}
-                      type="button"
-                    >
-                      {/* LEFT: name + percent + status (grouped) */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ display: "flex", flexDirection: "column", minWidth: 140 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ fontWeight: 700 }}>{s}</div>
+              <div className="ld-card">
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>🔎 Kết quả học tập (Chọn để xem chi tiết)
 
-                            {(() => {
-                              const p = computeProgressForSubject(s);
-                              const up = p.delta > 0.05;
-                              const down = p.delta < -0.05;
-                              const percentText = typeof p.percent === "number" ? `${Math.abs(p.percent).toFixed(1)}%` : "N/A";
-                              const color = up ? "#16a34a" : down ? "#ef4444" : "#64748b";
-                              // compute suggestionPriority for small badge
-                              const spRaw = computeSuggestionPriorityForSubject(s);
-                              const spDisplay = suggestionScale === "five" ? Math.max(1, Math.round((spRaw / 100) * 4) + 1) : spRaw;
-                              return (
-                                <>                                  
-                                  <div style={{ marginLeft: 8, fontSize: 12, color: "#7c2d12", fontWeight: 800 }}>Ưu tiên: {spDisplay}{suggestionScale === 'percent' ? '%' : ''}</div>
-                                </>
-                              );
-                            })()}
-                          </div>
+            </div>
+           {subjectsFromResults.length === 0 ? (
+            <div className="ld-empty">Chưa có kết quả học tập.</div>
+          ) : (
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {subjectsFromResults.map((s, idx) => (
+                <li key={`${String(s)}-${idx}`} style={{ marginBottom: 8 }}>
+                  <button
+                    aria-label={`Mở chi tiết môn ${s}`}
+                    className="subject-button-compact"
+                    onClick={() => handleSelectSubjectDetail(s)}
+                    type="button"
+                  >
+                    {/* LEFT: name + percent + status */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ display: "flex", flexDirection: "column", minWidth: 140 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ fontWeight: 700 }}>{s}</div>
 
-                          {/* compact status bar right under name so it won't be cut */}
-                          <div style={{ marginTop: 8 }}>
-                            <StatusIndicator
-                              subjectName={String(s)}
-                              percent={Math.min(100, Math.max(0, currentAverageFromDashboard(String(s)) * 10))}
-                              showPercent={true}
-                              compact={true}
-                              minVisiblePercent={3} // <-- luôn hiển thị chút bar kể cả 0
-                            />
-                          </div>
+                          {(() => {
+                            const p = computeProgressForSubject(s);
+                            const spRaw = computeSuggestionPriorityForSubject(s);
+                            const spDisplay =
+                              suggestionScale === "five"
+                                ? Math.max(1, Math.round((spRaw / 100) * 4) + 1)
+                                : spRaw;
+                            return (
+                              <div style={{ marginLeft: 8, fontSize: 12, color: "#7c2d12", fontWeight: 800 }}>
+                                Ưu tiên: {spDisplay}
+                                {suggestionScale === "percent" ? "%" : ""}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* compact bar */}
+                        <div style={{ marginTop: 8 }}>
+                          <StatusIndicator
+                            subjectName={String(s)}
+                            percent={Math.min(100, Math.max(0, currentAverageFromDashboard(s) * 10))}
+                            showPercent={true}
+                            compact={true}
+                            minVisiblePercent={3}
+                          />
                         </div>
                       </div>
+                    </div>
 
-                      {/* Right chevron (giữ như cũ) */}
-                      <div style={{ marginLeft: "auto" }}>
-                        {selectedSubjectDetail === s ? <ChevronUp /> : <ChevronDown />}
-                      </div>
-                    </button>
+                    <div style={{ marginLeft: "auto" }}>
+                      {selectedSubjectDetail === s ? <ChevronUp /> : <ChevronDown />}
+                    </div>
+                  </button>
 
+                  {/* COLLAPSE */}
                   <AnimatedCollapse show={selectedSubjectDetail === s}>
-  <div
-    style={{
-      padding: 12,
-      background: "#fff",
-      borderRadius: 8,
-      marginTop: 8,
-      border: "1px solid rgba(15,23,42,0.04)",
-    }}
-  >
-    {(() => {
-      const insightItem = (dashboardToShow?.subjectInsights || []).find(
-        (it: any) =>
-          (it?.subjectName || "").toString().toLowerCase() ===
-          (s || "").toLowerCase()
-      );
-
-      if (insightItem) {
-        const spRaw = computeSuggestionPriorityForSubject(s);
-        const spDisplay =
-          suggestionScale === "five"
-            ? Math.max(1, Math.round((spRaw / 100) * 4) + 1)
-            : spRaw;
-
-        return (
-          <div>
-            {/* --- Xu hướng --- */}
-            <p style={{ margin: "6px 0" }}>
-              <TrendingUp size={14} />{" "}
-              <strong>{insightItem.trend || "Không có xu hướng"}</strong>
-            </p>
-
-            {/* --- Điểm mạnh / yếu --- */}
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                flexWrap: "wrap",
-                marginBottom: 8,
-              }}
-            >
-              <div style={{ minWidth: 150 }}>
-                <div style={{ fontWeight: 700 }}>Điểm mạnh</div>
-                <div style={{ color: "#475569" }}>
-                  {insightItem.strength || "Chưa có"}
-                </div>
-              </div>
-              <div style={{ minWidth: 150 }}>
-                <div style={{ fontWeight: 700 }}>Điểm yếu</div>
-                <div style={{ color: "#475569" }}>
-                  {insightItem.weakness || "Chưa có"}
-                </div>
-              </div>
-            </div>
-
-            {/* --- Gợi ý --- */}
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 700 }}>Gợi ý</div>
-              <div style={{ color: "#475569" }}>
-                {insightItem.suggestion || "Chưa có gợi ý cụ thể."}
-              </div>
-            </div>
-
-            {/* --- Ưu tiên cải thiện --- */}
-            <div
-              style={{
-                marginTop: 6,
-                display: "flex",
-                gap: 12,
-                alignItems: "center",
-              }}
-            >
-              <div style={{ fontWeight: 800 }}>Ưu tiên cải thiện</div>
-              <div style={{ minWidth: 160 }}>
-                <div
-                  style={{
-                    background: "#f8fafc",
-                    padding: 8,
-                    borderRadius: 8,
-                  }}
-                >
-                  <div style={{ fontWeight: 900 }}>
-                    {spDisplay}
-                    {suggestionScale === "percent" ? "%" : ""}
-                  </div>
-                  <div
-                    style={{
-                      height: 8,
-                      borderRadius: 8,
-                      background: "#eef2ff",
-                      marginTop: 6,
-                      overflow: "hidden",
-                    }}
-                  >
                     <div
-                      className="ld-suggestion-fill"
                       style={{
-                        width: `${spRaw}%`,
-                        height: "100%",
-                        background:
-                          "linear-gradient(90deg,#fb7185,#f97316)",
+                        padding: 12,
+                        background: "#fff",
+                        borderRadius: 8,
+                        marginTop: 8,
+                        border: "1px solid rgba(15,23,42,0.04)"
                       }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      } else {
-        return (
-          <div style={{ fontStyle: "italic", color: "#64748b" }}>
-            Chưa có phân tích AI cho môn này — đang hiển thị biểu đồ điểm
-            gốc nếu có.
-          </div>
-        );
-      }
-    })()}
-  </div>
-</AnimatedCollapse>
+                    >
+                      {(() => {
+                        const insightItem = (dashboardToShow?.subjectInsights || []).find(
+                          (it: any) =>
+                            (it?.subjectName || "").toLowerCase() === (s || "").toLowerCase()
+                        );
 
-                            {/* --- NEW: Chi tiết điểm và Tiến bộ --- */}
-                            <div style={{ marginTop: 12 }} className="ld-subject-detail">
-                              <div style={{ display: "flex", gap: 12, alignItems: "center", justifyContent: "space-between", flexWrap: "wrap" }}>
-                                <div style={{ minWidth: 220 }}>
-                                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Chi tiết điểm</div>
-                                  {/* Lấy TX/GK/CK từ dashboard hoặc insight */}
-                                  {(() => {
-                                    const scores = extractScoresForSubject(dashboardToShow, s);
-                                    const avg = currentAverageFromDashboard(s);
-                                    return (
-                                      <div>
-                                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Thường xuyên</div><div style={{ fontWeight: 700 }}>{scores.tx ?? 0}</div></div>
-                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Giữa kỳ</div><div style={{ fontWeight: 700 }}>{scores.gk ?? 0}</div></div>
-                                          <div style={{ minWidth: 82 }}><div style={{ fontSize: 12, color: "#94a3b8" }}>Cuối kỳ</div><div style={{ fontWeight: 700 }}>{scores.ck ?? 0}</div></div>
-                                        </div>
+                        if (insightItem) {
+                          const spRaw = computeSuggestionPriorityForSubject(s);
+                          const spDisplay =
+                            suggestionScale === "five"
+                              ? Math.max(1, Math.round((spRaw / 100) * 4) + 1)
+                              : spRaw;
 
-                                        <div style={{ marginTop: 6 }}>
-                                          <div style={{ fontSize: 12, color: "#94a3b8" }}>Điểm trung bình (trọng số TX20/GK30/CK50)</div>
-                                          <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
-                                            <div style={{ flex: 1, background: "#eef2ff", height: 12, borderRadius: 8, overflow: "hidden" }}>
-                                              <div style={{ width: `${Math.min(100, (avg / 10) * 100)}%`, height: "100%", background: "linear-gradient(90deg,#60a5fa,#06b6d4)" }} />
-                                            </div>
-                                            <div style={{ minWidth: 48, textAlign: "right", fontWeight: 700 }}>{avg ?? 0}/10</div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
+                          return (
+                            <div>
+                              {/* Xu hướng */}
+                              <p style={{ margin: "6px 0" }}>
+                                <TrendingUp size={14} />{" "}
+                                <strong>{insightItem.trend || "Không có xu hướng"}</strong>
+                              </p>
 
-                                <div style={{ flex: 1, minWidth: 200 }}>
-                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                    
-
-                                    {/* status indicator in the compact detail */}
-                                    {(() => {
-                                      const avg = currentAverageFromDashboard(s);
-                                      // show percent here as well
-                                      return <StatusIndicator subjectName={s} percent={Math.min(100, Math.max(0, avg * 10))} showPercent={true} minVisiblePercent={0} compact={false} />;
-                                    })()}
+                              {/* Điểm mạnh / yếu */}
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+                                <div style={{ minWidth: 150 }}>
+                                  <div style={{ fontWeight: 700 }}>Điểm mạnh</div>
+                                  <div style={{ color: "#475569" }}>
+                                    {insightItem.strength || "Chưa có"}
                                   </div>
+                                </div>
+                                <div style={{ minWidth: 150 }}>
+                                  <div style={{ fontWeight: 700 }}>Điểm yếu</div>
+                                  <div style={{ color: "#475569" }}>
+                                    {insightItem.weakness || "Chưa có"}
+                                  </div>
+                                </div>
+                              </div>
 
-                                  <div style={{ marginTop: 8 }}>
-                                    {(seriesForSubject(s) || []).length > 0 ? (
-                                      <div style={{ height: 90 }}>
-                                        <ResponsiveContainer width="100%" height={90}>
-                                          <LineChart data={seriesForSubject(s)}>
-                                            <XAxis dataKey="semester" hide />
-                                            <YAxis domain={[0, 10]} hide />
-                                            <Tooltip />
-                                            <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} dot={false} />
-                                          </LineChart>
-                                        </ResponsiveContainer>
-                                      </div>
-                                    ) : (
-                                      <div style={{ fontSize: 13, color: "#64748b" }}>Không có dữ liệu điểm lịch sử.</div>
-                                    )}
+                              {/* Gợi ý */}
+                              <div style={{ marginBottom: 8 }}>
+                                <div style={{ fontWeight: 700 }}>Gợi ý</div>
+                                <div style={{ color: "#475569" }}>
+                                  {insightItem.suggestion || "Chưa có gợi ý cụ thể."}
+                                </div>
+                              </div>
+
+                              {/* Ưu tiên cải thiện */}
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  display: "flex",
+                                  gap: 12,
+                                  alignItems: "center"
+                                }}
+                              >
+                                <div style={{ fontWeight: 800 }}>Ưu tiên cải thiện</div>
+                                <div style={{ minWidth: 160 }}>
+                                  <div
+                                    style={{
+                                      background: "#f8fafc",
+                                      padding: 8,
+                                      borderRadius: 8
+                                    }}
+                                  >
+                                    <div style={{ fontWeight: 900 }}>
+                                      {spDisplay}
+                                      {suggestionScale === "percent" ? "%" : ""}
+                                    </div>
+                                    <div
+                                      style={{
+                                        height: 8,
+                                        borderRadius: 8,
+                                        background: "#eef2ff",
+                                        marginTop: 6,
+                                        overflow: "hidden"
+                                      }}
+                                    >
+                                      <div
+                                        className="ld-suggestion-fill"
+                                        style={{
+                                          width: `${spRaw}%`,
+                                          height: "100%",
+                                          background: "linear-gradient(90deg,#fb7185,#f97316)"
+                                        }}
+                                      />
+                                    </div>
                                   </div>
                                 </div>
                               </div>
                             </div>
+                          );
+                        }
 
-                            {(seriesForSubject(s) || []).length > 0 ? (
-                              <div style={{ marginTop: 8 }}>
-                                <ResponsiveContainer width="100%" height={220}>
-                                  <LineChart data={seriesForSubject(s)}>
-                                    <CartesianGrid strokeDasharray="3 3" />
-                                    <XAxis dataKey="semester" tick={{ fontSize: 12 }} />
-                                    <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
-                                    <Tooltip />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="score" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} />
-                                  </LineChart>
-                                </ResponsiveContainer>
-                              </div>
-                            ) : (
-                              <div style={{ fontSize: 13, color: "#64748b", marginTop: 8 }}>Không có dữ liệu điểm để vẽ biểu đồ.</div>
-                            )}
-                                              <AnimatedCollapse show={selectedSubjectDetail === s}>
-                      <div
-                        style={{
-                          padding: 12,
-                          background: "#fff",
-                          borderRadius: 8,
-                          marginTop: 8,
-                          border: "1px solid rgba(15,23,42,0.04)",
-                        }}
-                      >
+                        return (
+                          <div style={{ fontStyle: "italic", color: "#64748b" }}>
+                            Chưa có phân tích AI cho môn này — đang hiển thị điểm gốc nếu có.
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </AnimatedCollapse>
+
+                  {/* CHI TIẾT ĐIỂM */}
+                  <div style={{ marginTop: 12 }} className="ld-subject-detail">
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        flexWrap: "wrap"
+                      }}
+                    >
+                      {/* Bảng điểm */}
+                      <div style={{ minWidth: 220 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Chi tiết điểm</div>
                         {(() => {
-                          const insightItem =
-                            (dashboardToShow?.subjectInsights || []).find(
-                              (it: any) =>
-                                (it?.subjectName || "")
-                                  .toString()
-                                  .toLowerCase() === (s || "").toLowerCase()
-                            );
-                          if (insightItem) {
-                            const spRaw =
-                              computeSuggestionPriorityForSubject(s);
-                            const spDisplay =
-                              suggestionScale === "five"
-                                ? Math.max(
-                                    1,
-                                    Math.round((spRaw / 100) * 4) + 1
-                                  )
-                                : spRaw;
-                            return (
-                              <div>
-                                <p style={{ margin: "6px 0" }}>
-                                  <TrendingUp size={14} />{" "}
-                                  <strong>
-                                    {insightItem.trend || "Không có xu hướng"}
-                                  </strong>
-                                </p>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    gap: 8,
-                                    flexWrap: "wrap",
-                                    marginBottom: 8,
-                                  }}
-                                >
-                                  <div style={{ minWidth: 150 }}>
-                                    <div style={{ fontWeight: 700 }}>
-                                      Điểm mạnh
-                                    </div>
-                                    <div style={{ color: "#475569" }}>
-                                      {insightItem.strength || "Chưa có"}
-                                    </div>
-                                  </div>
-                                  <div style={{ minWidth: 150 }}>
-                                    <div style={{ fontWeight: 700 }}>
-                                      Điểm yếu
-                                    </div>
-                                    <div style={{ color: "#475569" }}>
-                                      {insightItem.weakness || "Chưa có"}
-                                    </div>
-                                  </div>
-                                </div>
+                          const scores = extractScoresForSubject(dashboardToShow, s);
+                          const avg = currentAverageFromDashboard(s);
 
-                                <div style={{ marginBottom: 8 }}>
-                                  <div style={{ fontWeight: 700 }}>Gợi ý</div>
-                                  <div style={{ color: "#475569" }}>
-                                    {insightItem.suggestion ||
-                                      "Chưa có gợi ý cụ thể."}
-                                  </div>
+                          return (
+                            <div>
+                              <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                                <div style={{ minWidth: 82 }}>
+                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Thường xuyên</div>
+                                  <div style={{ fontWeight: 700 }}>{scores.tx ?? 0}</div>
                                 </div>
+                                <div style={{ minWidth: 82 }}>
+                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Giữa kỳ</div>
+                                  <div style={{ fontWeight: 700 }}>{scores.gk ?? 0}</div>
+                                </div>
+                                <div style={{ minWidth: 82 }}>
+                                  <div style={{ fontSize: 12, color: "#94a3b8" }}>Cuối kỳ</div>
+                                  <div style={{ fontWeight: 700 }}>{scores.ck ?? 0}</div>
+                                </div>
+                              </div>
 
-                                <div
-                                  style={{
-                                    marginTop: 6,
-                                    display: "flex",
-                                    gap: 12,
-                                    alignItems: "center",
-                                  }}
-                                >
-                                  <div style={{ fontWeight: 800 }}>
-                                    Ưu tiên cải thiện
-                                  </div>
-                                  <div style={{ minWidth: 160 }}>
+                              <div style={{ marginTop: 6 }}>
+                                <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                                  Điểm trung bình (TX20/GK30/CK50)
+                                </div>
+                                <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6 }}>
+                                  <div
+                                    style={{
+                                      flex: 1,
+                                      background: "#eef2ff",
+                                      height: 12,
+                                      borderRadius: 8,
+                                      overflow: "hidden"
+                                    }}
+                                  >
                                     <div
                                       style={{
-                                        background: "#f8fafc",
-                                        padding: 8,
-                                        borderRadius: 8,
+                                        width: `${Math.min(100, (avg / 10) * 100)}%`,
+                                        height: "100%",
+                                        background: "linear-gradient(90deg,#60a5fa,#06b6d4)"
                                       }}
-                                    >
-                                      <div style={{ fontWeight: 900 }}>
-                                        {spDisplay}
-                                        {suggestionScale === "percent"
-                                          ? "%"
-                                          : ""}
-                                      </div>
-                                      <div
-                                        style={{
-                                          height: 8,
-                                          borderRadius: 8,
-                                          background: "#eef2ff",
-                                          marginTop: 6,
-                                          overflow: "hidden",
-                                        }}
-                                      >
-                                        <div
-                                          className="ld-suggestion-fill"
-                                          style={{
-                                            width: `${spRaw}%`,
-                                            height: "100%",
-                                            background:
-                                              "linear-gradient(90deg,#fb7185,#f97316)",
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
+                                    />
+                                  </div>
+                                  <div style={{ minWidth: 48, textAlign: "right", fontWeight: 700 }}>
+                                    {avg}/10
                                   </div>
                                 </div>
                               </div>
-                            );
-                          } else {
-                            return (
-                              <div
-                                style={{
-                                  fontStyle: "italic",
-                                  color: "#64748b",
-                                }}
-                              >
-                                Chưa có phân tích AI cho môn này — đang hiển
-                                thị biểu đồ điểm gốc nếu có.
-                              </div>
-                            );
-                          }
+                            </div>
+                          );
                         })()}
                       </div>
-                    </AnimatedCollapse>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </>
-      ) : (
-        <p className="ld-empty">Chưa có phân tích nào.</p>
-      )}
-    </div>
-  </div>
+
+                      {/* Biểu đồ mini */}
+                      <div style={{ flex: 1, minWidth: 200 }}>
+                        <div style={{ marginTop: 8 }}>
+                          {(seriesForSubject(s) || []).length > 0 ? (
+                            <div style={{ height: 90 }}>
+                              <ResponsiveContainer width="100%" height={90}>
+                                <LineChart data={seriesForSubject(s)}>
+                                  <XAxis dataKey="semester" hide />
+                                  <YAxis domain={[0, 10]} hide />
+                                  <Tooltip />
+                                  <Line
+                                    type="monotone"
+                                    dataKey="score"
+                                    stroke="#2563eb"
+                                    strokeWidth={2}
+                                    dot={false}
+                                  />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 13, color: "#64748b" }}>
+                              Không có dữ liệu điểm lịch sử.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Biểu đồ lớn */}
+                  {(seriesForSubject(s) || []).length > 0 ? (
+                    <div style={{ marginTop: 8 }}>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={seriesForSubject(s)}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="semester" tick={{ fontSize: 12 }} />
+                          <YAxis domain={[0, 10]} tick={{ fontSize: 12 }} />
+                          <Tooltip />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="score"
+                            stroke="#2563eb"
+                            strokeWidth={2}
+                            dot={{ r: 3 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 8 }}>
+                      Không có dữ liệu điểm để vẽ biểu đồ.
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+              
+              </div>  
+            </>
+                ) : (
+          <p className="ld-empty">Chưa có phân tích nào.</p>
+        )}
+        </div>            
+      </div>     
+ 
+
+
 
   {/* CSS inline */}
   <style>{`
@@ -1222,6 +1153,68 @@ const LearningDashboardPage: React.FC = () => {
   .ld-grid { flex-direction: column; }
   .ld-status-cell { min-width: 120px; }
 }
+  .ld-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 5000;
+}
+
+.ld-popup {
+  background: white;
+  padding: 28px;
+  border-radius: 14px;
+  width: 420px;
+  max-width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  animation: fadeIn 0.25s ease;
+}
+
+.ld-subject-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.ld-subject-item {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: 0.25s;
+  font-weight: 600;
+}
+
+.ld-subject-item.selected {
+  background: #2563eb;
+  color: white;
+  border-color: #1d4ed8;
+}
+
+.ld-save-btn {
+  margin-top: 20px;
+  width: 100%;
+  padding: 12px;
+  background: #10b981;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  opacity: 1;
+  transition: 0.25s;
+}
+
+.ld-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
       `}</style>
 </div>
 );

@@ -1,4 +1,3 @@
-// components_phantich/RadarSkillsChart.tsx
 import * as React from "react";
 import {
   RadarChart,
@@ -10,7 +9,7 @@ import {
 } from "recharts";
 
 export default function RadarSkillsChart({ data }: any) {
-  if (!data) return null;
+  if (!data || !data.labels || !data.labels.length) return null;
 
   const chart = data.labels.map((label: string, i: number) => ({
     skill: label,

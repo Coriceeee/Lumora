@@ -5,7 +5,7 @@ import {
   deleteSubject,
 } from "../../services/subjectService";
 import { Subject } from "../../types/Subject";
-
+import { getAuth } from "firebase/auth"; // ⬅️ Thêm dòng này
 
 export default function DanhMucMonHoc() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -15,6 +15,19 @@ export default function DanhMucMonHoc() {
   });
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // ⬅️ THÊM
+
+  // ===============================
+  // 🛡️ Kiểm tra admin REALTIME
+  // ===============================
+  useEffect(() => {
+    const auth = getAuth();
+    const unsub = auth.onAuthStateChanged((user) => {
+      setIsAdmin(user?.email === "nguyenlamvananh66@gmail.com");
+    });
+
+    return () => unsub();
+  }, []);
 
   const fetchSubjects = async () => {
     setLoading(true);
@@ -26,14 +39,27 @@ export default function DanhMucMonHoc() {
     }
   };
 
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  // ===============================
+  // 🛡️ Chặn người không phải admin
+  // ===============================
   const handleAdd = async () => {
-    if ( !newSubject.name.trim()) {
+    if (!isAdmin) {
+      alert("Bạn không có quyền thêm môn học.");
+      return;
+    }
+
+    if (!newSubject.name.trim()) {
       alert("Tên môn học không được để trống.");
       return;
     }
+
     try {
       await addSubject(newSubject);
-      setNewSubject({  name: "", description: "" });
+      setNewSubject({ name: "", description: "" });
       setShowForm(false);
       fetchSubjects();
     } catch (error) {
@@ -43,8 +69,14 @@ export default function DanhMucMonHoc() {
   };
 
   const handleDelete = async (id?: string) => {
+    if (!isAdmin) {
+      alert("Bạn không có quyền xóa môn học.");
+      return;
+    }
+
     if (!id) return;
     if (!window.confirm("Bạn có chắc muốn xóa môn học này?")) return;
+
     try {
       await deleteSubject(id);
       fetchSubjects();
@@ -53,10 +85,6 @@ export default function DanhMucMonHoc() {
       console.error(error);
     }
   };
-
-  useEffect(() => {
-    fetchSubjects();
-  }, []);
 
   return (
     <div className="container py-5">
@@ -81,32 +109,41 @@ export default function DanhMucMonHoc() {
             Danh Mục Môn Học
           </span>
         </h2>
-        <button
-          className="btn btn-lg btn-gradient"
-          style={{
-            background: "linear-gradient(45deg, #4a90e2 0%, #82b1ff 100%)",
-            color: "white",
-            fontWeight: "600",
-            boxShadow: "0 4px 15px rgba(74, 144, 226, 0.4)",
-            border: "none",
-          }}
-          onClick={() => setShowForm((v) => !v)}
-          aria-expanded={showForm}
-          aria-controls="subject-form"
-        >
-          {showForm ? (
-            <>
-              <i className="bi bi-x-circle me-2"></i> Đóng form
-            </>
-          ) : (
-            <>
-              <i className="bi bi-journal-plus me-2"></i> Thêm môn học
-            </>
-          )}
-        </button>
+
+        {/* ===============================
+            🛡️ CHỈ ADMIN MỚI THẤY NÚT THÊM
+        =============================== */}
+        {isAdmin && (
+          <button
+            className="btn btn-lg btn-gradient"
+            style={{
+              background: "linear-gradient(45deg, #4a90e2 0%, #82b1ff 100%)",
+              color: "white",
+              fontWeight: "600",
+              boxShadow: "0 4px 15px rgba(74, 144, 226, 0.4)",
+              border: "none",
+            }}
+            onClick={() => setShowForm((v) => !v)}
+            aria-expanded={showForm}
+            aria-controls="subject-form"
+          >
+            {showForm ? (
+              <>
+                <i className="bi bi-x-circle me-2"></i> Đóng form
+              </>
+            ) : (
+              <>
+                <i className="bi bi-journal-plus me-2"></i> Thêm môn học
+              </>
+            )}
+          </button>
+        )}
       </div>
 
-      {showForm && (
+      {/* ===============================
+          🛡️ FORM CHỈ HIỆN KHI ADMIN
+      =============================== */}
+      {isAdmin && showForm && (
         <div
           id="subject-form"
           className="card shadow-lg border-0 p-4 mb-5"
@@ -116,7 +153,6 @@ export default function DanhMucMonHoc() {
             borderRadius: 16,
           }}
         >
-
           <div className="mb-3">
             <label className="form-label fw-semibold">Tên môn học *</label>
             <input
@@ -183,22 +219,6 @@ export default function DanhMucMonHoc() {
                   transition: "all 0.3s ease",
                   cursor: "default",
                   backgroundColor: "#f0f6ff",
-                  boxShadow:
-                    "0 0 15px 2px rgba(74, 144, 226, 0.15), 0 4px 20px rgba(130, 177, 255, 0.15)",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  el.style.transform = "translateY(-6px)";
-                  el.style.borderColor = "#4a90e2";
-                  el.style.boxShadow =
-                    "0 0 20px 4px rgba(74, 144, 226, 0.3), 0 8px 30px rgba(130, 177, 255, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget;
-                  el.style.transform = "none";
-                  el.style.borderColor = "transparent";
-                  el.style.boxShadow =
-                    "0 0 15px 2px rgba(74, 144, 226, 0.15), 0 4px 20px rgba(130, 177, 255, 0.15)";
                 }}
               >
                 <div className="card-body d-flex flex-column">
@@ -218,20 +238,22 @@ export default function DanhMucMonHoc() {
                       <i className="bi bi-book-half me-2"></i>
                       {subject.name}
                     </h5>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      title="Xóa môn học"
-                      onClick={() => handleDelete(subject.id)}
-                      aria-label={`Xóa môn học ${subject.name}`}
-                      style={{ transition: "all 0.3s ease" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = "#d6336c")
-                      }
-                      onMouseLeave={(e) => (e.currentTarget.style.color = "")}
-                    >
-                      <i className="bi bi-trash3"></i>
-                    </button>
-                  </div>                
+
+                    {/* ===============================
+                        🛡️ NÚT XÓA CHỈ HIỂN THỊ CHO ADMIN
+                    =============================== */}
+                    {isAdmin && (
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        title="Xóa môn học"
+                        onClick={() => handleDelete(subject.id)}
+                        aria-label={`Xóa môn học ${subject.name}`}
+                      >
+                        <i className="bi bi-trash3"></i>
+                      </button>
+                    )}
+                  </div>
+
                   <p
                     className="flex-grow-1 text-secondary"
                     style={{ minHeight: "3.6rem" }}

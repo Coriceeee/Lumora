@@ -1,4 +1,3 @@
-// components_phantich/TabsContainer.tsx
 import * as React from "react";
 import { Tabs, Tab, Paper } from "@mui/material";
 

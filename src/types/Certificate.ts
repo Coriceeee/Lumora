@@ -2,6 +2,7 @@
 export interface Certificate {
   id?: string;           // ID của chứng chỉ (Firestore doc id, tuỳ chọn)
   name: string;          // Tên chứng chỉ (Ví dụ: Chứng chỉ TOEIC, Chứng chỉ Google Analytics)
+  code?: string;  
   provider?: string;     // Nhà cung cấp chứng chỉ (Ví dụ: Coursera, Udemy, Đại học ABC)
   description?: string;  // Mô tả chi tiết về chứng chỉ
   level?: string;        // Mức độ (Ví dụ: cơ bản, trung cấp, nâng cao)
