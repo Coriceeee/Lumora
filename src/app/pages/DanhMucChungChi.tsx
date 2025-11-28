@@ -1,13 +1,13 @@
-// DanhMucChungChi.tsx — FULL VERSION FIXED
+// DanhMucChungChi.tsx — FULL USER-ONLY VERSION
 import { useEffect, useState } from "react";
-import {
-  getAllCertificates,
-  addCertificate,
-  updateCertificate,
-} from "../../services/certificateService";
-import { Certificate } from "../../types/Certificate";
 
-import { addUserCertificate } from "../../services/userSkillCertService";
+import {
+  addUserCertificate,
+  deleteUserCertificate,
+  getUserCertificatesFirestore,
+} from "../../services/userSkillCertService";
+
+import { Certificate } from "../../types/Certificate";
 import { getAuth } from "firebase/auth";
 
 // AUTO CODE GEN
@@ -31,31 +31,33 @@ export default function CertificatesPage() {
 
   const userId = getAuth().currentUser?.uid || "";
 
+  /* ------------------------------------------- */
+  /*  FETCH USER CERTIFICATES ONLY               */
+  /* ------------------------------------------- */
   const fetchCertificates = async () => {
+    if (!userId) return;
+
     setLoading(true);
     try {
-      const data = await getAllCertificates();
+      const data = (await getUserCertificatesFirestore(userId)) as Certificate[] | null;
       setCertificates(data || []);
     } finally {
       setLoading(false);
     }
   };
 
+  /* ------------------------------------------- */
+  /*  ADD USER CERTIFICATE                       */
+  /* ------------------------------------------- */
   const handleAdd = async () => {
     if (!newCert.name.trim())
       return alert("Tên chứng chỉ không được để trống.");
 
     try {
-      // 1️⃣ THÊM VÀO DANH MỤC
-      await addCertificate({
+      await addUserCertificate(userId, {
         code: generateCode(newCert.name),
         name: newCert.name,
         description: newCert.description,
-      });
-
-      // 2️⃣ LƯU VÀO HỒ SƠ
-      await addUserCertificate(userId, {
-        name: newCert.name,
         status: "existing",
       });
 
@@ -68,12 +70,15 @@ export default function CertificatesPage() {
     }
   };
 
+  /* ------------------------------------------- */
+  /*  DELETE USER CERTIFICATE                    */
+  /* ------------------------------------------- */
   const handleDelete = async (id?: string) => {
     if (!id) return;
     if (!window.confirm("Bạn có chắc muốn xóa chứng chỉ này?")) return;
 
     try {
-      await updateCertificate(id, { deleted: true });
+      await deleteUserCertificate(userId, id);
       fetchCertificates();
     } catch (error) {
       alert("Lỗi khi xóa chứng chỉ.");
@@ -85,8 +90,12 @@ export default function CertificatesPage() {
     fetchCertificates();
   }, []);
 
+  /* ------------------------------------------- */
+  /*  UI RENDER                                  */
+  /* ------------------------------------------- */
   return (
     <div className="container py-5">
+      {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2
           className="fw-extrabold text-gradient"
@@ -99,7 +108,7 @@ export default function CertificatesPage() {
             userSelect: "none",
           }}
         >
-          🎖 Danh Mục Chứng Chỉ
+          🎖 Chứng Chỉ Của Bạn
         </h2>
 
         <button
@@ -125,9 +134,9 @@ export default function CertificatesPage() {
         </button>
       </div>
 
+      {/* FORM ADD */}
       {showForm && (
         <div
-          id="cert-form"
           className="card shadow-lg border-0 p-4 mb-5"
           style={{
             maxWidth: 600,
@@ -174,14 +183,15 @@ export default function CertificatesPage() {
         </div>
       )}
 
+      {/* LIST */}
       {loading ? (
         <div className="text-center py-5">
           <div className="spinner-border text-info"></div>
-          <p className="mt-3 text-info">Đang tải danh sách chứng chỉ...</p>
+          <p className="mt-3 text-info">Đang tải chứng chỉ...</p>
         </div>
       ) : certificates.length === 0 ? (
         <p className="text-center text-muted fst-italic">
-          Chưa có chứng chỉ nào. Hãy thêm mới nhé!
+          Bạn chưa có chứng chỉ nào. Hãy thêm mới nhé!
         </p>
       ) : (
         <div className="row row-cols-1 row-cols-md-3 g-4">

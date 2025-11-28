@@ -217,7 +217,6 @@ export default function CloudWhisper() {
             onClick={() => handleLike(selectedItem.id)}
             disabled={liked.has(selectedItem.id)}
           >
-            ❤️ {selectedItem.likes || 0}
           </button>
           <button className="close" onClick={closeModal}>
             ✖

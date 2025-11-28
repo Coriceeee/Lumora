@@ -704,22 +704,25 @@ const handleSelectSubjectDetail = (subject: string) => {
                     {/* --- 3 nội dung phân tích chính --- */}
                     <div className="ld-rows3">
                       <div className="ld-col">
-                        <div className="ld-col-title">Điểm mạnh</div>
+                        <div className="ld-col-title"></div>
                         <div className="ld-col-text">
+                           <b>Điểm mạnh: </b>
                           {dashboardToShow.importantSubjects?.overallStrengths || "Chưa có dữ liệu"}
                         </div>
                       </div>
 
                       <div className="ld-col">
-                        <div className="ld-col-title">Điểm yếu</div>
+                        <div className="ld-col-title"></div>
                         <div className="ld-col-text">
+                          <b>Điểm yếu: </b>
                           {dashboardToShow.importantSubjects?.overallWeaknesses || "Chưa có dữ liệu"}
                         </div>
                       </div>
 
                       <div className="ld-col">
-                        <div className="ld-col-title">Chiến lược</div>
+                        <div className="ld-col-title"></div>
                         <div className="ld-col-text">
+                          <b>Chiến lược: </b>
                           {dashboardToShow.importantSubjects?.learningAdvice || "Chưa có dữ liệu"}
                         </div>
                       </div>

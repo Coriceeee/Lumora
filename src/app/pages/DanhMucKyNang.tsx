@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { getAllSkills, addSkill, deleteSkill } from "../../services/skillService";
-import { addUserSkill } from "../../services/userSkillCertService";
 import { Skill } from "../../types/Skill";
 import { getAuth } from "firebase/auth";
 
+// Lấy và thao tác kỹ năng theo user
+import {
+  getUserSkills,
+  addUserSkill,
+  deleteUserSkill,
+} from "../../services/userSkillCertService";
+
 // AUTO CODE GEN
 const generateCode = (text: string) =>
-  text.normalize("NFD")
+  text
+    .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
@@ -15,7 +21,7 @@ const generateCode = (text: string) =>
 
 function SkillCard({ skill, onDelete }: any) {
   return (
-     <div
+    <div
       className="card h-100 shadow"
       style={{
         borderRadius: 18,
@@ -24,26 +30,20 @@ function SkillCard({ skill, onDelete }: any) {
         transition: "transform 0.3s ease",
         backgroundColor: "#fff8f0",
       }}
-      title={skill.description || "Không có mô tả"}      
+      title={skill.description || "Không có mô tả"}
     >
       <div className="card-body d-flex flex-column">
         <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5
-            className="fw-bold"
-            style={{ fontSize: "1.5rem" }}
-          >
+          <h5 className="fw-bold" style={{ fontSize: "1.5rem" }}>
             <i className="bi bi-stars me-2"></i>
             {skill.name}
           </h5>
+
           <button
             className="btn btn-sm btn-outline-danger"
             title="Xóa kỹ năng"
             onClick={() => {
-              if (
-                window.confirm(
-                  `Bạn có chắc muốn xóa kỹ năng "${skill.name}"?`
-                )
-              ) {
+              if (window.confirm(`Bạn có chắc muốn xóa kỹ năng "${skill.name}"?`)) {
                 onDelete(skill.id);
               }
             }}
@@ -54,11 +54,8 @@ function SkillCard({ skill, onDelete }: any) {
             <i className="bi bi-trash3"></i>
           </button>
         </div>
-        {/* Bỏ hiển thị mã kỹ năng */}
-        {/* <p className="text-muted small mb-1" style={{ userSelect: "none" }}>
-          Mã: <span className="fw-semibold">{skill.code}</span>
-        </p> */}
-        <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>       
+
+        <p className="flex-grow-1">{skill.description || <i>Chưa có mô tả.</i>}</p>
       </div>
     </div>
   );
@@ -77,9 +74,11 @@ export default function DanhMucKyNang() {
   const userId = getAuth().currentUser?.uid || "";
 
   const fetchSkills = async () => {
+    if (!userId) return;
+
     setLoading(true);
-    const data = await getAllSkills();
-    setSkills(data);
+    const data = await getUserSkills(userId); // ⬅️ CHỈ LẤY KỸ NĂNG CỦA USER
+    setSkills(data as Skill[]);
     setLoading(false);
   };
 
@@ -91,22 +90,18 @@ export default function DanhMucKyNang() {
 
     const code = generateCode(newSkill.name);
 
-    // 1️⃣ DANH MỤC
-    await addSkill({
+    // ➤ LƯU KỸ NĂNG VÀO USER
+    await addUserSkill(userId, {
       code,
       name: newSkill.name,
       description: newSkill.description,
-    });
-
-    // 2️⃣ HỒ SƠ CÁ NHÂN
-    await addUserSkill(userId, {
-      name: newSkill.name,
       level: 1,
       status: "existing",
     });
 
     setNewSkill({ name: "", description: "" });
     setShowForm(false);
+
     fetchSkills();
   };
 
@@ -114,13 +109,16 @@ export default function DanhMucKyNang() {
     if (!id) return;
     if (!window.confirm("Bạn chắc muốn xóa kỹ năng này?")) return;
 
-    await deleteSkill(id);
+    // ➤ XOÁ KỸ NĂNG RIÊNG CỦA USER
+    await deleteUserSkill(userId, id);
+
     fetchSkills();
   };
 
   useEffect(() => {
     fetchSkills();
   }, []);
+
   return (
     <div className="container py-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -131,10 +129,7 @@ export default function DanhMucKyNang() {
           🌟 Danh Mục Kỹ Năng
         </h2>
 
-        <button
-          className="btn btn-lg btn-warning"
-          onClick={() => setShowForm(!showForm)}
-        >
+        <button className="btn btn-lg btn-warning" onClick={() => setShowForm(!showForm)}>
           {showForm ? (
             <>
               <i className="bi bi-x-circle me-2"></i> Đóng form
@@ -148,16 +143,17 @@ export default function DanhMucKyNang() {
       </div>
 
       {showForm && (
-        <div className="card shadow-lg border-0 p-4 mb-5" style={{ maxWidth: 600 }}>
+        <div
+          className="card shadow-lg border-0 p-4 mb-5"
+          style={{ maxWidth: 600 }}
+        >
           <div className="mb-3">
             <label className="fw-semibold">Tên kỹ năng *</label>
             <input
               type="text"
               className="form-control form-control-lg"
               value={newSkill.name}
-              onChange={(e) =>
-                setNewSkill({ ...newSkill, name: e.target.value })
-              }
+              onChange={(e) => setNewSkill({ ...newSkill, name: e.target.value })}
               autoFocus
             />
           </div>
@@ -168,9 +164,7 @@ export default function DanhMucKyNang() {
               className="form-control"
               rows={3}
               value={newSkill.description}
-              onChange={(e) =>
-                setNewSkill({ ...newSkill, description: e.target.value })
-              }
+              onChange={(e) => setNewSkill({ ...newSkill, description: e.target.value })}
             />
           </div>
 
@@ -186,9 +180,7 @@ export default function DanhMucKyNang() {
           <p className="mt-3 text-warning">Đang tải kỹ năng...</p>
         </div>
       ) : skills.length === 0 ? (
-        <p className="text-center text-muted fst-italic">
-          Chưa có kỹ năng nào!
-        </p>
+        <p className="text-center text-muted fst-italic">Chưa có kỹ năng nào!</p>
       ) : (
         <div className="row row-cols-1 row-cols-md-3 g-4">
           {skills.map((skill) => (

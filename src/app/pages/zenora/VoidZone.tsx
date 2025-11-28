@@ -249,7 +249,8 @@ const VoidZone: React.FC = () => {
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
   };
 
-  const handleHoverIntoBlackhole = (event: MouseEvent, id: string) => {
+  /* ---------------- Handle Dropped Stress Item ---------------- */
+  const handleHoverIntoBlackhole = async (event: MouseEvent, id: string) => {
     const x = event.clientX;
     const y = event.clientY;
 
@@ -258,18 +259,44 @@ const VoidZone: React.FC = () => {
 
     deletedItemsRef.current.add(id);
 
+    // Lấy nội dung stress
+    const item = userStressItems.find((i) => i.id === id);
+    const stressText = item?.text || "";
+
+    // Xóa item khỏi UI
     setUserStressItems((prev) => prev.filter((i) => i.id !== id));
 
+    // Trừ điểm
     updatePoint(-1);
 
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content:
-          "Mình cảm nhận được bạn vừa bỏ đi một điều làm bạn nặng lòng. Hy vọng bạn thấy nhẹ hơn một chút.",
-      },
-    ]);
+    // Prompt tạo lời nhắn theo ngữ cảnh kiểu “vừa vứt bỏ…”
+    const prompt = `
+Bạn là ZenBot – trợ lý cảm xúc tiếng Việt.
+Nhiệm vụ của bạn: tạo một lời nhắn ngắn (1–2 câu) theo cấu trúc:
+
+• Câu phải mang tinh thần “bạn vừa vứt bỏ…” hoặc “mình thấy bạn đã thả ra…”
+• Nội dung bám sát cảm xúc mà người dùng vừa ném vào hố đen.
+• Giọng điệu nhẹ nhàng, ấm áp, không phân tích sâu, không giảng giải.
+
+Nội dung họ vừa vứt bỏ:
+"${stressText}"
+
+Hãy viết lời nhắn mới.
+    `;
+
+    try {
+      const reply = await callGeminiServer(prompt);
+
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: reply.trim(),
+        },
+      ]);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   /* ---------------- Chat System ---------------- */
@@ -299,10 +326,12 @@ const VoidZone: React.FC = () => {
         .join("\n");
 
       const prompt = `
-Bạn là ZenBot – AI trị liệu cảm xúc.
-Nhẹ nhàng, không phân tích, không dạy đời, 2–4 câu.
-Câu cuối là 1 câu hỏi mở.
-
+Bạn là ZenBot – AI trị liệu cảm xúc mặc định bạn sẽ là tiếng việt.
+Hãy phản hồi thật nhẹ nhàng, đồng cảm, không dạy đời.
+Chỉ viết 2–3 câu.
+Bạn có vai trò là người bạn vô hình, luôn lắng nghe và chia sẻ những căng thẳng của người dùng.
+Hãy thể hiện sự thấu hiểu và hỗ trợ qua từng câu trả lời.
+Nhắc tới đúng nội dung sau và chữa lành nó:
 ${history}
 
 Tạo câu trả lời tiếp theo:
@@ -338,8 +367,6 @@ Tạo câu trả lời tiếp theo:
 
       {/* Right Panel */}
       <UserStressItemsWrapper>
-        {/* Stress Items */}
-
         {userStressItems.map((item) => (
           <UserStressItem
             key={item.id}
