@@ -396,8 +396,7 @@ export default function HoSoHocTapPage() {
                         </td>
                         <td style={styles.td}>{sem.notes.join("; ") || "—"}</td>
                         {sortedScoreTypes.map((type) => {
-                            const typeKey = normalizeScoreType(type.id ?? "");
-                            const results = sem.scoresByType[typeKey] || [];
+                             const results = sem.scoresByType[type.id ?? ""] || [];
                           return (
                             <td key={type.id} style={styles.td}>
                               {results.length > 0 ? (
