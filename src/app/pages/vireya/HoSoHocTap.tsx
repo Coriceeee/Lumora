@@ -352,9 +352,7 @@ export default function HoSoHocTapPage() {
           const isEditing = editingSubjectId === row.subjectId;
           const semestersSorted = [...row.semesters].sort((a, b) => a.semester - b.semester);
 
-            function normalizeScoreType(typeId: string): string {
-            return typeId.toLowerCase();
-            }
+            
 
           return (
             <section key={`${row.subjectId}-${row.classLevel}`} style={styles.section}>

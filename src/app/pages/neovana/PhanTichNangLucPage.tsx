@@ -106,7 +106,7 @@ export default function PhanTichNangLucPage() {
       labels: d.skillsToImprove?.map((s) => s.name) || [],
       values: d.skillsToImprove?.map(
         (s: any) =>
-          Number(s.priorityRatio) || Number(s.priority) * 10 || 0
+          Number(s.priorityRatio)*100 || Number(s.priority) * 10 || 0
       ),
     });
 

@@ -24,7 +24,7 @@ export function Footer() {
         {/* begin::Nav */}
         <ul className="menu menu-gray-600 menu-hover-primary fw-bold order-1">
           <li className="menu-item">
-            <a href="#" className="menu-link ps-0 pe-2">
+            <a href="/about" className="menu-link ps-0 pe-2">
               About
             </a>
           </li>

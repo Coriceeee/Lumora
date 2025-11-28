@@ -20,7 +20,7 @@ export default function SkillEvaluation({
   if (!data || !data.length) return null;
 
   const getPriorityScore = (item: any): number => {
-    if (typeof item.priorityRatio === "number") return item.priorityRatio;
+    if (typeof item.priorityRatio === "number") return item.priorityRatio*100;
     if (typeof item.priority === "number") return item.priority * 10;
     return 0;
   };
