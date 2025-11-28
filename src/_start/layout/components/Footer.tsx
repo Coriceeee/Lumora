@@ -23,17 +23,18 @@ export function Footer() {
 
         {/* begin::Nav */}
         <ul className="menu menu-gray-600 menu-hover-primary fw-bold order-1">
-          <li className="menu-item">
-            <a href="/about" className="menu-link ps-0 pe-2">
-              About
-            </a>
-          </li>
-          <li className="menu-item">
-            <a href="#" className="menu-link pe-0 pe-2">
-              Contact
-            </a>
-          </li>
-        </ul>
+  <li className="menu-item">
+    <a href="/about" className="menu-link pe-1">
+      About
+    </a>
+  </li>
+  <li className="menu-item">
+    <a href="/contact" className="menu-link pe-1 ">
+      Contact
+    </a>
+  </li>
+</ul>
+
         {/* end::Nav */}
       </div>
       {/* end::Container */}

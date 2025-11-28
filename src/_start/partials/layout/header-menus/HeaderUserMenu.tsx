@@ -48,42 +48,7 @@ export function HeaderUserMenu() {
 
       {/* begin::Row */}
       <div className="row row-cols-2 g-0">
-        <Link
-          to="/profile"
-          className="border-bottom border-end text-center py-10 btn btn-active-color-primary rounded-0"
-          data-kt-menu-dismiss="true"
-        >
-          <KTSVG
-            className="svg-icon-3x me-n1"
-            path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
-          />
-          <span className="fw-bolder fs-6 d-block pt-3">My Profile</span>
-        </Link>
-
-        <Link
-          to="/profile/settings"
-          className="col border-bottom text-center py-10 btn btn-active-color-primary rounded-0"
-          data-kt-menu-dismiss="true"
-        >
-          <KTSVG
-            className="svg-icon-3x me-n1"
-            path="/media/icons/duotone/General/Settings-1.svg"
-          />
-          <span className="fw-bolder fs-6 d-block pt-3">Settings</span>
-        </Link>
-
-        <Link
-          to="/profile/account"
-          className="col text-center border-end py-10 btn btn-active-color-primary rounded-0"
-          data-kt-menu-dismiss="true"
-        >
-          <KTSVG
-            className="svg-icon-3x me-n1"
-            path="/media/icons/duotone/Shopping/Euro.svg"
-          />
-          <span className="fw-bolder fs-6 d-block pt-3">Subscriptions</span>
-        </Link>
-
+        
         <Link
           to="/logout"
           className="col text-center py-10 btn btn-active-color-primary rounded-0"

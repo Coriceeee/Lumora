@@ -6,28 +6,40 @@ import { LightDashboardWrapper } from "../pages/dashboards/light-dashboard/Light
 import { StartDashboardWrapper } from "../pages/dashboards/start-dashboard/StartDashboardWrapper";
 import { MenuTestPage } from "../pages/MenuTestPage";
 
+/* Danh Mục */
 import DanhMucLoaiDiem from "../pages/DanhMucLoaiDiem";
 import DanhMucMonHoc from "../pages/DanhMucMonHoc";
 import DanhMucKyNang from "../pages/DanhMucKyNang";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
 
+/* Vireya */
 import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
 import PhanTichHoSoHocTapPage from "../pages/vireya/PhanTichHoSoHocTapPage";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
 
+/* Neovana */
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
 import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
 import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
 
+/* Zenora */
 import VoidZone from "../pages/zenora/VoidZone";
 import CloudWhisper from "../pages/zenora/CloudWhisper";
 
+/* Ayura */
 import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
 import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
 
+/* General pages */
+import About from "../pages/About";
+import Contact from "../pages/Contact";
+
+
+/* Roboki */
 import RobokiLinks from "../pages/RobokiLinks";
 import RobokiEmbedPage from "../pages/RobokiEmbedPage";
+// import { Contact } from "lucide-react"; // Removed as it's not the page component
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(() =>
@@ -43,12 +55,18 @@ export function PrivateRoutes() {
   return (
     <Suspense fallback={<FallbackView />}>
       <Switch>
+
+        {/* Dashboard */}
         <Route path="/dashboard" component={StartDashboardWrapper} />
         <Route path="/light" component={LightDashboardWrapper} />
+
+        {/* General modules */}
         <Route path="/general" component={GeneralPageWrapper} />
         <Route path="/profile" component={ProfilePageWrapper} />
-        <Route path="/menu-test" component={MenuTestPage} />
         <Route path="/docs" component={DocsPageWrapper} />
+
+        {/* Menu Test */}
+        <Route path="/menu-test" component={MenuTestPage} />
 
         {/* Danh Mục */}
         <Route path="/danh-muc/loai-diem" component={DanhMucLoaiDiem} />
@@ -81,23 +99,20 @@ export function PrivateRoutes() {
         <Route path="/zenora/void-zone" component={VoidZone} />
         <Route path="/zenora/cloud-whisper" component={CloudWhisper} />
 
-        {/* ⭐ 4 mục Roboki mở iframe */}
-        <Route path="/roboki/embed/hotro" component={RobokiEmbedPage} />
-        <Route path="/roboki/embed/thietke" component={RobokiEmbedPage} />
-        <Route path="/roboki/embed/tuduy" component={RobokiEmbedPage} />
-        <Route path="/roboki/embed/giasu" component={RobokiEmbedPage} />
-
-        {/* ⭐ 6 ô đánh giá năng lực */}
+        {/* Roboki – 6 ô đánh giá */}
         <Route path="/roboki/danh-gia-nang-luc" component={RobokiLinks} />
 
-        {/* ⭐ route embed chung */}
+        {/* Roboki – embed chung */}
         <Route path="/roboki/embed/:id" component={RobokiEmbedPage} />
+
+        {/* About – Contact */}
+        <Route path="/about" component={About} />
+        <Route path="/contact" component={Contact} />
 
         {/* Redirect */}
         <Redirect from="/auth" to="/dashboard" />
         <Redirect exact from="/" to="/dashboard" />
         <Redirect to="/dashboard" />
-
       </Switch>
     </Suspense>
   );

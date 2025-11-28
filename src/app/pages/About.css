@@ -1,0 +1,100 @@
+.menu {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #f0f3ff, #e5d6ff);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(75, 0, 130, 0.08);
+  font-family: 'Poppins', sans-serif;
+}
+
+.menu-item {
+  transition: transform 0.3s ease;
+}
+
+.menu-item:hover {
+  transform: translateY(-3px);
+}
+
+.menu-link {
+  text-decoration: none;
+  color: #4b0082;
+  font-weight: 600;
+  font-size: 1.05rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.menu-link:hover {
+  background: #6a0dad;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(106, 13, 173, 0.25);
+}
+
+/* Tab popup enhanced */
+.tab-popup {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  animation: fadeIn 0.4s ease;
+}
+
+.tab-content {
+  background: #ffffff;
+  padding: 2.5rem;
+  border-radius: 18px;
+  max-width: 720px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: 'Poppins', sans-serif;
+  animation: scaleIn 0.35s ease;
+}
+
+.tab-content h2 {
+  color: #4b0082;
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+.close-tab {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  color: #333;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.25s;
+}
+
+.close-tab:hover {
+  background: #ff4d4f;
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

@@ -1,4 +1,4 @@
-// ====================== PhanTichNangLucPage.tsx (FINAL 100% — AUTO-SYNC BY NAME + ONE BUTTON) ======================
+// ====================== PhanTichNangLucPage.tsx (FINAL + MATCH C2) ======================
 import * as React from "react";
 import { Container, Typography, Box, Snackbar, Alert } from "@mui/material";
 
@@ -11,9 +11,17 @@ import SubjectEvaluation from "./components_phantich/SubjectEvaluation";
 
 import RadarSubjectsChart from "./components_phantich/RadarSubjectsChart";
 import RadarSkillsChart from "./components_phantich/RadarSkillsChart";
+// Nếu bạn muốn radar chứng chỉ thì chỉ cần mở import này:
+// import RadarCerti from "./components_phantich/RadarCertiChart";
 
-import { getAllSkills, addSkill } from "../../../services/skillService";
-import { getAllCertificates, addCertificate } from "../../../services/certificateService";
+import {
+  getAllSkills,
+  addSkill,
+} from "../../../services/skillService";
+import {
+  getAllCertificates,
+  addCertificate,
+} from "../../../services/certificateService";
 
 import { getUserSkills } from "../../../services/userSkillService";
 import { getUserCertificates } from "../../../services/userCertificateService";
@@ -23,6 +31,9 @@ import { CareerDashboard } from "../../../types/CareerDashboard";
 
 import { addDoc, collection } from "firebase/firestore";
 import { db } from "../../../firebase/firebase";
+
+// ⭐ Engine Match C2
+import { calculateCareerMatch_C2 } from "./utils/CareerMatchEngine";
 
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 
@@ -43,8 +54,11 @@ export default function PhanTichNangLucPage() {
   const [dashboard, setDashboard] = React.useState<CareerDashboard | null>(null);
   const [value, setValue] = React.useState(0);
 
-  const [subjectsRadar, setSubjectsRadar] = React.useState<RadarData | null>(null);
+  const [subjectsRadar, setSubjectsRadar] = React.useState<RadarData | null>(
+    null
+  );
   const [skillsRadar, setSkillsRadar] = React.useState<RadarData | null>(null);
+  const [certRadar, setCertRadar] = React.useState<RadarData | null>(null);
 
   const [snackbar, setSnackbar] = React.useState({
     open: false,
@@ -56,22 +70,24 @@ export default function PhanTichNangLucPage() {
     setSnackbar({ open: true, message: msg, severity });
 
   // ======================================================================
-  //                     LOAD DASHBOARD + AUTO-SYNC THEO NAME
+  //                        LOAD DASHBOARD + MATCH C2
   // ======================================================================
   const loadDashboards = async () => {
     if (!userId) return;
 
-    // 1. Load dashboard
     const list = await getCareerDashboardsByUser(userId);
     if (!list || list.length === 0) return;
 
-    const d = list[0];
+    // ⭐ luôn lấy dashboard mới nhất
+    const sorted = [...list].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
-    // 2. Load hồ sơ thực tế
+    const d = sorted[0];
+
+    // Load profile data thật
     const userSkills = await getUserSkills(userId);
     const userCerts = await getUserCertificates(userId);
-
-    // 3. Load definitions để map id -> name
     const skillDefs = await getAllSkills();
     const certDefs = await getAllCertificates();
 
@@ -79,24 +95,30 @@ export default function PhanTichNangLucPage() {
       const def = skillDefs.find((d: any) => d.id === s.skillId);
       return def ? def.name.toLowerCase().trim() : "";
     });
-
     const userCertNames = userCerts.map((c: any) => {
       const def = certDefs.find((d: any) => d.id === c.certificateId);
       return def ? def.name.toLowerCase().trim() : "";
     });
 
-    // 4. AUTO SYNC — MATCH THEO NAME
-    d.skillsToImprove = d.skillsToImprove?.map((s: any) => {
-      const match = userSkillNames.includes(s.name.toLowerCase().trim());
-      return { ...s, status: match ? "existing" : "need" };
-    });
+    // Auto-sync kỹ năng
+    d.skillsToImprove =
+      d.skillsToImprove?.map((s: any) => ({
+        ...s,
+        status: userSkillNames.includes(s.name.toLowerCase().trim())
+          ? "existing"
+          : "need",
+      })) || [];
 
-    d.certificatesToAdd = d.certificatesToAdd?.map((c: any) => {
-      const match = userCertNames.includes(c.name.toLowerCase().trim());
-      return { ...c, status: match ? "existing" : "need" };
-    });
+    // Auto-sync chứng chỉ
+    d.certificatesToAdd =
+      d.certificatesToAdd?.map((c: any) => ({
+        ...c,
+        status: userCertNames.includes(c.name.toLowerCase().trim())
+          ? "existing"
+          : "need",
+      })) || [];
 
-    // 5. Radar update
+    // ========================= RADAR DATA =========================
     setSubjectsRadar({
       labels: d.subjectsToFocus?.map((s) => s.name) || [],
       values: d.subjectsToFocus?.map((s) => Number(s.score || 0)) || [],
@@ -104,24 +126,44 @@ export default function PhanTichNangLucPage() {
 
     setSkillsRadar({
       labels: d.skillsToImprove?.map((s) => s.name) || [],
-      values: d.skillsToImprove?.map(
-        (s: any) =>
-          Number(s.priorityRatio)*100 || Number(s.priority) * 10 || 0
-      ),
+      values:
+        d.skillsToImprove?.map(
+          (s: any) =>
+            Number(s.priorityRatio) * 100 || Number(s.priority) * 10 || 0
+        ) || [],
     });
+
+    // Nếu bạn muốn radar chứng chỉ thì uncomment:
+    setCertRadar({
+      labels: d.certificatesToAdd?.map((c) => c.name) || [],
+      values:
+        d.certificatesToAdd?.map(
+          (c: any) =>
+            Number(c.priorityRatio) * 100 || Number(c.priority) * 10 || 0
+        ) || [],
+    });
+
+    // ========================= MATCH C2 =========================
+    if (d.careers && d.careers.length > 0) {
+      d.careers = calculateCareerMatch_C2(
+        d.careers,
+        d.subjectsToFocus || [],
+        d.skillsToImprove || [],
+        d.certificatesToAdd || []
+      );
+    }
 
     setDashboard({ ...d });
   };
 
   React.useEffect(() => {
-    if (!userId) return;
-    loadDashboards();
+    if (userId) loadDashboards();
   }, [userId]);
 
   if (!dashboard)
     return (
       <Container maxWidth="md" sx={{ mt: 5 }}>
-        <Typography>Chưa có dữ liệu Career Dashboard.</Typography>
+        <Typography>Chưa có dữ liệu.</Typography>
       </Container>
     );
 
@@ -139,7 +181,7 @@ export default function PhanTichNangLucPage() {
         onChange={(e: React.SyntheticEvent, v: number) => setValue(v)}
       />
 
-      {/* ====================== TAB 1 ====================== */}
+      {/* ====================== TAB 1 — MÔN HỌC ====================== */}
       <TabPanel value={value} index={0}>
         <Box sx={{ bgcolor: "#FFEEDB", p: 2, borderRadius: 3 }}>
           <SubjectEvaluation data={dashboard.subjectsToFocus} />
@@ -164,7 +206,9 @@ export default function PhanTichNangLucPage() {
 
               let list = await getAllSkills();
               let existing = list.find(
-                (x) => x.name.trim().toLowerCase() === sk.name.trim().toLowerCase()
+                (x) =>
+                  x.name.trim().toLowerCase() ===
+                  sk.name.trim().toLowerCase()
               );
 
               if (!existing) {
@@ -212,7 +256,8 @@ export default function PhanTichNangLucPage() {
               let list = await getAllCertificates();
               let existing = list.find(
                 (x) =>
-                  x.name.trim().toLowerCase() === c.name.trim().toLowerCase()
+                  x.name.trim().toLowerCase() ===
+                  c.name.trim().toLowerCase()
               );
 
               if (!existing) {
@@ -239,12 +284,20 @@ export default function PhanTichNangLucPage() {
               loadDashboards();
             }}
           />
+
+          {/* Nếu bạn muốn hiển thị radar chứng chỉ: */}
+          {/* {certRadar && (
+            <Box sx={{ mt: 2 }}>
+              <RadarCerti data={certRadar} title="Biểu đồ Chứng Chỉ" />
+            </Box>
+          )} */}
         </Box>
       </TabPanel>
 
+      {/* ====================== SNACKBAR ====================== */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={2500}
+        autoHideDuration={2600}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert severity={snackbar.severity} variant="filled">
