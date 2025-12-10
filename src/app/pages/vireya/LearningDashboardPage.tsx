@@ -19,7 +19,13 @@ import classNames from "classnames";
 import { KTSVG } from "../../../_start/helpers";
 import { Dropdown1 } from "../../../_start/partials";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
-import { getAllSubjects } from "../../../services/subjectService";
+import { predictScore } from "../../../utils/predictScore";
+import { computeRiskLevel } from "../../../utils/riskAnalyzer";
+import { doc, updateDoc, increment, getDoc, setDoc } from "firebase/firestore";
+import { computeEffortScore, getEffortLabel } from "../../../utils/effortScore";
+import { db } from "../../../firebase/firebase";
+
+
 const {
   BarChart,
   Bar,
@@ -195,19 +201,20 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ subjectName = "x", pe
   const [animatedWidth, setAnimatedWidth] = useState<number>(0);
   const rafRef = useRef<number | null>(null);
   useEffect(() => {
-    // animate from 0 -> fillPct with a slight delay so transition triggers
-    setAnimatedWidth(0);
-    const t = window.setTimeout(() => {
-      // use requestAnimationFrame for smoother paint
-      rafRef.current = window.requestAnimationFrame(() => setAnimatedWidth(fillPct));
-    }, 30);
-    return () => {
-      clearTimeout(t);
-      if (rafRef.current) {
-        window.cancelAnimationFrame(rafRef.current);
-      }
-    };
-  }, [fillPct]);
+  // animate from 0 -> fillPct with a slight delay so transition triggers
+  setAnimatedWidth(0);
+  const t = window.setTimeout(() => {
+    // use requestAnimationFrame for smoother paint
+    rafRef.current = window.requestAnimationFrame(() => setAnimatedWidth(fillPct));
+  }, 30);
+
+  return () => {
+    clearTimeout(t);
+    if (rafRef.current) {
+      window.cancelAnimationFrame(rafRef.current);
+    }
+  };
+}, [fillPct]);
 
   // alignment adjust
   const justify = showPercent ? "flex-end" : "center";
@@ -257,7 +264,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ subjectName = "x", pe
 /* ---------- Component ---------- */
 const LearningDashboardPage: React.FC = () => {
  // 🔥 Hook lấy userId
-   const { userId } = useFirebaseUser();
+   const { userId, user } = useFirebaseUser();
   const [dashboards, setDashboards] = useState<LearningDashboard[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<number>>(new Set());
@@ -309,6 +316,18 @@ const LearningDashboardPage: React.FC = () => {
     loadLearningResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+ useEffect(() => {
+  if (!user) return;
+
+  const ref = doc(db, "userStats", user.uid);
+  setDoc(
+    ref,
+    { dashboardOpens: increment(1) },
+    { merge: true }
+  );
+}, [user]);
+
+
 
   const dashboardToShow = selectedDashboard || dashboards[0];
 
@@ -340,7 +359,7 @@ const LearningDashboardPage: React.FC = () => {
   }
 
   const { subjectsData, anyFallback } = useMemo(() => {
-    const data: Array<{ subject: string; "Thường xuyên": number; "Giữa kỳ": number; "Cuối kỳ": number; suggestionPriority?: number } > = [];
+    const data: Array<{ subject: string; "Thường xuyên": number; "Giữa kỳ": number; "Cuối kỳ": number; suggestionPriority?: number; predictedScore?: number } > = [];
     if (!dashboardToShow) return { subjectsData: data, anyFallback: false };
     const fb = new Map<string, boolean>();
     const subjectNames = Object.keys(dashboardToShow.importantSubjects?.subjects || {});
@@ -348,11 +367,13 @@ const LearningDashboardPage: React.FC = () => {
     (subjectNames || []).forEach((name) => {
       const { tx, gk, ck, fromInsight } = extractScoresForSubject(dashboardToShow, name);
       const suggestionPriority = computeSuggestionPriorityForSubject(name); // 0..100
-      data.push({ subject: name, "Thường xuyên": Number(tx) || 0, "Giữa kỳ": Number(gk) || 0, "Cuối kỳ": Number(ck) || 0, suggestionPriority });
+      const predicted = predictScore(tx, gk, ck); // Calculate predicted score here
+      data.push({ subject: name, "Thường xuyên": Number(tx) || 0, "Giữa kỳ": Number(gk) || 0, "Cuối kỳ": Number(ck) || 0, suggestionPriority, predictedScore: predicted });
       fb.set(name, fromInsight);
     });
     return { subjectsData: data, anyFallback: Array.from(fb.values()).some((v) => v) };
   }, [dashboardToShow, learningResults]);
+
 
   // Build a list of ALL subjects to show in the separate Suggestion Priority card
   const allSubjectsWithPriority = useMemo(() => {
@@ -731,7 +752,7 @@ const handleSelectSubjectDetail = (subject: string) => {
                 )}
               </div>
 
-
+            
               {/* NEW: Separate card for Suggestion Priority showing ALL subjects */}
               <div className="ld-card">
                 <div className="ld-section-title">📈 Ưu tiên cải thiện (tất cả môn)</div>
@@ -880,6 +901,26 @@ const handleSelectSubjectDetail = (subject: string) => {
                               ? Math.max(1, Math.round((spRaw / 100) * 4) + 1)
                               : spRaw;
 
+                          const { tx, gk, ck } = extractScoresForSubject(dashboardToShow, s);
+                          const currentSubjectData = subjectsData.find(data => data.subject === s);
+
+                          // Dự đoán điểm lấy từ Firestore
+                          const predicted = currentSubjectData?.predictedScore ?? 0;
+
+                          // Effort = điểm trung bình môn * 10 (giới hạn 0–100)
+                          const effort = Math.min(100, Math.max(0, currentAverageFromDashboard(s) * 10));
+
+                          // Phân loại effort
+                          let effortLabel = getEffortLabel(effort);
+
+                          // (Tùy chọn) Gợi ý nâng cấp nhãn theo dự đoán
+                          if (predicted < ck) {
+                            effortLabel = "Cần cải thiện";
+                          } else if (predicted > ck) {
+                            effortLabel = "Có tiến bộ";
+                          }
+
+
                           return (
                             <div>
                               {/* Xu hướng */}
@@ -953,6 +994,31 @@ const handleSelectSubjectDetail = (subject: string) => {
                                       />
                                     </div>
                                   </div>
+                                   {effort !== null && (
+                                  <div className="ld-card" style={{ marginTop: 20 }}>
+                                    <div className="ld-section-title">🔥 Chỉ số nỗ lực học tập</div>
+
+                                    <div style={{ fontSize: 32, fontWeight: 700 }}>
+                                      {effort}/100
+                                    </div>
+
+                                    <div style={{ fontSize: 14, color: "#6b7280", marginTop: 4 }}>
+                                      {effortLabel}
+                                    </div>
+
+                                    <div style={{ marginTop: 10, height: 10, background: "#e5e7eb", borderRadius: 6 }}>
+                                      <div
+                                        style={{
+                                          width: `${effort}%`,
+                                          height: "100%",
+                                          background: "linear-gradient(90deg,#4ade80,#22c55e)",
+                                          borderRadius: 6,
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
                                 </div>
                               </div>
                             </div>
@@ -1090,6 +1156,57 @@ const handleSelectSubjectDetail = (subject: string) => {
                       Không có dữ liệu điểm để vẽ biểu đồ.
                     </div>
                   )}
+                  {/* 🔮 Dự đoán điểm kỳ tới */}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Dự đoán điểm kỳ tới</div>
+                    <div style={{ fontWeight: 700, fontSize: 16, marginTop: 4 }}>
+                      {(() => {
+                        const currentSubjectData = subjectsData.find(data => data.subject === s);
+                        const predicted = currentSubjectData?.predictedScore ?? 0;
+                        const { tx, gk, ck } = extractScoresForSubject(dashboardToShow, s); // Also get ck for comparison
+                        const risk = computeRiskLevel(tx, gk, ck, predicted);
+                        
+                        return (
+                          <>
+                            {predicted} / 10
+                            <div style={{ color: predicted > ck ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
+                              {predicted > ck ? "📈 Có xu hướng tăng" : predicted === ck ? "➖ Ổn định" : "📉 Nguy cơ giảm"}
+                            </div>
+                            {/* ⚠ CẢNH BÁO TỤT DỐC */}
+                          <div style={{ 
+                            marginTop: 12, 
+                            padding: "10px 12px", 
+                            background: risk.level === "high" ? "#fee2e2" : 
+                                      risk.level === "medium" ? "#fef9c3" : 
+                                      risk.level === "watch" ? "#e0f2fe" : "#ecfdf5",
+                            borderRadius: 8,
+                            borderLeft: risk.level === "high" ? "4px solid #dc2626" :
+                                        risk.level === "medium" ? "4px solid #eab308" :
+                                        risk.level === "watch" ? "4px solid #0284c7" :
+                                        "4px solid #22c55e"
+                          }}>
+                            <strong style={{ fontSize: 14 }}>
+                              {risk.level === "high"    && "⚠ Nguy cơ tụt dốc cao"}
+                              {risk.level === "medium"  && "⚠ Nguy cơ tụt dốc trung bình"}
+                              {risk.level === "watch"   && "ℹ Cần theo dõi thêm"}
+                              {risk.level === "safe"    && "✔ An toàn"}
+                            </strong>
+
+                            {/* lý do */}
+                            <div style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
+                              {gk < tx && "• Điểm giữa kỳ thấp hơn thường xuyên (TX → GK)\n"}
+                              {ck < gk && "• Điểm cuối kỳ giảm so với giữa kỳ (GK → CK)\n"}
+                              {predicted < ck && "• AI dự đoán kỳ tới tiếp tục giảm\n"}
+                              {risk.level === "safe" && "• Xu hướng điểm ổn định hoặc tăng\n"}
+                            </div>
+                          </div>
+
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
                 </li>
               ))}
             </ul>

@@ -53,4 +53,7 @@ export interface CareerDashboard {
   skillsToImprove: SkillToImprove[];
   certificatesToAdd: CertificateToAdd[];
   subjectsToFocus: SubjectToFocus[];
+
+  // ⭐ THÊM DÒNG NÀY ĐỂ FIX LỖI
+  userSkills?: Record<string, number>;
 }

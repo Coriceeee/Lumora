@@ -94,66 +94,7 @@ export default function SummaryCard({ dashboard }: Props) {
           {dashboard.summary}
         </Typography>
 
-        {/* ---------------- MATCH PERCENT ---------------- */}
-        {dashboard.careers && (
-          <Box mt={3}>
-            <Typography
-              sx={{
-                fontWeight: "700",
-                fontSize: "1.15rem",
-                mb: 1.4,
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                color: "#3b82f6",
-              }}
-            >
-              <TrendingUpIcon sx={{ fontSize: 22 }} />
-              Mức độ phù hợp ngành nghề
-            </Typography>
-
-            {/* Danh sách ngành + match */}
-            {dashboard.careers.map((c, i) => (
-              <Box
-                key={i}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                  mb: 0.7,
-                  p: "6px 10px",
-                  borderRadius: "10px",
-                  background: isDarkMode
-                    ? "rgba(148,163,184,0.08)"
-                    : "rgba(59,130,246,0.08)",
-                }}
-              >
-                <WorkspacePremiumIcon
-                  sx={{ color: getMatchColor(c.matchPercentage), fontSize: 22 }}
-                />
-
-                <Typography
-                  sx={{
-                    fontSize: ".95rem",
-                    flexGrow: 1,
-                    color: isDarkMode ? "#cbd5e1" : "#1e293b",
-                  }}
-                >
-                  {c.name}
-                </Typography>
-
-                <Typography
-                  sx={{
-                    fontWeight: "700",
-                    color: getMatchColor(c.matchPercentage),
-                  }}
-                >
-                  {c.matchPercentage ?? 0}%
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        )}
+        
       </CardContent>
     </Card>
   );

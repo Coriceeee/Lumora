@@ -23,6 +23,19 @@ import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
 import "./timeline.css";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 import { toast } from "react-toastify";
+import CareerFitMatrix from "./components_dinhhuong/CareerFitMatrix";
+import { industrySkillProfiles } from "./data/industrySkills";
+import { explainMatch } from "../../../utils/matchExplanation";
+
+interface IndustryProfile {
+  description: string;
+  coreSkills: string[];
+  keySubjects: string[];
+  workEnv: string;
+  roles: string[];
+  skills: Record<string, number>; // Assuming 'skills' is also part of this profile
+}
+
 
 const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
@@ -91,13 +104,26 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const mapSkills = (skills: SkillToImprove[]): Skill[] =>
     skills.map((s) => ({
       name: s.name,
-      priority: Number(s.priority) || 0,
-      priorityRatio: (Number(s.priorityRatio) || 0) * 100,
-      reason: s.reason || "",
-    }));
+    priority: Number(s.priority) || 0,
+    priorityRatio: (Number(s.priorityRatio) || 0) * 100,
+    reason: s.reason || "",
+  }));
 
-  return (
-    <>
+const topCareer = selected?.careers?.[0];
+const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
+
+// lưu ý: nếu backend trả key khác thì sửa tại đây
+const userSkills = selected?.userSkills ?? {};
+
+const skillGapData = computeSkillGap(userSkills, selectedCareer);
+
+// Cast 'industry' to the newly defined IndustryProfile type
+// to ensure TypeScript recognizes properties like 'description'.
+const industry = industrySkillProfiles[selectedCareer] as IndustryProfile | undefined;
+const matchReasons = explainMatch(topCareer, selected);
+
+return (
+  <>
       {/* ============================================= */}
       {/*           FULL SCREEN AI LOADING OVERLAY      */}
       {/* ============================================= */}
@@ -308,10 +334,54 @@ const DinhHuongPhatTrienPage: React.FC = () => {
         </div>
 
         {/* RIGHT COLUMN */}
-        <div className="col-xxl-8 gy-0 gy-xxl-8">
+        <div className="col-xxl-8">
           {selected ? (
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box>
               <SummaryCard dashboard={selected} />
+              <CareerFitMatrix careers={selected.careers} />
+              {skillGapData && (
+                <div className="card p-4" style={{ borderRadius: 20 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>
+                    🌟 Khoảng cách kỹ năng với ngành "{selectedCareer}"
+                  </h3>
+                  <SkillGapRadar data={skillGapData.map(item => ({ skill: item.skill, value: item.gap }))} />
+                </div>
+              )}
+              {/* ⭐ INDUSTRY PROFILE & MATCH REASONING */}
+              {industry && (
+                <div className="card p-4" style={{ borderRadius: 20 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>
+                    🧠 Hồ sơ ngành "{selectedCareer}"
+                  </h3>
+                  <p style={{ marginBottom: 12 }}>{industry.description}</p>
+
+                  <div>
+                    <strong>Kỹ năng lõi:</strong>
+                    <ul>{industry.coreSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+
+                    <strong>Môn học quan trọng:</strong>
+                    <ul>{industry.keySubjects.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
+
+                    <strong>Môi trường làm việc:</strong>
+                    <p>{industry.workEnv}</p>
+
+                    <strong>Vai trò phổ biến:</strong>
+                    <ul>{industry.roles.map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
+                  </div>
+                </div>
+              )}
+              {matchReasons.length > 0 && (
+                <div className="card p-4" style={{ borderRadius: 20 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>
+                    📌 Vì sao phù hợp ngành "{selectedCareer}"?
+                  </h3>
+                  <ul>
+                    {matchReasons.map((r: string, i: number) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <CareersCard careers={selected.careers} />
             </Box>
           ) : (
@@ -326,10 +396,10 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           {selected ? (
             <SkillsCard skills={mapSkills(selected.skillsToImprove || [])} />
           ) : (
-            <Typography>Chưa có dữ liệu.</Typography>
+            <Typography>Không có dữ liệu.</Typography>
           )}
+          
         </div>
-
         <div className="col-xxl-6 p-4">
           {selected ? (
             <CertificatesCard certificates={selected.certificatesToAdd || []} />
@@ -337,9 +407,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
-      </div>
-
-      {/* SUBJECTS */}
+          {/* SUBJECTS */}
       <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
         <div className="col-xxl-12 p-4">
           {selected ? (
@@ -349,15 +417,67 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Dialog */}
-      <SuggestionDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSubmit={handleDialogSubmit}
-      />
+        {/* DIALOG */}
+        <SuggestionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSubmit={handleDialogSubmit} />
+      </div>
     </>
   );
 };
 
+const SkillGapRadar: React.FC<{ data: { skill: string; value: number }[] }> = ({
+  data,
+}) => {
+  // In a real application, this would be a sophisticated radar chart component
+  // For demonstration, we'll just show the data as a list.
+  if (data.length === 0) {
+    return <Typography sx={{ mt: 2 }}>Không có dữ liệu khoảng cách kỹ năng cho ngành này.</Typography>;
+  }
+
+  return (
+    <Box sx={{ p: 2, border: "1px solid #eee", borderRadius: 2, background: "#fafafa" }}>
+      <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
+        Chi tiết khoảng cách kỹ năng:
+      </Typography>
+      <ul>
+        {data.map((item, index) => (
+          <li key={index}>
+            {item.skill}: {item.value} điểm
+          </li>
+        ))}
+      </ul>
+    </Box>
+  );
+};
+
+function computeSkillGap(
+  userSkills: Record<string, number>,
+  selectedCareer: string
+) {
+  const industryProfile = industrySkillProfiles[selectedCareer];
+
+  if (!industryProfile || !industryProfile.skills) {
+    return []; // No industry profile or skills defined for this career
+  }
+
+  const skillGaps: { skill: string; gap: number }[] = [];
+  const industrySkills = industryProfile.skills;
+
+  // Iterate over the skills defined for the industry
+  for (const skillName in industrySkills) {
+    if (Object.prototype.hasOwnProperty.call(industrySkills, skillName)) {
+      const industryProficiency = industrySkills[skillName]; // Expected proficiency from industry
+      const userProficiency = userSkills[skillName] || 0; // User's actual proficiency, default to 0
+
+      // Calculate the gap. A positive gap means the user needs to improve.
+      const gap = Math.max(0, industryProficiency - userProficiency);
+
+      skillGaps.push({ skill: skillName, gap: gap });
+    }
+  }
+
+  // Optionally, sort by gap (highest gap first) or filter out skills with 0 gap
+  return skillGaps.filter(item => item.gap > 0).sort((a, b) => b.gap - a.gap);
+}
+
 export default DinhHuongPhatTrienPage;
+

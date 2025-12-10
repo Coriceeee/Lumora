@@ -11,6 +11,7 @@ import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
 import { getAuth } from "firebase/auth";
 
+
 interface FormData {
   classLevel: 10 | 11 | 12;
   subjectId: string;
@@ -228,12 +229,12 @@ export default function KetQuaHocTapForm() {
                   >
                     Đặt lại
                   </button>
-                  <button type="submit" disabled={loading} className="btn-gradient">
-                    {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
-                  </button>
-                </div>
-              </form>
-            </div>
+      <button type="submit" disabled={loading} className="btn-gradient">
+        {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
+      </button>
+    </div>
+  </form>
+</div>
           </motion.div>
         )}
       </AnimatePresence>
