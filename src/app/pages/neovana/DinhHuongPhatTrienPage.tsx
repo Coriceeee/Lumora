@@ -26,6 +26,8 @@ import { toast } from "react-toastify";
 import CareerFitMatrix from "./components_dinhhuong/CareerFitMatrix";
 import { industrySkillProfiles } from "./data/industrySkills";
 import { explainMatch } from "../../../utils/matchExplanation";
+import { generateRoadmap } from "../../../utils/careerRoadmap";
+
 
 interface IndustryProfile {
   description: string;
@@ -116,6 +118,7 @@ const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
 const userSkills = selected?.userSkills ?? {};
 
 const skillGapData = computeSkillGap(userSkills, selectedCareer);
+const roadmap = generateRoadmap(selectedCareer);
 
 // Cast 'industry' to the newly defined IndustryProfile type
 // to ensure TypeScript recognizes properties like 'description'.
@@ -382,6 +385,20 @@ return (
                   </ul>
                 </div>
               )}
+                          {roadmap.length > 0 && (
+              <div className="card p-4" style={{ borderRadius: 20 }}>
+                <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>
+                  🚀 Lộ trình 90 ngày theo ngành "{selectedCareer}"
+                </h3>
+
+                {roadmap.map((step, i) => (
+                  <div key={i} style={{ marginBottom: 10 }}>
+                    <strong>Tuần {step.week}:</strong> {step.task}
+                  </div>
+                ))}
+              </div>
+            )}
+
               <CareersCard careers={selected.careers} />
             </Box>
           ) : (

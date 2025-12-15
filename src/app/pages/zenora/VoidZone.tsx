@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "../../../utils/fakeMotion";
 import styled, { keyframes } from "styled-components";
+import { Box, Typography, Select, MenuItem, Button as MuiButton } from "@mui/material";
 import {
   getDatabase,
   ref,
@@ -13,6 +14,8 @@ import {
 import { getAuth } from "firebase/auth";
 import { callGeminiServer } from "../../../services/gemini";
 import { v4 as uuid } from "uuid";
+import { ZenoraVoiceChat } from "./ZenoraVoiceChat";
+<ZenoraVoiceChat />
 
 /* ---------------- Animations ---------------- */
 const swirl = keyframes`
@@ -174,6 +177,11 @@ const VoidZone: React.FC = () => {
       content: "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
     },
   ]);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>("");
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [response, setResponse] = useState("");
 
   const [chatLoading, setChatLoading] = useState(false);
   const deletedItemsRef = useRef<Set<string>>(new Set());
@@ -182,6 +190,7 @@ const VoidZone: React.FC = () => {
   const user = auth.currentUser;
 
   const blackholeRef = useRef<HTMLDivElement | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   /* ---------------- Drag System ---------------- */
   const dragRef = useRef<{
@@ -262,6 +271,57 @@ const VoidZone: React.FC = () => {
     // Lấy nội dung stress
     const item = userStressItems.find((i) => i.id === id);
     const stressText = item?.text || "";
+
+useEffect(() => {
+  const synth = window.speechSynthesis;
+  const loadVoices = () => {
+    const viVoices = synth.getVoices().filter(v => v.lang.startsWith("vi"));
+    setVoices(viVoices);
+    if (viVoices.length > 0) setSelectedVoice(viVoices[0].name);
+  };
+  loadVoices();
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+}, []);
+
+const startListening = () => {
+  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  const recognition = new SpeechRecognition();
+  recognition.lang = "vi-VN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognitionRef.current = recognition;
+
+  recognition.onresult = async (event: any) => {
+    const spokenText = event.results[0][0].transcript;
+    setTranscript(spokenText);
+    setIsListening(false);
+
+    const reply = await callGeminiServer(spokenText);
+    setResponse(reply);
+    speak(reply);
+  };
+
+  recognition.onerror = (event: any) => {
+    console.error("Lỗi nhận dạng giọng nói:", event.error);
+    setIsListening(false);
+  };
+
+  recognition.onend = () => setIsListening(false);
+
+  recognition.start();
+  setIsListening(true);
+};
+
+const speak = (text: string) => {
+  const utterance = new SpeechSynthesisUtterance(text);
+  const voice = voices.find(v => v.name === selectedVoice);
+  if (voice) utterance.voice = voice;
+  utterance.lang = "vi-VN";
+  window.speechSynthesis.speak(utterance);
+};
 
     // Xóa item khỏi UI
     setUserStressItems((prev) => prev.filter((i) => i.id !== id));
@@ -347,6 +407,26 @@ Tạo câu trả lời tiếp theo:
     setChatLoading(false);
   };
 
+  useEffect(() => {
+    const synth = window.speechSynthesis;
+    const update = () => setVoices(synth.getVoices() || []);
+    update();
+    synth.addEventListener?.("voiceschanged", update);
+    return () => synth.removeEventListener?.("voiceschanged", update);
+  }, []);
+
+  function startListening(): void {
+    setIsListening(true);
+    setTranscript("Simulating listening...");
+    // In a real application, you would integrate with a speech-to-text API here.
+    // For this example, we'll just simulate a response after a delay.
+    setTimeout(() => {
+      setIsListening(false);
+      setResponse("This is a simulated response from ZenBot.");
+      setTranscript("");
+    }, 3000);
+  }
+
   return (
     <Container>
       {/* Blackhole */}
@@ -366,6 +446,7 @@ Tạo câu trả lời tiếp theo:
       </BlackholeWrapper>
 
       {/* Right Panel */}
+      
       <UserStressItemsWrapper>
         {userStressItems.map((item) => (
           <UserStressItem
@@ -385,6 +466,36 @@ Tạo câu trả lời tiếp theo:
           />
           <Button onClick={handleAddMessage}>Gửi qua ZenBot</Button>
         </InputWrapper>
+        {/* 🎙️ Voice Chat với Zenora */}
+        <Box mt={3} sx={{ background: "#111827", borderRadius: "1rem", padding: "1rem" }}>
+          <Typography variant="h6" sx={{ color: "white", mb: 2 }}>
+            🧠 Tâm sự bằng giọng nói
+          </Typography>
+
+          <Select
+            value={selectedVoice}
+            onChange={(e: any) => setSelectedVoice(e.target.value)}
+            sx={{ mb: 2, minWidth: 200, background: "#1f2937", color: "white" }}
+          >
+            {voices.map((v, i) => (
+              <MenuItem key={i} value={v.name}>
+                {v.name.includes("Female") || v.name.includes("Nữ") ? "👩 Giọng nữ" : "👨 Giọng nam"} - {v.name}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <MuiButton onClick={startListening} disabled={isListening}>
+            {isListening ? "🎧 Đang nghe bạn nói..." : "🎙 Bắt đầu tâm sự"}
+          </MuiButton>
+
+          {transcript && (
+            <Typography sx={{ color: "#cbd5e1", mt: 2 }}>📥 Bạn nói: {transcript}</Typography>
+          )}
+
+          {response && (
+            <Typography sx={{ color: "#38bdf8", mt: 1 }}>🤖 ZenBot: {response}</Typography>
+          )}
+        </Box>
 
         <ChatBox>
           <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
