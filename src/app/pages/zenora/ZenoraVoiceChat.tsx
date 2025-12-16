@@ -67,7 +67,7 @@ export const ZenoraVoiceChat: React.FC = () => {
   return (
     <Box>
       <Typography variant="h5" gutterBottom>
-        🧠 Tâm sự với Zenora
+        🧠 Tâm sự với Zenora bằng giọng nói
       </Typography>
 
       <Select
