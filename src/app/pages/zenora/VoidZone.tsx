@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "../../../utils/fakeMotion";
 import styled, { keyframes } from "styled-components";
+import { Box, Typography } from "@mui/material";
 import {
   getDatabase,
   ref,
@@ -13,6 +14,7 @@ import {
 import { getAuth } from "firebase/auth";
 import { callGeminiServer } from "../../../services/gemini";
 import { v4 as uuid } from "uuid";
+import { ZenoraVoiceChat } from "./ZenoraVoiceChat";
 
 /* ---------------- Animations ---------------- */
 const swirl = keyframes`
@@ -164,7 +166,6 @@ const RobotIcon = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-/* ---------------- Main Component ---------------- */
 const VoidZone: React.FC = () => {
   const [input, setInput] = useState("");
   const [userStressItems, setUserStressItems] = useState<{ id: string; text: string }[]>([]);
@@ -174,74 +175,43 @@ const VoidZone: React.FC = () => {
       content: "Bạn đang ở VoidZone – nơi lắng nghe và chia sẻ những căng thẳng của bạn.",
     },
   ]);
-
   const [chatLoading, setChatLoading] = useState(false);
   const deletedItemsRef = useRef<Set<string>>(new Set());
-
   const auth = getAuth();
   const user = auth.currentUser;
-
   const blackholeRef = useRef<HTMLDivElement | null>(null);
 
-  /* ---------------- Drag System ---------------- */
-  const dragRef = useRef<{
-    id: string;
-    offsetX: number;
-    offsetY: number;
-  } | null>(null);
+  const dragRef = useRef<{ id: string; offsetX: number; offsetY: number } | null>(null);
 
   const startDrag = (e: React.MouseEvent, id: string) => {
     const target = e.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
-
     dragRef.current = {
       id,
       offsetX: e.clientX - rect.left,
       offsetY: e.clientY - rect.top,
     };
-
     window.addEventListener("mousemove", onDragMove);
     window.addEventListener("mouseup", endDrag);
   };
 
   const onDragMove = (e: MouseEvent) => {
     if (!dragRef.current) return;
-
     const item = document.getElementById(dragRef.current.id);
     if (!item) return;
-
     item.style.position = "fixed";
     item.style.left = e.clientX - dragRef.current.offsetX + "px";
     item.style.top = e.clientY - dragRef.current.offsetY + "px";
     item.style.zIndex = "999";
-
     handleHoverIntoBlackhole(e, dragRef.current.id);
   };
 
   const endDrag = () => {
     window.removeEventListener("mousemove", onDragMove);
     window.removeEventListener("mouseup", endDrag);
-
     dragRef.current = null;
   };
 
-  /* ---------------- Points ---------------- */
-  const updatePoint = async (score: number) => {
-    if (!user) return;
-    const db = getDatabase();
-    const pointRef = ref(db, `pointItems`);
-    const q = query(pointRef, orderByChild("userId"), equalTo(user.uid));
-    const snap = await get(q);
-    if (!snap.exists()) return;
-
-    const data = snap.val();
-    const id = Object.keys(data)[0];
-    const userData = Object.values(data)[0] as any;
-
-    await update(ref(db, `pointItems/${id}`), { points: userData.points + score });
-  };
-
-  /* ---------------- BlackHole HitTest ---------------- */
   const pointInsideBlackhole = (x: number, y: number) => {
     const el = blackholeRef.current;
     if (!el) return false;
@@ -249,27 +219,31 @@ const VoidZone: React.FC = () => {
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
   };
 
-  /* ---------------- Handle Dropped Stress Item ---------------- */
+  const updatePoint = async (score: number) => {
+    if (!user) return;
+    const db = getDatabase();
+    const pointRef = ref(db, `pointItems`);
+    const q = query(pointRef, orderByChild("userId"), equalTo(user.uid));
+    const snap = await get(q);
+    if (!snap.exists()) return;
+    const data = snap.val();
+    const id = Object.keys(data)[0];
+    const userData = Object.values(data)[0] as any;
+    await update(ref(db, `pointItems/${id}`), { points: userData.points + score });
+  };
+
   const handleHoverIntoBlackhole = async (event: MouseEvent, id: string) => {
     const x = event.clientX;
     const y = event.clientY;
-
     if (!pointInsideBlackhole(x, y)) return;
     if (deletedItemsRef.current.has(id)) return;
-
     deletedItemsRef.current.add(id);
-
-    // Lấy nội dung stress
     const item = userStressItems.find((i) => i.id === id);
     const stressText = item?.text || "";
-
-    // Xóa item khỏi UI
     setUserStressItems((prev) => prev.filter((i) => i.id !== id));
-
-    // Trừ điểm
     updatePoint(-1);
 
-    // Prompt tạo lời nhắn theo ngữ cảnh kiểu “vừa vứt bỏ…”
+     // Prompt tạo lời nhắn theo ngữ cảnh kiểu “vừa vứt bỏ…”
     const prompt = `
 Bạn là ZenBot – trợ lý cảm xúc tiếng Việt.
 Nhiệm vụ của bạn: tạo một lời nhắn ngắn (1–2 câu) theo cấu trúc:
@@ -283,49 +257,30 @@ Nội dung họ vừa vứt bỏ:
 
 Hãy viết lời nhắn mới.
     `;
-
     try {
       const reply = await callGeminiServer(prompt);
-
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: reply.trim(),
-        },
-      ]);
+      setChatMessages((prev) => [...prev, { role: "assistant", content: reply.trim() }]);
     } catch (err) {
       console.log(err);
     }
   };
 
-  /* ---------------- Chat System ---------------- */
   const handleAddMessage = async () => {
     if (!input.trim()) return;
-
     const text = input.trim();
     const id = uuid();
-
     setUserStressItems((prev) => [...prev, { id, text }]);
     const newMsgs = [...chatMessages, { role: "user", content: text }];
     setChatMessages(newMsgs);
-
     setInput("");
     setChatLoading(true);
-
     try {
       const history = newMsgs
-        .map((m) =>
-          m.role === "user"
-            ? `User: ${m.content}`
-            : m.role === "assistant"
-            ? `ZenBot: ${m.content}`
-            : ""
-        )
-        .filter(Boolean)
+        .map((m) => (m.role === "user" ? `User: ${m.content}` : `ZenBot: ${m.content}`))
         .join("\n");
+      
 
-      const prompt = `
+ const prompt = `
 Bạn là ZenBot – AI trị liệu cảm xúc mặc định bạn sẽ là tiếng việt.
 Hãy phản hồi thật nhẹ nhàng, đồng cảm, không dạy đời.
 Chỉ viết 2–3 câu.
@@ -336,48 +291,37 @@ ${history}
 
 Tạo câu trả lời tiếp theo:
 `;
-
       const reply = await callGeminiServer(prompt);
-
       setChatMessages((prev) => [...prev, { role: "assistant", content: reply.trim() }]);
     } catch (err) {
       console.log(err);
     }
-
     setChatLoading(false);
   };
 
   return (
     <Container>
-      {/* Blackhole */}
       <BlackholeWrapper ref={blackholeRef}>
-        <div style={{ width: "100%", height: "100%" }}>
-          <motion.div
-            style={{ width: "100%", height: "100%" }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.2 }}
-          >
-            <video autoPlay muted loop playsInline>
-              <source src="/BlackHold.mp4" type="video/mp4" />
-            </video>
-          </motion.div>
-        </div>
+        <motion.div style={{ width: "100%", height: "100%" }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1.2 }}>
+          <video autoPlay muted loop playsInline>
+            <source src="/BlackHold.mp4" type="video/mp4" />
+          </video>
+        </motion.div>
       </BlackholeWrapper>
 
-      {/* Right Panel */}
-      <UserStressItemsWrapper>
+      <UserStressItemsWrapper>  
         {userStressItems.map((item) => (
-          <UserStressItem
-            key={item.id}
-            id={item.id}
-            onMouseDown={(e) => startDrag(e, item.id)}
-          >
+          <UserStressItem key={item.id} id={item.id} onMouseDown={(e) => startDrag(e, item.id)}>
             {item.text}
           </UserStressItem>
         ))}
 
-        <InputWrapper>
+       
+
+        <Box mt={3} sx={{ background: "#111827", borderRadius: "1rem", padding: "1rem" }}>
+          <ZenoraVoiceChat />
+        </Box>
+ <InputWrapper>
           <TextInput
             value={input}
             placeholder="Nhập cảm xúc hoặc câu hỏi..."
@@ -385,22 +329,17 @@ Tạo câu trả lời tiếp theo:
           />
           <Button onClick={handleAddMessage}>Gửi qua ZenBot</Button>
         </InputWrapper>
-
         <ChatBox>
           <h3 style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <RobotIcon size={24} /> ZenBot – Người bạn vô hình
           </h3>
-
           {chatMessages.slice(1).map((msg, idx) => (
             <ChatMessage key={idx} $isUser={msg.role === "user"}>
               {msg.role === "user" ? "Bạn" : "ZenBot"}: {msg.content}
             </ChatMessage>
           ))}
-
           {chatLoading && (
-            <div style={{ color: "#aaa", fontStyle: "italic" }}>
-              ZenBot đang suy nghĩ…
-            </div>
+            <div style={{ color: "#aaa", fontStyle: "italic" }}>ZenBot đang suy nghĩ…</div>
           )}
         </ChatBox>
       </UserStressItemsWrapper>
