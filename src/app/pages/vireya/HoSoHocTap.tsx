@@ -46,9 +46,14 @@ type GroupedRow = {
 /* ---------- styles ---------- */
 const styles = {
   container: { maxWidth: 1200, margin: "0 auto", padding: "1rem" },
+
+  // ✅ ĐÃ CHỈNH FONT Ở ĐÂY
   heading: {
-    fontSize: "2.5rem",
-    fontWeight: "800",
+    fontSize: "2.4rem",
+    fontWeight: 700,
+    fontFamily: "inherit", // 🔥 đồng bộ font toàn Lumora
+    letterSpacing: "-0.02em",
+    color: "#1e293b",
     textAlign: "center" as const,
     marginBottom: "1.5rem",
     display: "flex",
@@ -56,6 +61,7 @@ const styles = {
     alignItems: "center",
     gap: "0.5rem",
   },
+
   scoreLegend: {
     display: "flex",
     justifyContent: "center",
@@ -82,7 +88,6 @@ const styles = {
     border: "1.5px solid #ccc",
     fontSize: "1rem",
     outline: "none",
-    transition: "border-color 0.3s",
   },
   section: {
     backgroundColor: "#fff",
@@ -92,7 +97,12 @@ const styles = {
     padding: "1.5rem 2rem",
     marginBottom: "3rem",
   },
-  headerFlex: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" },
+  headerFlex: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1.5rem",
+  },
   headerLeft: { display: "flex", alignItems: "center", gap: "1rem" },
   subjectName: { fontSize: "1.75rem", fontWeight: 600, color: "#111" },
   editButton: {
@@ -105,33 +115,63 @@ const styles = {
     border: "none",
     cursor: "pointer",
     fontSize: "1rem",
-    padding: "0.25rem 0.5rem",
-    borderRadius: 6,
   },
-  table: { width: "100%", borderCollapse: "separate" as const, borderSpacing: "0 12px", fontSize: "0.9rem", color: "#444" },
-  thead: { background: "linear-gradient(90deg, #a5b4fc, #38bdf8, #14b8a6)", color: "#1e293b" },
+  table: {
+    width: "100%",
+    borderCollapse: "separate" as const,
+    borderSpacing: "0 12px",
+    fontSize: "0.9rem",
+    color: "#444",
+  },
+  thead: {
+    background: "linear-gradient(90deg, #a5b4fc, #38bdf8, #14b8a6)",
+    color: "#1e293b",
+  },
   th: { padding: "12px 18px", fontWeight: 600, textAlign: "center" as const },
-  tbodyRow: { backgroundColor: "#fff", borderRadius: 20, transition: "background-color 0.2s" },
+  tbodyRow: { backgroundColor: "#fff", borderRadius: 20 },
   td: { padding: "12px 16px", textAlign: "center" as const },
-  notesCell: { fontStyle: "italic", color: "#6b7280" },
   scoreBox: {
     borderRadius: 12,
     padding: "4px 8px",
-    boxShadow: "inset 0 0 6px rgb(0 0 0 / 0.1)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     gap: 4,
     fontWeight: 600,
   },
-  scoreInput: { width: 56, padding: "2px 6px", borderRadius: 6, border: "1.5px solid #cbd5e1", textAlign: "center" as const },
+  scoreInput: {
+    width: 56,
+    padding: "2px 6px",
+    borderRadius: 6,
+    border: "1.5px solid #cbd5e1",
+    textAlign: "center" as const,
+  },
   scoreDeleteBtn: { background: "none", border: "none", color: "#dc2626", cursor: "pointer" },
   scoreUndoBtn: { background: "none", border: "none", color: "#ca8a04", cursor: "pointer" },
-  warningIcon: { color: "#b91c1c", fontWeight: 700 },
-  actionButtonsWrapper: { marginTop: "1.5rem", display: "flex", justifyContent: "flex-end", gap: "1rem" },
-  saveBtn: { backgroundColor: "#16a34a", color: "#fff", fontWeight: 700, padding: "0.5rem 1.25rem", borderRadius: 12, border: "none" },
-  cancelBtn: { backgroundColor: "#d1d5db", padding: "0.5rem 1.25rem", borderRadius: 12, border: "none", cursor: "pointer", fontWeight: 600 },
+  actionButtonsWrapper: {
+    marginTop: "1.5rem",
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "1rem",
+  },
+  saveBtn: {
+    backgroundColor: "#16a34a",
+    color: "#fff",
+    fontWeight: 700,
+    padding: "0.5rem 1.25rem",
+    borderRadius: 12,
+    border: "none",
+  },
+  cancelBtn: {
+    backgroundColor: "#d1d5db",
+    padding: "0.5rem 1.25rem",
+    borderRadius: 12,
+    border: "none",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
 };
+
 
 /* ---------- helper ---------- */
 const getSubjectIcon = (subjectName: string) => {

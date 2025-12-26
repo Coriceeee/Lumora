@@ -56,8 +56,10 @@ export default function CareersCard({ careers }: Props) {
   const isDark = theme.palette.mode === "dark";
   const history = useHistory(); 
   const sortedCareers = [...(careers || [])].sort(
-    (a, b) => Number(b.matchPercentage || 0) - Number(a.matchPercentage || 0)
-  );
+  (a, b) =>
+    Number((b as any).fitScore ?? (b as any).percent ?? 0) -
+    Number((a as any).fitScore ?? (a as any).percent ?? 0)
+);
 
 
   if (!careers || careers.length === 0) {
@@ -152,8 +154,13 @@ export default function CareersCard({ careers }: Props) {
         </Box>
 
         <Stack spacing={2}>
-          {careers.map((c, idx) => {
-            const pct = Math.max(0, Math.min(100, Number(c.matchPercentage || 0)));
+          {sortedCareers.map((c, idx) => {
+
+            const pct = Math.max(
+  0,
+  Math.min(100, Number((c as any).fitScore ?? (c as any).percent ?? 0))
+);
+
             const colors = getProgressColor(pct, isDark);
 
             const stepsList = Array.isArray((c as any).steps)

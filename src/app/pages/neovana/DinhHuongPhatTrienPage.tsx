@@ -111,11 +111,24 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     reason: s.reason || "",
   }));
 
-const topCareer = selected?.careers?.[0];
+const sortedCareers = [...(selected?.careers || [])].sort(
+  (a, b) => Number(b.fitScore ?? 0) - Number(a.fitScore ?? 0)
+);
+
+const topCareer = sortedCareers[0];
+
 const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
 
 // lưu ý: nếu backend trả key khác thì sửa tại đây
-const userSkills = selected?.userSkills ?? {};
+const userSkills =
+  selected?.userSkills ??
+  Object.fromEntries(
+    (selected?.skillsToImprove || []).map(s => [
+      s.name,
+      Number(s.priorityRatio) || 0,
+    ])
+  );
+
 
 const skillGapData = computeSkillGap(userSkills, selectedCareer);
 const roadmap = generateRoadmap(selectedCareer);
@@ -124,7 +137,6 @@ const roadmap = generateRoadmap(selectedCareer);
 // to ensure TypeScript recognizes properties like 'description'.
 const industry = industrySkillProfiles[selectedCareer] as IndustryProfile | undefined;
 const matchReasons = explainMatch(topCareer, selected);
-
 return (
   <>
       {/* ============================================= */}
@@ -399,7 +411,13 @@ return (
               </div>
             )}
 
-              <CareersCard careers={selected.careers} />
+              <CareersCard
+          careers={sortedCareers.map(c => ({
+            ...c,
+            percent: c.fitScore ?? c.percent ?? 0,
+          }))}
+        />
+
             </Box>
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>

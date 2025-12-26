@@ -6,7 +6,8 @@ import { Card, CardContent, Typography, Table, TableBody, TableCell, TableHead, 
 interface CareerFitMatrixProps {
   careers: {
     name: string;
-    matchPercentage: number;
+    fitScore?: number;
+    percent?: number;
     bestSubject?: string;
     bestSkill?: string;
     weakestSkill?: string;
@@ -60,8 +61,8 @@ export default function CareerFitMatrix({ careers }: CareerFitMatrixProps) {
           <TableBody>
             {careers.map((c, i) => (
               <TableRow key={i}>
-                <TableCell>{c.name}</TableCell>
-                <TableCell>{c.matchPercentage}%</TableCell>
+                <TableCell>{c.name}</TableCell><TableCell>{Math.round(c.fitScore ?? c.percent ?? 0)}%</TableCell>
+
                 <TableCell>{c.bestSubject ?? "—"}</TableCell>
                 <TableCell>{c.bestSkill ?? "—"}</TableCell>
                 <TableCell>{c.weakestSkill ?? "—"}</TableCell>

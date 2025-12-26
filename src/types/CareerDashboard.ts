@@ -8,8 +8,10 @@ import {
 
 // --------------------------- CAREER ----------------------------
 export interface Career {
+  [x: string]: string | number | string[] | undefined;
   name: string;
-  matchPercentage: number;
+  fitScore?: number;     // AI / Dashboard dùng
+  percent?: number;      // UI fallback
   reason?: string;
   preparationSteps?: string[];
 }
