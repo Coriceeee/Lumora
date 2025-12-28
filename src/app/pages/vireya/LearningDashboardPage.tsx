@@ -1157,55 +1157,7 @@ const handleSelectSubjectDetail = (subject: string) => {
                     </div>
                   )}
                   {/* 🔮 Dự đoán điểm kỳ tới */}
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>Dự đoán điểm kỳ tới</div>
-                    <div style={{ fontWeight: 700, fontSize: 16, marginTop: 4 }}>
-                      {(() => {
-                        const currentSubjectData = subjectsData.find(data => data.subject === s);
-                        const predicted = currentSubjectData?.predictedScore ?? 0;
-                        const { tx, gk, ck } = extractScoresForSubject(dashboardToShow, s); // Also get ck for comparison
-                        const risk = computeRiskLevel(tx, gk, ck, predicted);
-                        
-                        return (
-                          <>
-                            {predicted} / 10
-                            <div style={{ color: predicted > ck ? "#16a34a" : "#dc2626", fontWeight: 600 }}>
-                              {predicted > ck ? "📈 Có xu hướng tăng" : predicted === ck ? "➖ Ổn định" : "📉 Nguy cơ giảm"}
-                            </div>
-                            {/* ⚠ CẢNH BÁO TỤT DỐC */}
-                          <div style={{ 
-                            marginTop: 12, 
-                            padding: "10px 12px", 
-                            background: risk.level === "high" ? "#fee2e2" : 
-                                      risk.level === "medium" ? "#fef9c3" : 
-                                      risk.level === "watch" ? "#e0f2fe" : "#ecfdf5",
-                            borderRadius: 8,
-                            borderLeft: risk.level === "high" ? "4px solid #dc2626" :
-                                        risk.level === "medium" ? "4px solid #eab308" :
-                                        risk.level === "watch" ? "4px solid #0284c7" :
-                                        "4px solid #22c55e"
-                          }}>
-                            <strong style={{ fontSize: 14 }}>
-                              {risk.level === "high"    && "⚠ Nguy cơ tụt dốc cao"}
-                              {risk.level === "medium"  && "⚠ Nguy cơ tụt dốc trung bình"}
-                              {risk.level === "watch"   && "ℹ Cần theo dõi thêm"}
-                              {risk.level === "safe"    && "✔ An toàn"}
-                            </strong>
-
-                            {/* lý do */}
-                            <div style={{ marginTop: 6, fontSize: 13, opacity: 0.8 }}>
-                              {gk < tx && "• Điểm giữa kỳ thấp hơn thường xuyên (TX → GK)\n"}
-                              {ck < gk && "• Điểm cuối kỳ giảm so với giữa kỳ (GK → CK)\n"}
-                              {predicted < ck && "• AI dự đoán kỳ tới tiếp tục giảm\n"}
-                              {risk.level === "safe" && "• Xu hướng điểm ổn định hoặc tăng\n"}
-                            </div>
-                          </div>
-
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                  
 
                 </li>
               ))}
