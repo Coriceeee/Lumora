@@ -14,7 +14,6 @@ import {
 import { getAuth } from "firebase/auth";
 import { callGeminiServer } from "../../../services/gemini";
 import { v4 as uuid } from "uuid";
-import { ZenoraVoiceChat } from "./ZenoraVoiceChat";
 
 /* ---------------- Animations ---------------- */
 const swirl = keyframes`
@@ -319,7 +318,6 @@ Tạo câu trả lời tiếp theo:
        
 
         <Box mt={3} sx={{ background: "#111827", borderRadius: "1rem", padding: "1rem" }}>
-          <ZenoraVoiceChat />
         </Box>
  <InputWrapper>
           <TextInput

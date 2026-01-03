@@ -4,7 +4,9 @@
 import React from "react";
 import { useTrail, animated } from "@react-spring/web";
 import { BookOpen } from "lucide-react";
+import { Typography } from "@mui/material"; // ✅ FIX LỖI Ở ĐÂY
 import { SubjectToFocus } from "@/types/CareerDashboard";
+
 
 /* ------------------------- Mini Sparkline chart -------------------------- */
 const Sparkline: React.FC<{ values?: number[] }> = ({ values = [] }) => {
@@ -58,7 +60,11 @@ const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
   if (!subjects || subjects.length === 0) {
     return (
       <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white shadow text-center text-gray-500">
-        Chưa có dữ liệu môn học cần tập trung.
+        <Typography sx={{ color: "text.secondary", fontStyle: "italic" }}>
+  🤖 AI đang tổng hợp dữ liệu môn học phù hợp.
+  <br />
+  Bạn có thể bắt đầu từ các môn cốt lõi liên quan đến ngành đã chọn.
+</Typography>
       </div>
     );
   }

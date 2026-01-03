@@ -1,6 +1,6 @@
 // FILE: src/app/pages/neovana/DinhHuongPhatTrienPage.tsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, Button, Typography } from "@mui/material";
 import {
   addCareerDashboard,
@@ -8,10 +8,7 @@ import {
 } from "../../../services/careerDashboardService";
 import { generateCareerDashboard } from "../../../services/neovanaDashboardService";
 
-import {
-  CareerDashboard,
-  SkillToImprove,
-} from "../../../types/CareerDashboard";
+import { CareerDashboard, SkillToImprove } from "../../../types/CareerDashboard";
 
 import CareersCard from "./components_dinhhuong/CareersCard";
 import SkillsCard, { Skill } from "./components_dinhhuong/SkillsCard";
@@ -23,11 +20,11 @@ import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
 import "./timeline.css";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 import { toast } from "react-toastify";
-import CareerFitMatrix from "./components_dinhhuong/CareerFitMatrix";
 import { industrySkillProfiles } from "./data/industrySkills";
 import { explainMatch } from "../../../utils/matchExplanation";
 import { generateRoadmap } from "../../../utils/careerRoadmap";
 
+const SKILL_LABELS: Record<string, string> = {};
 
 interface IndustryProfile {
   description: string;
@@ -35,9 +32,153 @@ interface IndustryProfile {
   keySubjects: string[];
   workEnv: string;
   roles: string[];
-  skills: Record<string, number>; // Assuming 'skills' is also part of this profile
+  skills: Record<string, number>; // 0-100
 }
 
+type SkillGapItem = { skill: string; gap: number };
+
+const floatingCardStyle: React.CSSProperties = {
+  borderRadius: 20,
+  background: "linear-gradient(180deg, #ffffff 0%, #f8f9ff 100%)",
+  boxShadow: "0 20px 50px rgba(79,70,229,0.18)",
+  border: "1px solid rgba(79,70,229,0.18)",
+  marginBottom: 24,
+};
+
+const softCardStyle: React.CSSProperties = {
+  borderRadius: 20,
+  background: "#fff",
+  boxShadow: "0 12px 35px rgba(0,0,0,0.08)",
+  border: "1px solid rgba(0,0,0,0.06)",
+  marginBottom: 24,
+};
+
+function pct(n: number) {
+  const x = Number.isFinite(n) ? n : 0;
+  return Math.max(0, Math.min(100, Math.round(x)));
+}
+
+function buildUserSkills(selected?: CareerDashboard | null) {
+  // Ưu tiên data backend nếu có
+  const fromBackend = (selected as any)?.userSkills as Record<string, number> | undefined;
+  if (fromBackend && typeof fromBackend === "object") return fromBackend;
+
+  // Fallback: lấy từ skillsToImprove.priorityRatio (%)
+  const arr = selected?.skillsToImprove || [];
+  const map: Record<string, number> = {};
+  arr.forEach((s) => {
+    map[s.name] = pct(Number((s as any).priorityRatio) || 0);
+  });
+  return map;
+}
+
+function getAllSkillsUnion(a: SkillGapItem[], b: SkillGapItem[]) {
+  const set = new Set<string>();
+  a.forEach((x) => set.add(x.skill));
+  b.forEach((x) => set.add(x.skill));
+  return Array.from(set);
+}
+
+function toGapMap(gaps: SkillGapItem[]) {
+  const map: Record<string, number> = {};
+  gaps.forEach((g) => (map[g.skill] = pct(g.gap)));
+  return map;
+}
+
+function computeSkillGap(
+  userSkills: Record<string, number>,
+  selectedCareer: string
+): SkillGapItem[] {
+  const industryProfile = industrySkillProfiles[selectedCareer] as IndustryProfile | undefined;
+
+  if (!industryProfile || !industryProfile.skills) return [];
+
+  const industrySkills = industryProfile.skills;
+  const skillGaps: SkillGapItem[] = [];
+
+  for (const skillName in industrySkills) {
+    if (Object.prototype.hasOwnProperty.call(industrySkills, skillName)) {
+      const industryProficiency = pct(industrySkills[skillName]);
+      const userProficiency = pct(userSkills[skillName] || 0);
+      const gap = Math.max(0, industryProficiency - userProficiency);
+      skillGaps.push({ skill: skillName, gap });
+    }
+  }
+
+  return skillGaps.filter((x) => x.gap > 0).sort((a, b) => b.gap - a.gap);
+}
+
+/** Radar SVG đơn giản (không cần lib) + hỗ trợ compare 2 ngành */
+interface SkillGapRadarProps {
+  axes: string[];
+  seriesA: { label: string; map: Record<string, number> };
+  seriesB?: { label: string; map: Record<string, number> };
+}
+
+const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
+  axes,
+  seriesA,
+}) => {
+  const dataA = axes.map((skill) => ({ skill, value: seriesA.map[skill] || 0 }));
+
+  if (!dataA || dataA.length === 0) {
+     return (
+      <Typography sx={{ mt: 2 }}>
+        Không có khoảng cách kỹ năng đáng kể với ngành này.
+      </Typography>
+    );
+  }
+
+  const maxGap = Math.max(...dataA.map((d) => d.value));
+
+  return (
+    <Box
+      sx={{
+        mt: 2,
+        p: 3,
+        borderRadius: 3,
+        background: "#f8f9ff",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+      }}
+    >
+      <Typography sx={{ fontWeight: 800, mb: 2 }}>
+        🧠 Phân tích chi tiết từng kỹ năng
+      </Typography>
+
+      {dataA.map((item, index) => {
+        const isMax = item.value === maxGap;
+
+        return (
+          <Box
+            key={index}
+            sx={{
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              background: isMax ? "#eef2ff" : "#fff",
+              border: isMax
+                ? "2px solid #4f46e5"
+                : "1px solid #e0e0e0",
+            }}
+          >
+            <Typography sx={{ fontWeight: 900 }}>
+              {item.skill}
+              {isMax && (
+                <span style={{ color: "#4f46e5", marginLeft: 8 }}>
+                  ⭐ Khoảng cách lớn nhất
+                </span>
+              )}
+            </Typography>
+
+            <Typography sx={{ fontSize: 14, mt: 0.5 }}>
+              Khoảng cách hiện tại: <strong>{item.value}</strong> điểm
+            </Typography>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
 
 const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
@@ -48,6 +189,9 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDone, setAiDone] = useState(false);
 
+  // Compare 2 ngành
+  const [compareCareer, setCompareCareer] = useState<string>("");
+
   // Firebase userId
   const { userId } = useFirebaseUser();
 
@@ -55,20 +199,19 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const loadDashboards = async () => {
     if (!userId) return;
 
-  const data = await getCareerDashboardsByUser(userId) || [];
-
+    const data = (await getCareerDashboardsByUser(userId)) || [];
     const sorted = data.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
     setDashboards(sorted);
-
     if (sorted.length > 0) setSelected(sorted[0]);
   };
 
   useEffect(() => {
     if (!userId) return;
     loadDashboards();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   // HANDLE CREATE
@@ -82,7 +225,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
 
     try {
       const dashboard = await generateCareerDashboard(userId, formData);
-      dashboard.userId = userId;
+      (dashboard as any).userId = userId;
 
       const saved = await addCareerDashboard(dashboard);
       await loadDashboards();
@@ -91,9 +234,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
       setAiDone(true);
       toast.success("AI đã phân tích xong!");
 
-      setTimeout(() => {
-        setAiDone(false);
-      }, 1800);
+      setTimeout(() => setAiDone(false), 1800);
     } catch (error) {
       toast.error("AI phân tích không thành công");
     } finally {
@@ -106,39 +247,117 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const mapSkills = (skills: SkillToImprove[]): Skill[] =>
     skills.map((s) => ({
       name: s.name,
-    priority: Number(s.priority) || 0,
-    priorityRatio: (Number(s.priorityRatio) || 0) * 100,
-    reason: s.reason || "",
-  }));
+      priority: Number((s as any).priority) || 0,
+      priorityRatio: (Number((s as any).priorityRatio) || 0) * 100,
+      reason: (s as any).reason || "",
+    }));
 
-const sortedCareers = [...(selected?.careers || [])].sort(
-  (a, b) => Number(b.fitScore ?? 0) - Number(a.fitScore ?? 0)
-);
+  const sortedCareers = useMemo(() => {
+    return [...(selected?.careers || [])].sort(
+      (a, b) => Number((b as any).fitScore ?? 0) - Number((a as any).fitScore ?? 0)
+    );
+  }, [selected?.careers]);
 
-const topCareer = sortedCareers[0];
+  const topCareer = sortedCareers[0];
+  const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
 
-const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
+  // auto pick compare career = ngành top 2
+  useEffect(() => {
+    const second = sortedCareers?.[1]?.name;
+    if (!compareCareer && second) setCompareCareer(second);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedCareers?.length, selectedCareer]);
 
-// lưu ý: nếu backend trả key khác thì sửa tại đây
-const userSkills =
-  selected?.userSkills ??
-  Object.fromEntries(
-    (selected?.skillsToImprove || []).map(s => [
-      s.name,
-      Number(s.priorityRatio) || 0,
-    ])
+  const userSkills = useMemo(() => buildUserSkills(selected), [selected]);
+
+  const skillGapDataA = useMemo(
+    () => computeSkillGap(userSkills, selectedCareer),
+    [userSkills, selectedCareer]
   );
 
+  const skillGapDataB = useMemo(() => {
+    if (!compareCareer || compareCareer === selectedCareer) return [];
+    return computeSkillGap(userSkills, compareCareer);
+  }, [userSkills, compareCareer, selectedCareer]);
 
-const skillGapData = computeSkillGap(userSkills, selectedCareer);
-const roadmap = generateRoadmap(selectedCareer);
+  const biggestSkillGapA = skillGapDataA?.[0];
+  const biggestSkillGapB = skillGapDataB?.[0];
 
-// Cast 'industry' to the newly defined IndustryProfile type
-// to ensure TypeScript recognizes properties like 'description'.
-const industry = industrySkillProfiles[selectedCareer] as IndustryProfile | undefined;
-const matchReasons = explainMatch(topCareer, selected) || [];
-return (
-  <>
+  const roadmap = useMemo(() => generateRoadmap(selectedCareer), [selectedCareer]);
+
+  const industry = (industrySkillProfiles[selectedCareer] as IndustryProfile | undefined) || undefined;
+  const matchReasons = explainMatch(topCareer, selected) || [];
+  // ================== UTILS: NORMALIZE % ==================
+const normalizePercent = (raw: any): number => {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 0;
+
+  // 0..1 → %
+  if (n > 0 && n <= 1) return Math.round(n * 100);
+
+  // 0..10 → %
+  if (n > 1 && n <= 10) return Math.round(n * 10);
+
+  // 0..100
+  return Math.round(n);
+};
+
+const clamp01_100 = (v: number): number =>
+  Math.max(0, Math.min(100, v));
+
+
+    // ===== AI explanation theo từng trục kỹ năng =====
+
+const axes = Object.keys(industry?.skills || []);
+
+const axisExplanations = axes.map((skill) => {
+  const a = skillGapDataA.find((s) => s.skill === skill);
+  const b = skillGapDataB?.find((s) => s.skill === skill);
+
+  const ga = a ? pct(a.gap) : 0;
+  const gb = b ? pct(b.gap) : 0;
+
+  let text = "";
+
+  if (ga >= 30) {
+    text = `AI nhận thấy ${SKILL_LABELS[skill] || skill} là điểm thiếu hụt lớn so với yêu cầu ngành ${selectedCareer}. Đây là kỹ năng nên ưu tiên cải thiện sớm.`;
+  } else if (ga >= 15) {
+    text = `${SKILL_LABELS[skill] || skill} đang ở mức trung bình. Nếu rèn luyện thêm, bạn sẽ theo kịp yêu cầu ngành.`;
+  } else {
+    text = `${SKILL_LABELS[skill] || skill} đã tương đối phù hợp với yêu cầu ngành hiện tại.`;
+  }
+
+  return {
+    skill,
+    ga,
+    gb,
+    text,
+  };
+});
+
+
+  const readinessA = useMemo(() => {
+    // ước lượng “mức sẵn sàng” = 100 - trung bình gap (top 10)
+    const mapA = toGapMap(skillGapDataA);
+    const top = axes.slice(0, 10);
+    if (top.length === 0) return 100;
+    const avg = top.reduce((sum, s) => sum + (mapA[s] || 0), 0) / top.length;
+    return pct(100 - avg);
+  }, [axes, skillGapDataA]);
+
+  const readinessB = useMemo(() => {
+    if (!compareCareer || compareCareer === selectedCareer) return null;
+    const mapB = toGapMap(skillGapDataB);
+    const top = axes.slice(0, 10);
+    if (top.length === 0) return 100;
+    const avg = top.reduce((sum, s) => sum + (mapB[s] || 0), 0) / top.length;
+    return pct(100 - avg);
+  }, [axes, skillGapDataB, compareCareer, selectedCareer]);
+
+  
+
+  return (
+    <>
       {/* ============================================= */}
       {/*           FULL SCREEN AI LOADING OVERLAY      */}
       {/* ============================================= */}
@@ -340,12 +559,11 @@ return (
 
             .timeline-date {
               font-size: 14px;
-              font-weight: 700;   /* ⭐ In đậm */
+              font-weight: 700;
               color: #444;
               margin-top: 2px;
             }
           `}</style>
-
         </div>
 
         {/* RIGHT COLUMN */}
@@ -353,51 +571,189 @@ return (
           {selected ? (
             <Box>
               <SummaryCard dashboard={selected} />
-              <CareerFitMatrix careers={selected.careers || []} />
-            
-              {skillGapData && (
-                <div className="card p-4" style={{ borderRadius: 20 }}>
-                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>
-                    🌟 Khoảng cách kỹ năng với ngành "{selectedCareer}"
-                  </h3>
-                  <SkillGapRadar data={skillGapData.map(item => ({ skill: item.skill, value: item.gap }))} />
-                </div>
-              )}
+
+              {/* ⭐ SKILL GAP + COMPARE + AI AXIS EXPLANATION */}
+
+                <div className="card p-4" style={floatingCardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div>
+                      <h3 style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>
+                        🌟 Khoảng cách kỹ năng (Radar)
+                      </h3>
+                      <div style={{ color: "#444", fontWeight: 600 }}>
+                        Ngành chính: <span style={{ color: "#4f46e5" }}>{selectedCareer}</span>
+                      </div>
+                      {biggestSkillGapA && (
+                        <div style={{ marginTop: 8, color: "#444" }}>
+                          Ưu tiên nhất:{" "}
+                          <strong style={{ color: "#4f46e5" }}>
+                            {biggestSkillGapA.skill}
+                          </strong>{" "}
+                          (thiếu {pct(biggestSkillGapA.gap)}%)
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Compare selector */}
+                    <div style={{ minWidth: 260 }}>
+                      <div style={{ fontWeight: 800, marginBottom: 6 }}>✨ So sánh 2 ngành</div>
+                      <select
+                        value={compareCareer}
+                        onChange={(e) => setCompareCareer(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          border: "1px solid rgba(79,70,229,0.25)",
+                          outline: "none",
+                          fontWeight: 700,
+                          background: "rgba(79,70,229,0.04)",
+                        }}
+                      >
+                        <option value="">(Tắt so sánh)</option>
+                        {sortedCareers
+                          .map((c) => c?.name)
+                          .filter(Boolean)
+                          .filter((name) => name !== selectedCareer)
+                          .map((name) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
+                      </select>
+
+                      <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                        <div
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: 12,
+                            background: "rgba(79,70,229,0.08)",
+                            border: "1px solid rgba(79,70,229,0.16)",
+                            fontWeight: 800,
+                            color: "#2f2a8a",
+                          }}
+                        >
+                          Sẵn sàng ({selectedCareer}): {readinessA}%
+                        </div>
+                        {readinessB !== null && compareCareer && (
+                          <div
+                            style={{
+                              padding: "8px 10px",
+                              borderRadius: 12,
+                              background: "rgba(255,140,90,0.10)",
+                              border: "1px solid rgba(255,140,90,0.22)",
+                              fontWeight: 800,
+                              color: "#8a3a15",
+                            }}
+                          >
+                            Sẵn sàng ({compareCareer}): {readinessB}%
+                          </div>
+                        )}
+                      </div>
+
+                      {compareCareer && compareCareer !== selectedCareer && biggestSkillGapB && (
+                        <div style={{ marginTop: 10, color: "#444" }}>
+                          Ưu tiên nhất ({compareCareer}):{" "}
+                          <strong style={{ color: "#ff8c5a" }}>
+                            {biggestSkillGapB.skill}
+                          </strong>{" "}
+                          (thiếu {pct(biggestSkillGapB.gap)}%)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: 18 }}>
+                    <SkillGapRadar
+                      axes={axes}
+                      seriesA={{ label: selectedCareer, map: toGapMap(skillGapDataA) }}
+                      seriesB={
+                        compareCareer && compareCareer !== selectedCareer
+                          ? { label: compareCareer, map: toGapMap(skillGapDataB) }
+                          : undefined
+                      }
+                    />
+                  </div>
+
+                  {/* AI explanation per axis */}
+                  {axisExplanations.length > 0 && (
+  <div style={{ marginTop: 18 }}>
+    <h4 style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>
+      ✨ Lời giải thích AI theo từng trục kỹ năng
+    </h4>
+
+    <div style={{ display: "grid", gap: 10 }}>
+      {axisExplanations.map((ax) => {
+        const isMaxA = biggestSkillGapA?.skill === ax.skill;
+        const isMaxB = biggestSkillGapB?.skill === ax.skill;
+
+        return (
+          <div
+            key={ax.skill}
+            style={{
+              padding: "12px 14px",
+              borderRadius: 16,
+              background: isMaxA
+                ? "rgba(79,70,229,0.12)"
+                : isMaxB
+                ? "rgba(255,140,90,0.10)"
+                : "rgba(0,0,0,0.03)",
+              border: "1px solid rgba(0,0,0,0.06)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
+              <div style={{ fontWeight: 900 }}>
+                {SKILL_LABELS[ax.skill] || ax.skill}
+
+                {isMaxA && (
+                  <span style={{ marginLeft: 8, color: "#4f46e5" }}>
+                    (Gap lớn nhất – {selectedCareer})
+                  </span>
+                )}
+                {isMaxB && compareCareer && (
+                  <span style={{ marginLeft: 8, color: "#ff8c5a" }}>
+                    (Gap lớn nhất – {compareCareer})
+                  </span>
+                )}
+              </div>
+
+              <div style={{ fontWeight: 800 }}>
+                {selectedCareer}:{" "}
+                <span style={{ color: "#4f46e5" }}>{ax.ga}%</span>
+                {compareCareer && (
+                  <>
+                    {" "}• {compareCareer}:{" "}
+                    <span style={{ color: "#ff8c5a" }}>{ax.gb}%</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={{ marginTop: 8, color: "#444", lineHeight: 1.55 }}>
+              {ax.text}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+
+</div>
+
+
               {/* ⭐ INDUSTRY PROFILE & MATCH REASONING */}
-              {industry && (
-                <div className="card p-4" style={{ borderRadius: 20 }}>
-                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>
-                    🧠 Hồ sơ ngành "{selectedCareer}"
-                  </h3>
-                  <p style={{ marginBottom: 12 }}>{industry.description}</p>
 
-                  <div>
-                    <strong>Kỹ năng lõi:</strong>
-                    <ul>
-  {(industry.coreSkills ?? []).map((s, i) => (
-    <li key={i}>{s}</li>
-  ))}
-</ul>
-                    <strong>Môn học quan trọng:</strong>
-                    <ul>
-  {(industry.keySubjects ?? []).map((s, i) => (
-    <li key={i}>{s}</li>
-  ))}
-</ul>
-                    <strong>Môi trường làm việc:</strong>
-                    <p>{industry.workEnv}</p>
-
-                    <strong>Vai trò phổ biến:</strong>
-<ul>
-  {(industry.roles ?? []).map((r, i) => (
-    <li key={i}>{r}</li>
-  ))}
-</ul>                  </div>
-                </div>
-              )}
               {matchReasons.length > 0 && (
-                <div className="card p-4" style={{ borderRadius: 20 }}>
-                  <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 8 }}>
+                <div className="card p-4" style={softCardStyle}>
+                  <h3 style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>
                     📌 Vì sao phù hợp ngành "{selectedCareer}"?
                   </h3>
                   <ul>
@@ -407,26 +763,65 @@ return (
                   </ul>
                 </div>
               )}
-                          {roadmap.length > 0 && (
-              <div className="card p-4" style={{ borderRadius: 20 }}>
-                <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>
-                  🚀 Lộ trình 90 ngày theo ngành "{selectedCareer}"
-                </h3>
 
-                {roadmap.map((step, i) => (
-                  <div key={i} style={{ marginBottom: 10 }}>
-                    <strong>Tuần {step.week}:</strong> {step.task}
-                  </div>
-                ))}
-              </div>
-            )}
+              {roadmap.length > 0 && (
+  <div
+    className="card p-4 mt-4"
+    style={{
+      borderRadius: 22,
+      background: "linear-gradient(135deg, #eef2ff, #ffffff)",
+      boxShadow: "0 12px 30px rgba(79,70,229,0.25)",
+      border: "1px solid rgba(79,70,229,0.2)",
+    }}
+  >
+    <h3 style={{ fontWeight: 900, fontSize: 22, marginBottom: 14 }}>
+      🚀 Lộ trình 90 ngày theo ngành "{selectedCareer}"
+    </h3>
 
-              <CareersCard
-          careers={sortedCareers.map(c => ({
-            ...c,
-            percent: c.fitScore ?? c.percent ?? 0,
-          }))}
-        />
+    {roadmap.map((step, i) => (
+      <div
+        key={i}
+        style={{
+          marginBottom: 12,
+          padding: "10px 14px",
+          borderRadius: 14,
+          background: "#fff",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        }}
+      >
+        <strong style={{ color: "#4f46e5" }}>
+          Tuần {step.week}:
+        </strong>{" "}
+        {step.task}
+      </div>
+    ))}
+
+    <Typography sx={{ mt: 2, fontStyle: "italic", color: "#555" }}>
+      🤖 AI gợi ý: Nếu bạn hoàn thành đều đặn lộ trình này, mức độ phù hợp với
+      ngành sẽ được cải thiện rõ rệt sau 3 tháng.
+    </Typography>
+  </div>
+)}
+
+
+
+              <Box sx={{ mt: 6 }}>
+     <CareersCard
+  careers={sortedCareers.map((c) => {
+    const percent: number = clamp01_100(
+      normalizePercent(c.fitScore ?? (c as any).percent)
+    );
+
+    return {
+      ...c,
+      percent, // ✔ number
+    };
+  })}
+/>
+
+
+
+            </Box>
 
             </Box>
           ) : (
@@ -443,8 +838,8 @@ return (
           ) : (
             <Typography>Không có dữ liệu.</Typography>
           )}
-          
         </div>
+
         <div className="col-xxl-6 p-4">
           {selected ? (
             <CertificatesCard certificates={selected.certificatesToAdd || []} />
@@ -452,77 +847,27 @@ return (
             <Typography>Chưa có dữ liệu.</Typography>
           )}
         </div>
-          {/* SUBJECTS */}
-      <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
-        <div className="col-xxl-12 p-4">
-          {selected ? (
-            <SubjectsCard subjects={selected.subjectsToFocus || []} />
-          ) : (
-            <Typography>Chưa có dữ liệu.</Typography>
-          )}
+
+        {/* SUBJECTS */}
+        <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
+          <div className="col-xxl-12 p-4">
+            {selected ? (
+              <SubjectsCard subjects={selected.subjectsToFocus || []} />
+            ) : (
+              <Typography>Chưa có dữ liệu.</Typography>
+            )}
+          </div>
         </div>
-      </div>
+
         {/* DIALOG */}
-        <SuggestionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} onSubmit={handleDialogSubmit} />
+        <SuggestionDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onSubmit={handleDialogSubmit}
+        />
       </div>
     </>
   );
 };
 
-const SkillGapRadar: React.FC<{ data: { skill: string; value: number }[] }> = ({
-  data,
-}) => {
-  // In a real application, this would be a sophisticated radar chart component
-  // For demonstration, we'll just show the data as a list.
-  if (data.length === 0) {
-    return <Typography sx={{ mt: 2 }}>Không có dữ liệu khoảng cách kỹ năng cho ngành này.</Typography>;
-  }
-
-  return (
-    <Box sx={{ p: 2, border: "1px solid #eee", borderRadius: 2, background: "#fafafa" }}>
-      <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>
-        Chi tiết khoảng cách kỹ năng:
-      </Typography>
-      <ul>
-        {data.map((item, index) => (
-          <li key={index}>
-            {item.skill}: {item.value} điểm
-          </li>
-        ))}
-      </ul>
-    </Box>
-  );
-};
-
-function computeSkillGap(
-  userSkills: Record<string, number>,
-  selectedCareer: string
-) {
-  const industryProfile = industrySkillProfiles[selectedCareer];
-
-  if (!industryProfile || !industryProfile.skills) {
-    return []; // No industry profile or skills defined for this career
-  }
-
-  const skillGaps: { skill: string; gap: number }[] = [];
-  const industrySkills = industryProfile.skills;
-
-  // Iterate over the skills defined for the industry
-  for (const skillName in industrySkills) {
-    if (Object.prototype.hasOwnProperty.call(industrySkills, skillName)) {
-      const industryProficiency = industrySkills[skillName]; // Expected proficiency from industry
-      const userProficiency = userSkills[skillName] || 0; // User's actual proficiency, default to 0
-
-      // Calculate the gap. A positive gap means the user needs to improve.
-      const gap = Math.max(0, industryProficiency - userProficiency);
-
-      skillGaps.push({ skill: skillName, gap: gap });
-    }
-  }
-
-  // Optionally, sort by gap (highest gap first) or filter out skills with 0 gap
-  return skillGaps.filter(item => item.gap > 0).sort((a, b) => b.gap - a.gap);
-}
-
 export default DinhHuongPhatTrienPage;
-

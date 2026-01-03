@@ -100,7 +100,12 @@ export default function AboutLumoraPage() {
   };
 
   return (
-    <Box sx={{ bgcolor: "#f7f7ff" }}>
+    <Box
+  sx={{
+    bgcolor: "#f7f7ff",
+  }}
+>
+
       {/* HERO */}
       <Fade in timeout={600}>
         <div>
@@ -282,25 +287,26 @@ function MockupCard() {
         <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.16)" }} />
 
         <Box
-          sx={{
-            height: 140,
-            borderRadius: 3,
-            border: "1px dashed rgba(255,255,255,0.25)",
-            bgcolor: "rgba(0,0,0,0.12)",
-            display: "grid",
-            placeItems: "center",
-            color: "rgba(255,255,255,0.65)",
-            textAlign: "center",
-            px: 2,
-          }}
-        >
-          <Typography sx={{ fontWeight: 700 }}>
-            (Chỗ này đặt ảnh mockup UI / screenshot Lumora)
-          </Typography>
-          <Typography variant="body2" sx={{ opacity: 0.9 }}>
-            Bạn có thể thay bằng Image/Avatar/Carousel tuỳ ý
-          </Typography>
-        </Box>
+  sx={{
+    height: 160,
+    borderRadius: 3,
+    overflow: "hidden",
+    boxShadow: "0 10px 30px rgba(79,70,229,0.35)",
+    border: "1px solid rgba(79,70,229,0.25)",
+  }}
+>
+  <Box
+    component="img"
+    src="/media/avatars/lumora.png"
+    alt="Lumora cover"
+    sx={{
+      width: "100%",
+      height: "100%",
+      objectFit: "cover",
+    }}
+  />
+</Box>
+
       </CardContent>
     </Card>
   );
@@ -460,10 +466,7 @@ function FlowSection() {
             <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
               Hành trình Lumora đồng hành
             </Typography>
-            <Typography sx={{ color: "text.secondary", maxWidth: 760 }}>
-              Một flow dễ hiểu để người xem “nắm hệ thống” trong 15 giây — rất hợp
-              trình bày với BGK.
-            </Typography>
+
           </Stack>
 
           <Grid container spacing={2.5} sx={{ mt: 2 }}>
@@ -673,49 +676,6 @@ function ModulesSection() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={5}>
-            <Card
-              sx={{
-                borderRadius: 4,
-                height: "100%",
-                boxShadow: "0 12px 40px rgba(0,0,0,0.08)",
-                border: "1px solid rgba(0,0,0,0.06)",
-              }}
-            >
-              <CardContent sx={{ p: 3 }}>
-                <Typography sx={{ fontWeight: 900, mb: 1 }}>
-                  Mockup / Screenshot
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: "text.secondary", mb: 2 }}
-                >
-                  Thay khung này bằng ảnh UI thật (Dashboard, biểu đồ, Void Zone,
-                  Career Suggestion…).
-                </Typography>
-
-                <Box
-                  sx={{
-                    height: 260,
-                    borderRadius: 3,
-                    border: "1px dashed rgba(0,0,0,0.25)",
-                    bgcolor: "rgba(79,70,229,0.04)",
-                    display: "grid",
-                    placeItems: "center",
-                    textAlign: "center",
-                    px: 2,
-                  }}
-                >
-                  <Typography sx={{ fontWeight: 900, color: "#3730a3" }}>
-                    {active} UI Preview
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                    (Ảnh minh hoạ / screenshot đặt ở đây)
-                  </Typography>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
         </Grid>
       </Container>
     </SectionReveal>
@@ -755,13 +715,7 @@ function QuoteCTASection() {
                 variant="h5"
                 sx={{ fontWeight: 900, lineHeight: 1.25, mb: 1.25 }}
               >
-                “Lumora không thay bạn quyết định tương lai — nhưng Lumora giúp
-                bạn có đủ thông tin để quyết định đúng.”
-              </Typography>
-
-              <Typography sx={{ color: "text.secondary", maxWidth: 820 }}>
-                Nếu bạn muốn, mình có thể giúp bạn gắn section này thành landing
-                CTA, hoặc chuyển sang dạng “BGK-friendly” để thuyết trình.
+               "Ở LUMORA, bạn không cần phải giỏi hơn ai – chỉ cần đủ an yên để hiểu mình, đủ tự do để chọn đường đi, và đủ dũng cảm để trở thành chính mình, theo cách chân thật và đẹp nhất mà bạn có thể".
               </Typography>
 
               <Stack
