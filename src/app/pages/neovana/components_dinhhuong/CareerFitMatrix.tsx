@@ -51,7 +51,7 @@ export default function CareerFitMatrix({ careers }: CareerFitMatrixProps) {
           <TableHead>
             <TableRow>
               <TableCell><strong>Ngành</strong></TableCell>
-              <TableCell><strong>Match</strong></TableCell>
+              <TableCell><strong>Tỉ lệ </strong></TableCell>
               <TableCell><strong>Môn mạnh nhất</strong></TableCell>
               <TableCell><strong>Kỹ năng mạnh nhất</strong></TableCell>
               <TableCell><strong>Kỹ năng yếu nhất</strong></TableCell>

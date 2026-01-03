@@ -55,7 +55,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const loadDashboards = async () => {
     if (!userId) return;
 
-    const data = await getCareerDashboardsByUser(userId);
+  const data = await getCareerDashboardsByUser(userId) || [];
 
     const sorted = data.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -136,7 +136,7 @@ const roadmap = generateRoadmap(selectedCareer);
 // Cast 'industry' to the newly defined IndustryProfile type
 // to ensure TypeScript recognizes properties like 'description'.
 const industry = industrySkillProfiles[selectedCareer] as IndustryProfile | undefined;
-const matchReasons = explainMatch(topCareer, selected);
+const matchReasons = explainMatch(topCareer, selected) || [];
 return (
   <>
       {/* ============================================= */}
@@ -353,7 +353,8 @@ return (
           {selected ? (
             <Box>
               <SummaryCard dashboard={selected} />
-              <CareerFitMatrix careers={selected.careers} />
+              <CareerFitMatrix careers={selected.careers || []} />
+            
               {skillGapData && (
                 <div className="card p-4" style={{ borderRadius: 20 }}>
                   <h3 style={{ fontWeight: 700, fontSize: 20, marginBottom: 12 }}>
@@ -372,17 +373,26 @@ return (
 
                   <div>
                     <strong>Kỹ năng lõi:</strong>
-                    <ul>{industry.coreSkills.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
-
+                    <ul>
+  {(industry.coreSkills ?? []).map((s, i) => (
+    <li key={i}>{s}</li>
+  ))}
+</ul>
                     <strong>Môn học quan trọng:</strong>
-                    <ul>{industry.keySubjects.map((s: string, i: number) => <li key={i}>{s}</li>)}</ul>
-
+                    <ul>
+  {(industry.keySubjects ?? []).map((s, i) => (
+    <li key={i}>{s}</li>
+  ))}
+</ul>
                     <strong>Môi trường làm việc:</strong>
                     <p>{industry.workEnv}</p>
 
                     <strong>Vai trò phổ biến:</strong>
-                    <ul>{industry.roles.map((r: string, i: number) => <li key={i}>{r}</li>)}</ul>
-                  </div>
+<ul>
+  {(industry.roles ?? []).map((r, i) => (
+    <li key={i}>{r}</li>
+  ))}
+</ul>                  </div>
                 </div>
               )}
               {matchReasons.length > 0 && (
