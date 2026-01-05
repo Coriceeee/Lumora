@@ -11,7 +11,6 @@ const SidebarGeneral: React.FC = () => {
 
   const history = useHistory();
   const location = useLocation();
-  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   /* ===== ROUTE CONTROL ===== */
   useEffect(() => {
@@ -54,7 +53,7 @@ const SidebarGeneral: React.FC = () => {
       { label: "📘 Thiết kế dự án học tập", to: "/roboki/embed/thietke", link: "https://roboki.vn/g/682c2d277e2e043fa9c31cba", color: "#e6fd14" },
       { label: "🧠 Chuyên sâu – Tư duy phản biện", to: "/roboki/embed/tuduy", link: "https://roboki.vn/g/67ddbd59923d0072befa135f", color: "#e6fd14" },
       { label: "🎓 Học sinh – Gia sư THPT", to: "/roboki/embed/giasu", link: "https://roboki.vn/g/681d6f075a561b1d5e71e835", color: "#e6fd14" },
-      { label: "📊 Đánh giá năng lực", to: "/roboki/danh-gia-nang-luc", link: null, color: "#e6fd14" },
+      { label: "📊 Đánh giá năng lực", to: "/roboki/danh-gia-nang-luc", color: "#e6fd14" },
     ],
     4: [
       { label: "📝 Loại điểm", to: "/danh-muc/loai-diem", color: "#0dcaf0" },
@@ -64,23 +63,40 @@ const SidebarGeneral: React.FC = () => {
     ],
   };
 
-  /* ===== CURSOR TRACK ===== */
+  /* ===== CURSOR TRACK (FOR LIGHT EFFECT) ===== */
   useEffect(() => {
-    const move = (e: any) => setCursorPos({ x: e.clientX, y: e.clientY });
+    const move = (e: MouseEvent) =>
+      setCursorPos({ x: e.clientX, y: e.clientY });
     window.addEventListener("mousemove", move);
     return () => window.removeEventListener("mousemove", move);
   }, []);
 
   return (
     <div
-  style={{
-    display: "flex",
-    height: "100vh",
-    background: "#1f1f2e",
-    position: "relative", // 👈 QUAN TRỌNG
-  }}
-
+      style={{
+        display: "flex",
+        height: "100vh",
+        background: "#1f1f2e",
+        position: "relative",
+        overflow: "hidden",
+      }}
     >
+      {/* ✨ GLOBAL LIGHT AURA */}
+      <div
+        style={{
+          position: "absolute",
+          top: cursorPos.y - 200,
+          left: cursorPos.x - 200,
+          width: 400,
+          height: 400,
+          background:
+            "radial-gradient(circle, rgba(99,102,241,0.18), transparent 70%)",
+          pointerEvents: "none",
+          transition: "top 0.05s, left 0.05s",
+          zIndex: 0,
+        }}
+      />
+
       {/* ===== LEFT SLIDE PANEL ===== */}
       <div
         style={{
@@ -91,6 +107,7 @@ const SidebarGeneral: React.FC = () => {
           transform: sidebarOpen ? "translateX(0)" : "translateX(-120%)",
           transition: "transform 0.45s cubic-bezier(0.22, 1, 0.36, 1)",
           pointerEvents: sidebarOpen ? "auto" : "none",
+          zIndex: 2,
         }}
       >
         {activeTab !== null && (
@@ -99,33 +116,70 @@ const SidebarGeneral: React.FC = () => {
               {tabs[activeTab].title}
             </h3>
 
-            {menus[activeTab].map((item: any) => (
-              <div
-                key={item.to}
-                style={{
-                  padding: "12px 18px",
-                  borderRadius: "12px",
-                  marginBottom: "12px",
-                  cursor: "pointer",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  color: item.color,
-                  fontWeight: 600,
-                }}
-                onClick={() => {
-                  setActiveItem(item.to);
-                  setShowBigText(false);
-                  history.push(item.to, { link: item.link });
-                }}
-              >
-                {item.label}
-              </div>
-            ))}
+{menus[activeTab].map((item: any) => {
+  const isActive = activeItem === item.to;
+
+  return (
+    <div
+      key={item.to}
+      onClick={() => {
+        setActiveItem(item.to);
+        setShowBigText(false);
+        history.push(item.to, { link: item.link });
+      }}
+      style={{
+        position: "relative",
+        padding: "12px 18px",
+        borderRadius: "14px",
+        marginBottom: "12px",
+        cursor: "pointer",
+        fontWeight: 600,
+        fontSize: "15px",                 // 👈 chữ gọn hơn
+        color: item.color,
+        background: isActive
+          ? "linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06))"
+          : "rgba(255,255,255,0.05)",
+        border: isActive
+          ? `1px solid ${item.color}`
+          : "1px solid rgba(255,255,255,0.12)",
+        boxShadow: isActive
+          ? `0 0 18px ${item.color}55`
+          : "0 4px 10px rgba(0,0,0,0.25)",
+        transition: "all 0.25s ease",
+        overflow: "hidden",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform =
+          "translateX(6px)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.transform =
+          "translateX(0)";
+      }}
+    >
+      {/* ✨ Light sweep */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background:
+            "linear-gradient(120deg, transparent, rgba(255,255,255,0.18), transparent)",
+          opacity: isActive ? 0.35 : 0,
+          transition: "opacity 0.3s ease",
+          pointerEvents: "none",
+        }}
+      />
+
+      {item.label}
+    </div>
+  );
+})}
+
           </>
         )}
       </div>
 
-      {/* ===== RIGHT COLUMN ===== */}
+      {/* ===== RIGHT COLUMN (ICON BAR) ===== */}
       <div
         style={{
           width: showBigText ? 200 : 80,
@@ -134,6 +188,7 @@ const SidebarGeneral: React.FC = () => {
           flexDirection: "column",
           gap: "18px",
           transition: "width 0.35s ease",
+          zIndex: 3,
         }}
       >
         {tabs.map((tab) => {
@@ -152,10 +207,11 @@ const SidebarGeneral: React.FC = () => {
               {showBigText && (
                 <div
                   style={{
-                    fontSize: "22px",
-                    fontWeight: 900,
+                    fontSize: "18px",        // 👈 GIẢM NHẸ (từ 22)
+                    fontWeight: 800,         // 👈 nhẹ hơn 900
                     color: tab.color,
-                    letterSpacing: "1px",
+                    letterSpacing: "0.8px",  // 👈 bớt gắt
+                    textShadow: `0 0 10px ${tab.color}`,
                   }}
                 >
                   {tab.title}
@@ -176,16 +232,24 @@ const SidebarGeneral: React.FC = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: isActive ? tab.color : "rgba(255,255,255,0.08)",
-                  border: "1px solid rgba(255,255,255,0.3)",
+                  backgroundColor: isActive
+                    ? tab.color
+                    : "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.35)",
                   boxShadow: isActive
-                    ? `0 0 20px ${tab.color}`
-                    : "0 0 12px rgba(0,0,0,0.3)",
+                    ? `0 0 30px ${tab.color}`
+                    : "0 0 14px rgba(0,0,0,0.35)",
+                  transition: "all 0.25s ease",
                 }}
               >
                 <img
-                  src={toAbsoluteUrl(`/media/svg/logo/colored/${tab.iconFile}.svg`)}
-                  style={{ width: 28, filter: "brightness(0) invert(1)" }}
+                  src={toAbsoluteUrl(
+                    `/media/svg/logo/colored/${tab.iconFile}.svg`
+                  )}
+                  style={{
+                    width: 28,
+                    filter: "brightness(0) invert(1)",
+                  }}
                 />
               </div>
             </div>
@@ -193,36 +257,32 @@ const SidebarGeneral: React.FC = () => {
         })}
       </div>
 
-      {/* ===== SCHOOL IMAGE (SIDEBAR ONLY) ===== */}
-<div
-  style={{
-    position: "absolute",
-    bottom: "24px",
-    left: "50%",                     // 👈 canh giữa
-    transform: "translateX(-50%)",   // 👈 kéo về đúng tâm
-    width: showBigText ? "300px" : "220px",
-    transition: "all 0.35s ease",
-    pointerEvents: "none",
-    zIndex: 1,
-  }}
->
-
-
-  <img
-    src={toAbsoluteUrl("/media/schools/Trường THPT.NK.jpg")}
-    alt="Trường THPT"
-    style={{
-      width: "100%",
-      height: "160px", // 👈 TO HƠN, RÕ HƠN
-      objectFit: "cover",
-      borderRadius: "24px",
-      boxShadow: "0 0 28px rgba(13,202,240,0.35)",
-      border: "1px solid rgba(255,255,255,0.18)",
-    }}
-  />
-</div>
-
-       
+      {/* ===== SCHOOL IMAGE ===== */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "24px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: showBigText ? "300px" : "220px",
+          transition: "all 0.35s ease",
+          pointerEvents: "none",
+          zIndex: 1,
+        }}
+      >
+        <img
+          src={toAbsoluteUrl("/media/schools/Trường THPT.NK.jpg")}
+          alt="Trường THPT"
+          style={{
+            width: "100%",
+            height: "160px",
+            objectFit: "cover",
+            borderRadius: "24px",
+            boxShadow: "0 0 32px rgba(13,202,240,0.45)",
+            border: "1px solid rgba(255,255,255,0.22)",
+          }}
+        />
+      </div>
     </div>
   );
 };

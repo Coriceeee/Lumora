@@ -9,13 +9,24 @@ import {
   Stack,
   Box,
   useTheme,
-  LinearProgress,
 } from "@mui/material";
 import { CertificateToAdd } from "@/types/CareerDashboard";
 
-interface Props {
-  certificates: CertificateToAdd[];
-}
+/* ================== UTILS (ĐẶT TRƯỚC COMPONENT) ================== */
+
+const normalizePercent = (value: string | number): number => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+
+  // 0–1 → %
+  if (num > 0 && num <= 1) return num * 100;
+
+  return num;
+};
+
+const clamp01_100 = (value: number): number => {
+  return Math.max(0, Math.min(100, Math.round(value)));
+};
 
 const getPriorityColor = (v: number, dark: boolean) => {
   if (v >= 80) return dark ? "#16a34a" : "#22c55e";
@@ -23,6 +34,12 @@ const getPriorityColor = (v: number, dark: boolean) => {
   if (v >= 40) return dark ? "#ca8a04" : "#f59e0b";
   return dark ? "#ef4444" : "#f87171";
 };
+
+/* ================== COMPONENT ================== */
+
+interface Props {
+  certificates: CertificateToAdd[];
+}
 
 export default function CertificatesCard({ certificates }: Props) {
   const theme = useTheme();
@@ -40,8 +57,9 @@ export default function CertificatesCard({ certificates }: Props) {
   }
 
   const labels = certificates.map((c) => c.name);
-  const chartSeries: number[] = certificates.map(
-    (c) => Number(c.priorityRatio) || 0
+
+  const chartSeries = certificates.map((c) =>
+    clamp01_100(normalizePercent(c.priorityRatio ?? 0))
   );
 
   const chartOptions: ApexCharts.ApexOptions = {
@@ -66,11 +84,20 @@ export default function CertificatesCard({ certificates }: Props) {
 
         <Stack spacing={2} mt={2}>
           {certificates.map((c, i) => {
-            const ratio = Number(c.priorityRatio) || 0;
+            const ratio = clamp01_100(
+              normalizePercent(c.priorityRatio ?? 0)
+            );
             const color = getPriorityColor(ratio, isDark);
 
             return (
-              <Box key={i} sx={{ p: 1.5, borderRadius: 2, border: "1px solid #eee" }}>
+              <Box
+                key={i}
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  border: "1px solid #eee",
+                }}
+              >
                 <Typography fontWeight={600}>{c.name}</Typography>
                 <Chip
                   label={`${ratio}% ưu tiên`}

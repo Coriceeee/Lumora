@@ -315,10 +315,6 @@ Tạo câu trả lời tiếp theo:
           </UserStressItem>
         ))}
 
-       
-
-        <Box mt={3} sx={{ background: "#111827", borderRadius: "1rem", padding: "1rem" }}>
-        </Box>
  <InputWrapper>
           <TextInput
             value={input}

@@ -196,16 +196,15 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
                 variant="h6"
                 sx={{ color: "rgba(255,255,255,0.82)", maxWidth: 620 }}
               >
-                Hiểu năng lực • Chăm sóc cảm xúc • Định hướng tương lai — tất cả
-                trong một nền tảng web thông minh dành cho học sinh THPT.
+                Hiểu năng lực học tập • Chăm sóc cảm xúc • Định hướng tương lai —
+                tất cả được kết nối trong một nền tảng dành riêng cho học sinh THPT
               </Typography>
 
               <Typography
                 sx={{ color: "rgba(255,255,255,0.72)", maxWidth: 640 }}
               >
-                Lumora giúp bạn nhìn thấy bức tranh toàn diện về bản thân từ dữ
-                liệu học tập và tương tác, để học chủ động và tự tin hơn mỗi
-                ngày.
+                Lumora giúp bạn nhìn rõ hơn về chính mình thông qua dữ liệu học tập và những tương tác hằng ngày —
+                từ đó học chủ động hơn, nhẹ nhàng hơn và tự tin hơn theo cách của riêng bạn.
               </Typography>
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -340,8 +339,8 @@ function BenefitsSection() {
             Lumora giúp bạn làm được gì?
           </Typography>
           <Typography sx={{ color: "text.secondary", maxWidth: 760 }}>
-            Mọi gợi ý đều hướng tới sự rõ ràng – cá nhân hóa – dễ thực hiện, để bạn
-            “học đúng hướng” thay vì chỉ “học thật nhiều”.
+            Mọi gợi ý đều hướng tới sự rõ ràng, cá nhân hóa và dễ thực hiện —
+            để bạn học đúng hướng, thay vì chỉ cố gắng học thật nhiều.
           </Typography>
         </Stack>
 
@@ -350,22 +349,22 @@ function BenefitsSection() {
             {
               icon: <AutoGraphIcon />,
               title: "Hiểu năng lực học tập",
-              desc: "Phân tích điểm mạnh – điểm yếu và theo dõi tiến trình học theo dữ liệu thật.",
+              desc: "Giúp bạn nhận ra điểm mạnh, điểm cần cải thiện và theo dõi tiến trình học dựa trên dữ liệu thật.",
             },
             {
               icon: <ExploreIcon />,
               title: "Định hướng nghề nghiệp",
-              desc: "Gợi ý ngành nghề phù hợp, có giải thích lý do và lộ trình phát triển.",
+              desc: "Gợi ý những hướng nghề nghiệp phù hợp, kèm theo lý do và lộ trình để bạn dễ hình dung và lựa chọn.",
             },
             {
               icon: <FavoriteIcon />,
               title: "Chăm sóc cảm xúc",
-              desc: "Nhận diện cảm xúc, giải tỏa áp lực và nâng đỡ tinh thần học đường.",
+              desc: "Nhận diện cảm xúc, giúp bạn giải tỏa áp lực và giữ cân bằng tinh thần trong quá trình học tập.",
             },
             {
               icon: <SmartToyIcon />,
               title: "Trợ lý học tập AI",
-              desc: "Giải thích bài, gợi ý bài tập, hỗ trợ học chủ động mỗi ngày.",
+              desc: "Hỗ trợ giải thích bài, gợi ý cách luyện tập và đồng hành cùng bạn trong việc học mỗi ngày.",
             },
           ].map((it) => (
             <Grid key={it.title} item xs={12} sm={6} md={3}>
@@ -436,22 +435,22 @@ function FlowSection() {
     () => [
       {
         title: "Thu thập dữ liệu",
-        desc: "Điểm số, môn học, kỹ năng, mục tiêu và (tùy chọn) nhật ký cảm xúc.",
+        desc: "Thu thập những thông tin cần thiết như điểm số, môn học, kỹ năng, mục tiêu học tập và (nếu bạn muốn) trạng thái cảm xúc.",
         bullets: ["Hồ sơ học tập", "Hồ sơ năng lực", "Tương tác cảm xúc"],
       },
       {
         title: "AI phân tích & cá nhân hóa",
-        desc: "Nhận diện điểm mạnh/yếu, xu hướng tiến bộ và nhu cầu hỗ trợ phù hợp.",
+        desc: "Phân tích dữ liệu để nhận ra điểm mạnh, điểm cần cải thiện, xu hướng tiến bộ và những hỗ trợ bạn đang cần.",
         bullets: ["Phân tích theo thời gian", "Xác định ưu tiên", "Gợi ý rõ ràng"],
       },
       {
         title: "Gợi ý học tập & nghề nghiệp",
-        desc: "Đề xuất lộ trình học, kỹ năng cần bổ sung và hướng đi nghề nghiệp phù hợp.",
+        desc: "Gợi ý lộ trình học tập, kỹ năng cần bổ sung và những hướng nghề nghiệp phù hợp với năng lực hiện tại.",
         bullets: ["Lộ trình cải thiện", "Kỹ năng/chứng chỉ", "Lý do đề xuất"],
       },
       {
         title: "Đồng hành & tối ưu liên tục",
-        desc: "Theo dõi tiến bộ, cập nhật mục tiêu và điều chỉnh gợi ý theo dữ liệu mới.",
+        desc: "Đồng hành lâu dài bằng cách theo dõi tiến bộ, cập nhật mục tiêu và điều chỉnh gợi ý khi bạn thay đổi.",
         bullets: ["Báo cáo tiến trình", "Điều chỉnh mục tiêu", "Phát triển bền vững"],
       },
     ],
@@ -548,7 +547,7 @@ function ModulesSection() {
       VIREYA: {
         title: "VIREYA — Phân tích học tập & định hướng học tập",
         summary:
-          "Theo dõi hồ sơ học tập, phân tích điểm mạnh/yếu và đề xuất lộ trình cải thiện phù hợp với năng lực cá nhân.",
+          "VIREYA giúp bạn theo dõi hồ sơ học tập, nhận ra điểm mạnh, điểm cần cải thiện và gợi ý lộ trình học phù hợp với năng lực của bạn.",
         highlights: [
           "Hồ sơ học tập & nhập điểm",
           "Biểu đồ tiến trình theo thời gian",
@@ -558,7 +557,7 @@ function ModulesSection() {
       NEOVANA: {
         title: "NEOVANA — Năng lực & định hướng nghề nghiệp",
         summary:
-          "Phân tích năng lực, sở thích và mục tiêu để đề xuất nghề nghiệp phù hợp, kèm lý do và lộ trình kỹ năng/chứng chỉ.",
+          "NEOVANA phân tích năng lực, sở thích và mục tiêu để gợi ý những hướng nghề nghiệp phù hợp, kèm theo lý do và lộ trình rõ ràng.",
         highlights: [
           "Hồ sơ năng lực (skills, chứng chỉ, minh chứng)",
           "Gợi ý nghề nghiệp có giải thích",
@@ -568,7 +567,7 @@ function ModulesSection() {
       ZENORA: {
         title: "ZENORA — Trợ lý cảm xúc AI",
         summary:
-          "Nhận diện cảm xúc từ văn bản và cung cấp công cụ giải tỏa như Void Zone, hố đen cảm xúc, đám mây chữa lành.",
+          "ZENORA giúp nhận diện cảm xúc và mang đến những không gian nhẹ nhàng để bạn giải tỏa, thư giãn và cân bằng lại tinh thần.",
         highlights: [
           "Phản hồi cảm xúc tức thời",
           "Không gian chữa lành & thư giãn",

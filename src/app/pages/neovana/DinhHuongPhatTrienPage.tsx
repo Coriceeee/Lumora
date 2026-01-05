@@ -24,7 +24,13 @@ import { industrySkillProfiles } from "./data/industrySkills";
 import { explainMatch } from "../../../utils/matchExplanation";
 import { generateRoadmap } from "../../../utils/careerRoadmap";
 
-const SKILL_LABELS: Record<string, string> = {};
+const SKILL_LABELS: Record<string, string> = {
+  logic: "Tư duy logic",
+  problemSolving: "Giải quyết vấn đề",
+  selfLearning: "Tự học",
+  communication: "Giao tiếp",
+  teamwork: "Làm việc nhóm",
+};
 
 interface IndustryProfile {
   description: string;
@@ -118,8 +124,14 @@ interface SkillGapRadarProps {
 const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
   axes,
   seriesA,
+  seriesB,
 }) => {
-  const dataA = axes.map((skill) => ({ skill, value: seriesA.map[skill] || 0 }));
+  const dataA = axes.map((skill) => ({
+    skill,
+    valueA: seriesA.map[skill] || 0,
+    valueB: seriesB?.map?.[skill] || null,
+  }));
+
 
   if (!dataA || dataA.length === 0) {
      return (
@@ -129,7 +141,7 @@ const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
     );
   }
 
-  const maxGap = Math.max(...dataA.map((d) => d.value));
+    const maxGap = Math.max(...dataA.map((d) => d.valueA));
 
   return (
     <Box
@@ -146,7 +158,7 @@ const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
       </Typography>
 
       {dataA.map((item, index) => {
-        const isMax = item.value === maxGap;
+        const isMax = item.valueA === maxGap;
 
         return (
           <Box
@@ -171,7 +183,7 @@ const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
             </Typography>
 
             <Typography sx={{ fontSize: 14, mt: 0.5 }}>
-              Khoảng cách hiện tại: <strong>{item.value}</strong> điểm
+              Khoảng cách hiện tại: <strong>{item.valueA}</strong> điểm
             </Typography>
           </Box>
         );
@@ -181,6 +193,22 @@ const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
 };
 
 const DinhHuongPhatTrienPage: React.FC = () => {
+  // import ...
+
+// ====== UTILS / HELPERS (ĐẶT Ở ĐÂY) ======
+function getMatchedSkillCount(
+  userSkills: Record<string, number>,
+  industrySkills: Record<string, number>
+) {
+  return Object.keys(industrySkills).filter(
+    (s) => userSkills[s] !== undefined
+  ).length;
+}
+
+// (các helper khác nếu có: pct, normalizePercent, calculateReadiness...)
+
+// ====== COMPONENT ======
+
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
   const [selected, setSelected] = useState<CareerDashboard | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -279,6 +307,23 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     if (!compareCareer || compareCareer === selectedCareer) return [];
     return computeSkillGap(userSkills, compareCareer);
   }, [userSkills, compareCareer, selectedCareer]);
+  
+// ===== READINESS CALCULATION =====
+const industrySkillsA = industrySkillProfiles[selectedCareer]?.skills || {};
+const matchedCountA = getMatchedSkillCount(userSkills, industrySkillsA);
+
+const readinessA =
+  matchedCountA === 0
+    ? null
+    : calculateReadiness(userSkills, industrySkillsA);
+
+const readinessB =
+  compareCareer && industrySkillProfiles[compareCareer]
+    ? calculateReadiness(
+        userSkills,
+        industrySkillProfiles[compareCareer].skills
+      )
+    : null;
 
   const biggestSkillGapA = skillGapDataA?.[0];
   const biggestSkillGapB = skillGapDataB?.[0];
@@ -308,51 +353,72 @@ const clamp01_100 = (v: number): number =>
 
     // ===== AI explanation theo từng trục kỹ năng =====
 
-const axes = Object.keys(industry?.skills || []);
+const axes = useMemo(
+  () => Object.keys(industry?.skills || {}),
+  [industry]
+);
 
-const axisExplanations = axes.map((skill) => {
-  const a = skillGapDataA.find((s) => s.skill === skill);
-  const b = skillGapDataB?.find((s) => s.skill === skill);
 
-  const ga = a ? pct(a.gap) : 0;
-  const gb = b ? pct(b.gap) : 0;
+const axisExplanations = useMemo(() => {
+  const reqA =
+    (industrySkillProfiles[selectedCareer] as any)?.skills || {};
+  const reqB = compareCareer
+    ? (industrySkillProfiles[compareCareer] as any)?.skills || {}
+    : {};
 
-  let text = "";
+  return axes.map((skill) => {
+    const requiredA = clamp01_100(reqA?.[skill] ?? 0);
+    const requiredB = clamp01_100(reqB?.[skill] ?? 0);
+    const current = clamp01_100(userSkills?.[skill] ?? 0);
 
-  if (ga >= 30) {
-    text = `AI nhận thấy ${SKILL_LABELS[skill] || skill} là điểm thiếu hụt lớn so với yêu cầu ngành ${selectedCareer}. Đây là kỹ năng nên ưu tiên cải thiện sớm.`;
-  } else if (ga >= 15) {
-    text = `${SKILL_LABELS[skill] || skill} đang ở mức trung bình. Nếu rèn luyện thêm, bạn sẽ theo kịp yêu cầu ngành.`;
-  } else {
-    text = `${SKILL_LABELS[skill] || skill} đã tương đối phù hợp với yêu cầu ngành hiện tại.`;
+    const gapA = clamp01_100(requiredA - current);
+    const gapB = clamp01_100(requiredB - current);
+
+    let text = "";
+    if (gapA >= 30)
+      text =
+        "Kỹ năng này đang thiếu nhiều so với yêu cầu ngành. Nên ưu tiên học sớm.";
+    else if (gapA >= 15)
+      text =
+        "Bạn có nền tảng nhưng cần luyện thêm để theo kịp yêu cầu thực tế.";
+    else
+      text =
+        "Mức độ hiện tại khá phù hợp với yêu cầu ngành, nên duy trì và nâng cao.";
+
+    return {
+      skill,
+      ga: gapA,
+      gb: compareCareer ? gapB : 0,
+      current,
+      requiredA,
+      requiredB,
+      text,
+    };
+  });
+}, [axes, userSkills, selectedCareer, compareCareer]);
+
+
+function calculateReadiness(
+  userSkills: Record<string, number>,
+  industrySkills: Record<string, number>
+): number {
+  let totalIndustry = 0;
+  let totalUser = 0;
+
+  for (const skill in industrySkills) {
+    const industryLevel = industrySkills[skill];
+    const userLevel = userSkills[skill] ?? 0;
+
+    totalIndustry += industryLevel;
+    totalUser += Math.min(userLevel, industryLevel); 
+    // 👈 không cho vượt quá yêu cầu ngành
   }
 
-  return {
-    skill,
-    ga,
-    gb,
-    text,
-  };
-});
+  if (totalIndustry === 0) return 0;
 
+  return Math.round((totalUser / totalIndustry) * 100);
+}
 
-  const readinessA = useMemo(() => {
-    // ước lượng “mức sẵn sàng” = 100 - trung bình gap (top 10)
-    const mapA = toGapMap(skillGapDataA);
-    const top = axes.slice(0, 10);
-    if (top.length === 0) return 100;
-    const avg = top.reduce((sum, s) => sum + (mapA[s] || 0), 0) / top.length;
-    return pct(100 - avg);
-  }, [axes, skillGapDataA]);
-
-  const readinessB = useMemo(() => {
-    if (!compareCareer || compareCareer === selectedCareer) return null;
-    const mapB = toGapMap(skillGapDataB);
-    const top = axes.slice(0, 10);
-    if (top.length === 0) return 100;
-    const avg = top.reduce((sum, s) => sum + (mapB[s] || 0), 0) / top.length;
-    return pct(100 - avg);
-  }, [axes, skillGapDataB, compareCareer, selectedCareer]);
 
   
 
@@ -572,181 +638,6 @@ const axisExplanations = axes.map((skill) => {
             <Box>
               <SummaryCard dashboard={selected} />
 
-              {/* ⭐ SKILL GAP + COMPARE + AI AXIS EXPLANATION */}
-
-                <div className="card p-4" style={floatingCardStyle}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div>
-                      <h3 style={{ fontWeight: 800, fontSize: 20, marginBottom: 6 }}>
-                        🌟 Khoảng cách kỹ năng (Radar)
-                      </h3>
-                      <div style={{ color: "#444", fontWeight: 600 }}>
-                        Ngành chính: <span style={{ color: "#4f46e5" }}>{selectedCareer}</span>
-                      </div>
-                      {biggestSkillGapA && (
-                        <div style={{ marginTop: 8, color: "#444" }}>
-                          Ưu tiên nhất:{" "}
-                          <strong style={{ color: "#4f46e5" }}>
-                            {biggestSkillGapA.skill}
-                          </strong>{" "}
-                          (thiếu {pct(biggestSkillGapA.gap)}%)
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Compare selector */}
-                    <div style={{ minWidth: 260 }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6 }}>✨ So sánh 2 ngành</div>
-                      <select
-                        value={compareCareer}
-                        onChange={(e) => setCompareCareer(e.target.value)}
-                        style={{
-                          width: "100%",
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          border: "1px solid rgba(79,70,229,0.25)",
-                          outline: "none",
-                          fontWeight: 700,
-                          background: "rgba(79,70,229,0.04)",
-                        }}
-                      >
-                        <option value="">(Tắt so sánh)</option>
-                        {sortedCareers
-                          .map((c) => c?.name)
-                          .filter(Boolean)
-                          .filter((name) => name !== selectedCareer)
-                          .map((name) => (
-                            <option key={name} value={name}>
-                              {name}
-                            </option>
-                          ))}
-                      </select>
-
-                      <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <div
-                          style={{
-                            padding: "8px 10px",
-                            borderRadius: 12,
-                            background: "rgba(79,70,229,0.08)",
-                            border: "1px solid rgba(79,70,229,0.16)",
-                            fontWeight: 800,
-                            color: "#2f2a8a",
-                          }}
-                        >
-                          Sẵn sàng ({selectedCareer}): {readinessA}%
-                        </div>
-                        {readinessB !== null && compareCareer && (
-                          <div
-                            style={{
-                              padding: "8px 10px",
-                              borderRadius: 12,
-                              background: "rgba(255,140,90,0.10)",
-                              border: "1px solid rgba(255,140,90,0.22)",
-                              fontWeight: 800,
-                              color: "#8a3a15",
-                            }}
-                          >
-                            Sẵn sàng ({compareCareer}): {readinessB}%
-                          </div>
-                        )}
-                      </div>
-
-                      {compareCareer && compareCareer !== selectedCareer && biggestSkillGapB && (
-                        <div style={{ marginTop: 10, color: "#444" }}>
-                          Ưu tiên nhất ({compareCareer}):{" "}
-                          <strong style={{ color: "#ff8c5a" }}>
-                            {biggestSkillGapB.skill}
-                          </strong>{" "}
-                          (thiếu {pct(biggestSkillGapB.gap)}%)
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={{ marginTop: 18 }}>
-                    <SkillGapRadar
-                      axes={axes}
-                      seriesA={{ label: selectedCareer, map: toGapMap(skillGapDataA) }}
-                      seriesB={
-                        compareCareer && compareCareer !== selectedCareer
-                          ? { label: compareCareer, map: toGapMap(skillGapDataB) }
-                          : undefined
-                      }
-                    />
-                  </div>
-
-                  {/* AI explanation per axis */}
-                  {axisExplanations.length > 0 && (
-  <div style={{ marginTop: 18 }}>
-    <h4 style={{ fontWeight: 900, fontSize: 18, marginBottom: 10 }}>
-      ✨ Lời giải thích AI theo từng trục kỹ năng
-    </h4>
-
-    <div style={{ display: "grid", gap: 10 }}>
-      {axisExplanations.map((ax) => {
-        const isMaxA = biggestSkillGapA?.skill === ax.skill;
-        const isMaxB = biggestSkillGapB?.skill === ax.skill;
-
-        return (
-          <div
-            key={ax.skill}
-            style={{
-              padding: "12px 14px",
-              borderRadius: 16,
-              background: isMaxA
-                ? "rgba(79,70,229,0.12)"
-                : isMaxB
-                ? "rgba(255,140,90,0.10)"
-                : "rgba(0,0,0,0.03)",
-              border: "1px solid rgba(0,0,0,0.06)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 10,
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ fontWeight: 900 }}>
-                {SKILL_LABELS[ax.skill] || ax.skill}
-
-                {isMaxA && (
-                  <span style={{ marginLeft: 8, color: "#4f46e5" }}>
-                    (Gap lớn nhất – {selectedCareer})
-                  </span>
-                )}
-                {isMaxB && compareCareer && (
-                  <span style={{ marginLeft: 8, color: "#ff8c5a" }}>
-                    (Gap lớn nhất – {compareCareer})
-                  </span>
-                )}
-              </div>
-
-              <div style={{ fontWeight: 800 }}>
-                {selectedCareer}:{" "}
-                <span style={{ color: "#4f46e5" }}>{ax.ga}%</span>
-                {compareCareer && (
-                  <>
-                    {" "}• {compareCareer}:{" "}
-                    <span style={{ color: "#ff8c5a" }}>{ax.gb}%</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginTop: 8, color: "#444", lineHeight: 1.55 }}>
-              {ax.text}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-)}
-
-</div>
 
 
               {/* ⭐ INDUSTRY PROFILE & MATCH REASONING */}
@@ -807,16 +698,10 @@ const axisExplanations = axes.map((skill) => {
 
               <Box sx={{ mt: 6 }}>
      <CareersCard
-  careers={sortedCareers.map((c) => {
-    const percent: number = clamp01_100(
-      normalizePercent(c.fitScore ?? (c as any).percent)
-    );
-
-    return {
-      ...c,
-      percent, // ✔ number
-    };
-  })}
+  careers={sortedCareers.map((c) => ({
+    ...c,
+    percent: clamp01_100(normalizePercent(c.fitScore ?? c.percent)),
+  }))}
 />
 
 
@@ -871,3 +756,19 @@ const axisExplanations = axes.map((skill) => {
 };
 
 export default DinhHuongPhatTrienPage;
+function getMatchedSkillCount(
+  userSkills: Record<string, number>,
+  industrySkills: Record<string, number>
+): number {
+  let count = 0;
+  for (const skill in industrySkills) {
+    if (
+      Object.prototype.hasOwnProperty.call(industrySkills, skill) &&
+      (userSkills[skill] ?? 0) > 0
+    ) {
+      count++;
+    }
+  }
+  return count;
+}
+

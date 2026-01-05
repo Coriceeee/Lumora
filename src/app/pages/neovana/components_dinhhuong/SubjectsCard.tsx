@@ -68,12 +68,22 @@ const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
       </div>
     );
   }
+const normalizePercent = (v: any): number => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+
+  // Nếu backend trả 0–1 → đổi sang %
+  if (n > 0 && n <= 1) return Math.round(n * 100);
+
+  // Nếu đã là 0–100 → giữ nguyên
+  return Math.round(n);
+};
 
   return (
     <div className="grid gap-4 md:grid-cols-2 p-5 rounded-3xl bg-gradient-to-br from-indigo-50 to-white shadow-lg hover:shadow-xl transition-all duration-300">
       {trail.map((style, idx) => {
         const s = subjects[idx];
-        const ratio = Number(s.priorityRatio) || 0;
+        const ratio = normalizePercent(s.priorityRatio);
         const ratioColor =
           ratio >= 80
             ? "#22c55e"
