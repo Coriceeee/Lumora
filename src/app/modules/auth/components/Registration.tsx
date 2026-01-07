@@ -19,49 +19,39 @@ const initialValues = {
 
 const registrationSchema = Yup.object().shape({
   firstname: Yup.string()
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("First name is required"),
-  email: Yup.string()
-    .email("Wrong email format")
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("Email is required"),
+    .min(3, "Ít nhất 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập tên"),
   lastname: Yup.string()
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("Last name is required"),
+    .min(3, "Ít nhất 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập họ"),
+  email: Yup.string()
+    .email("Email không hợp lệ")
+    .min(3, "Ít nhất 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập email"),
   password: Yup.string()
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("Password is required"),
+    .min(3, "Ít nhất 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập mật khẩu"),
   changepassword: Yup.string()
-    .required("Password confirmation is required")
-    .when("password", {
-      is: (val: string) => (val && val.length > 0 ? true : false),
-      then: Yup.string().oneOf(
-        [Yup.ref("password")],
-        "Password and Confirm Password didn't match"
-      ),
-    }),
-  acceptTerms: Yup.bool().required("You must accept the terms and conditions"),
+    .required("Vui lòng xác nhận mật khẩu")
+    .oneOf([Yup.ref("password")], "Mật khẩu không khớp"),
+  acceptTerms: Yup.bool().required("Bạn phải đồng ý với điều khoản"),
 });
 
 export function Registration() {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
+
   const formik = useFormik({
     initialValues,
     validationSchema: registrationSchema,
     onSubmit: (values, { setStatus, setSubmitting }) => {
       setLoading(true);
       setTimeout(() => {
-        register(
-          values.email,
-          values.firstname,
-          values.lastname,
-          values.password
-        )
+        register(values.email, values.firstname, values.lastname, values.password)
           .then(({ data: { accessToken } }) => {
             setLoading(false);
             dispatch(auth.actions.login(accessToken));
@@ -69,27 +59,19 @@ export function Registration() {
           .catch(() => {
             setLoading(false);
             setSubmitting(false);
-            setStatus("Registration process has broken");
+            setStatus("Đăng ký thất bại. Vui lòng thử lại.");
           });
       }, 1000);
     },
   });
 
   return (
-    <form
-      className="form w-100"
-      noValidate
-      id="kt_login_signup_form"
-      onSubmit={formik.handleSubmit}
-    >
-      {/* begin::Title */}
+    <form className="form w-100" noValidate onSubmit={formik.handleSubmit}>
+      {/* Tiêu đề */}
       <div className="pb-5 pb-lg-15">
-        <h3 className="fw-bolder text-dark display-6">Sign Up</h3>
-        <p className="text-muted fw-bold fs-3">
-          Enter your details to create your account
-        </p>
+        <h3 className="fw-bolder text-dark display-6">Tạo tài khoản</h3>
+        <p className="text-muted fw-bold fs-3">Điền thông tin để đăng ký</p>
       </div>
-      {/* end::Title */}
 
       {formik.status && (
         <div className="mb-lg-15 alert alert-danger">
@@ -97,13 +79,11 @@ export function Registration() {
         </div>
       )}
 
-      {/* begin::Form group Firstname */}
+      {/* Tên */}
       <div className="fv-row mb-5">
-        <label className="form-label fs-6 fw-bolder text-dark pt-5">
-          First name
-        </label>
+        <label className="form-label fs-6 fw-bolder text-dark pt-5">Tên</label>
         <input
-          placeholder="First name"
+          placeholder="Tên"
           type="text"
           autoComplete="off"
           {...formik.getFieldProps("firstname")}
@@ -111,27 +91,20 @@ export function Registration() {
             "form-control form-control-lg form-control-solid",
             {
               "is-invalid": formik.touched.firstname && formik.errors.firstname,
-            },
-            {
               "is-valid": formik.touched.firstname && !formik.errors.firstname,
             }
           )}
         />
         {formik.touched.firstname && formik.errors.firstname && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">{formik.errors.firstname}</div>
-          </div>
+          <div className="fv-help-block">{formik.errors.firstname}</div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group Lastname */}
+      {/* Họ */}
       <div className="fv-row mb-5">
-        <label className="form-label fs-6 fw-bolder text-dark pt-5">
-          Last name
-        </label>
+        <label className="form-label fs-6 fw-bolder text-dark pt-5">Họ</label>
         <input
-          placeholder="Last name"
+          placeholder="Họ"
           type="text"
           autoComplete="off"
           {...formik.getFieldProps("lastname")}
@@ -139,25 +112,18 @@ export function Registration() {
             "form-control form-control-lg form-control-solid",
             {
               "is-invalid": formik.touched.lastname && formik.errors.lastname,
-            },
-            {
               "is-valid": formik.touched.lastname && !formik.errors.lastname,
             }
           )}
         />
         {formik.touched.lastname && formik.errors.lastname && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">{formik.errors.lastname}</div>
-          </div>
+          <div className="fv-help-block">{formik.errors.lastname}</div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group Email */}
+      {/* Email */}
       <div className="fv-row mb-5">
-        <label className="form-label fs-6 fw-bolder text-dark pt-5">
-          Email
-        </label>
+        <label className="form-label fs-6 fw-bolder text-dark pt-5">Email</label>
         <input
           placeholder="Email"
           type="email"
@@ -165,56 +131,44 @@ export function Registration() {
           {...formik.getFieldProps("email")}
           className={clsx(
             "form-control form-control-lg form-control-solid",
-            { "is-invalid": formik.touched.email && formik.errors.email },
             {
+              "is-invalid": formik.touched.email && formik.errors.email,
               "is-valid": formik.touched.email && !formik.errors.email,
             }
           )}
         />
         {formik.touched.email && formik.errors.email && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">{formik.errors.email}</div>
-          </div>
+          <div className="fv-help-block">{formik.errors.email}</div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group Password */}
+      {/* Mật khẩu */}
       <div className="fv-row mb-5">
-        <label className="form-label fs-6 fw-bolder text-dark pt-5">
-          Password
-        </label>
+        <label className="form-label fs-6 fw-bolder text-dark pt-5">Mật khẩu</label>
         <input
           type="password"
-          placeholder="Password"
+          placeholder="Mật khẩu"
           autoComplete="off"
           {...formik.getFieldProps("password")}
           className={clsx(
             "form-control form-control-lg form-control-solid",
             {
               "is-invalid": formik.touched.password && formik.errors.password,
-            },
-            {
               "is-valid": formik.touched.password && !formik.errors.password,
             }
           )}
         />
         {formik.touched.password && formik.errors.password && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">{formik.errors.password}</div>
-          </div>
+          <div className="fv-help-block">{formik.errors.password}</div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group Confirm password */}
+      {/* Xác nhận mật khẩu */}
       <div className="fv-row mb-10">
-        <label className="form-label fs-6 fw-bolder text-dark pt-5">
-          Confirm Password
-        </label>
+        <label className="form-label fs-6 fw-bolder text-dark pt-5">Xác nhận mật khẩu</label>
         <input
           type="password"
-          placeholder="Password confirmation"
+          placeholder="Nhập lại mật khẩu"
           autoComplete="off"
           {...formik.getFieldProps("changepassword")}
           className={clsx(
@@ -222,22 +176,17 @@ export function Registration() {
             {
               "is-invalid":
                 formik.touched.changepassword && formik.errors.changepassword,
-            },
-            {
               "is-valid":
                 formik.touched.changepassword && !formik.errors.changepassword,
             }
           )}
         />
         {formik.touched.changepassword && formik.errors.changepassword && (
-          <div className="fv-plugins-message-container">
-            <div className="fv-help-block">{formik.errors.changepassword}</div>
-          </div>
+          <div className="fv-help-block">{formik.errors.changepassword}</div>
         )}
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group */}
+      {/* Điều khoản */}
       <div className="fv-row mb-10">
         <div className="form-check form-check-custom form-check-solid mb-5">
           <input
@@ -250,50 +199,45 @@ export function Registration() {
             className="form-check-label fw-bold text-gray-600"
             htmlFor="kt_login_toc_agree"
           >
-            I Agree the{" "}
+            Tôi đồng ý với{" "}
             <Link to="/auth/terms" className="ms-1">
-              terms and conditions
+              điều khoản sử dụng
             </Link>
             .
           </label>
           {formik.touched.acceptTerms && formik.errors.acceptTerms && (
-            <div className="fv-plugins-message-container">
-              <div className="fv-help-block">{formik.errors.acceptTerms}</div>
-            </div>
+            <div className="fv-help-block">{formik.errors.acceptTerms}</div>
           )}
         </div>
       </div>
-      {/* end::Form group */}
 
-      {/* begin::Form group */}
+      {/* Nút hành động */}
       <div className="d-flex flex-wrap pb-lg-0 pb-5">
         <button
           type="submit"
-          id="kt_login_signup_form_submit_button"
           className="btn btn-primary fw-bolder fs-6 px-8 py-4 my-3 me-4"
           disabled={
             formik.isSubmitting || !formik.isValid || !formik.values.acceptTerms
           }
         >
-          {!loading && <span className="indicator-label">Submit</span>}
+          {!loading && <span className="indicator-label">Đăng ký</span>}
           {loading && (
             <span className="indicator-progress" style={{ display: "block" }}>
-              Please wait...{" "}
+              Vui lòng chờ...
               <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
             </span>
           )}
         </button>
+
         <Link to="/auth/login">
           <button
             type="button"
-            id="kt_login_signup_form_cancel_button"
             className="btn btn-light-primary fw-bolder fs-6 px-8 py-4 my-3"
           >
-            Cancel
+            Hủy
           </button>
         </Link>
       </div>
-      {/* end::Form group */}
     </form>
   );
 }

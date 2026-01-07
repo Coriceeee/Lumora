@@ -1,11 +1,14 @@
 import React, { useEffect } from "react";
-import { Redirect, Route, Switch, Link } from "react-router-dom";
+import { Redirect, Route, Switch, Link, useHistory } from "react-router-dom";
 import { Registration } from "./components/Registration";
 import { ForgotPassword } from "./components/ForgotPassword";
 import { Login } from "./components/Login";
 import { toAbsoluteUrl } from "../../../_start/helpers";
 
 export function AuthPage() {
+  const history = useHistory();
+  const navigate = (path: string): void => history.push(path); // ✅ Thống nhất cách gọi
+
   useEffect(() => {
     document.body.classList.add("bg-white");
     return () => {
@@ -15,15 +18,11 @@ export function AuthPage() {
 
   return (
     <div className="d-flex flex-column flex-root">
-      <div
-        className="d-flex flex-column flex-lg-row flex-column-fluid"
-        id="kt_login"
-      >
+      <div className="d-flex flex-column flex-lg-row flex-column-fluid" id="kt_login">
         {/* Aside */}
         <div className="d-flex flex-column flex-lg-row-auto bg-primary w-lg-600px pt-15 pt-lg-0">
-          {/* Top */}
+          {/* Logo + subtitle */}
           <div className="d-flex flex-column-auto flex-column pt-lg-40 pt-15 text-center">
-            {/* begin::Aside Logo */}
             <Link to="/" className="mb-6">
               <img
                 alt="Logo"
@@ -31,9 +30,7 @@ export function AuthPage() {
                 className="h-75px"
               />
             </Link>
-            {/* end::Aside Logo */}
 
-            {/* begin::Aside Subtitle */}
             <h3 className="fw-bolder fs-2x text-white lh-lg">
               Vũ trụ AI giáo dục toàn diện
               <br />
@@ -41,10 +38,9 @@ export function AuthPage() {
               <br />
               đủ can đảm là chính mình."
             </h3>
-            {/* end::Aside Subtitle */}
           </div>
 
-          {/* Bottom */}
+          {/* Background illustration */}
           <div
             className="d-flex flex-row-fluid bgi-size-contain bgi-no-repeat bgi-position-y-bottom bgi-position-x-center min-h-350px"
             style={{
@@ -66,17 +62,10 @@ export function AuthPage() {
               <Redirect to="/auth/login" />
             </Switch>
           </div>
-          <div className="d-flex justify-content-lg-start justify-content-center align-items-center py-7 py-lg-0">
-            <span className="text-primary fw-bolder fs-4 cursor-pointer">
-              Terms
-            </span>
-            <span className="text-primary ms-10 fw-bolder fs-4">Plans</span>
-            <span className="text-primary ms-10 fw-bolder fs-4">
-              Contact Us
-            </span>
+
+
           </div>
         </div>
       </div>
-    </div>
   );
 }

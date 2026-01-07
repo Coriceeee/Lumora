@@ -128,59 +128,63 @@ export const StartDashboardPage: React.FC = () => {
 
   // ================= RENDER =================
   return (
-    <>
-      {/* 🌌 ONBOARDING – BLOCK WEB */}
-      <LumoraOnboarding
-        open={showOnboarding}
-        onFinish={closeOnboarding}
-        onSkipForever={skipOnboardingForever}
-        isFirstTime={isFirstTime}
-      />
+  <>
+    {/* 🌌 ONBOARDING – BLOCK WEB */}
+    <LumoraOnboarding
+      open={showOnboarding}
+      onFinish={closeOnboarding}
+      onSkipForever={skipOnboardingForever}
+      isFirstTime={isFirstTime}
+    />
 
-      {/* ================= ROW 1 – NGHỀ NGHIỆP ================= */}
-      <div className="row g-0 g-xl-5 g-xxl-8">
-        <div className="col-xl-4">
-          <EngageWidget5 className="card-stretch mb-5 mb-xxl-8">
-            <div className="text-center pt-7">
-              <Link
-                id="menu-vireya"
-                to="/vireya/ket-qua-hoc-tap"
-                className="btn btn-primary fw-bolder fs-6 px-7 py-3"
-              >
-                Cập nhật
-              </Link>
-            </div>
-          </EngageWidget5>
-        </div>
+    {/* ================= ROW 1 – NGHỀ NGHIỆP ================= */}
+    <div className="row g-0 g-xl-5 g-xxl-8">
+      <div className="col-xl-4">
+        <EngageWidget5 className="card-stretch mb-5 mb-xxl-8">
+          <div className="text-center pt-7">
+            <Link
+              id="menu-vireya"
+              to="/vireya/ket-qua-hoc-tap"
+              className="btn btn-primary fw-bolder fs-6 px-7 py-3"
+            >
+              Cập nhật
+            </Link>
+          </div>
+        </EngageWidget5>
+      </div>
 
+      {!showOnboarding && (
         <div id="menu-neovana" className="col-xl-8">
           <CareersCard
             careers={selectedCareerDashboard?.careers || []}
           />
         </div>
+      )}
+    </div>
+
+    {/* ================= ROW 2 – MÔN HỌC ================= */}
+    <div className="row g-0 g-xl-5 g-xxl-8 mt-5">
+      <div className="col-xl-4">
+        <ListsWidget1 className="card-stretch mb-5 mb-xxl-8" />
       </div>
 
-      {/* ================= ROW 2 – MÔN HỌC ================= */}
-      <div className="row g-0 g-xl-5 g-xxl-8 mt-5">
-        <div className="col-xl-4">
-          <ListsWidget1 className="card-stretch mb-5 mb-xxl-8" />
-        </div>
-
+      {!showOnboarding && (
         <div id="menu-zenora" className="col-xl-8">
           <KeySubjectsCard
             selectedDashboard={selectedLearningDashboard}
           />
         </div>
-      </div>
+      )}
+    </div>
 
-      {/* ROBOKI (placeholder highlight) */}
-      <div id="menu-roboki" />
+    {/* ROBOKI (placeholder highlight) */}
+    <div id="menu-roboki" />
 
-      {/* ================= MODAL ================= */}
-      <CreateAppModal
-        show={show}
-        handleClose={() => setShow(false)}
-      />
-    </>
-  );
+    {/* ================= MODAL ================= */}
+    <CreateAppModal
+      show={show}
+      handleClose={() => setShow(false)}
+    />
+  </>
+);
 };

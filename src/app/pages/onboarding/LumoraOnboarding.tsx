@@ -11,23 +11,41 @@ import {
 type Gender = "female" | "male" | null;
 
 /* ================== STEP CONTENT ================== */
+interface StepContent {
+  title: string;
+  description: string;
+  target?: string;
+}
+
 const steps = [
   {
-    title: "Bắt đầu từ điểm số học tập",
-    text: "Để bắt đầu hành trình của bạn, hãy cập nhật điểm số gần nhất. Lumora cần dữ liệu thật để hiểu đúng năng lực của bạn.",
+    title: "Chào bạn, mình là Lumora",
+    text: "Để đồng hành cùng bạn trên hành trình học tập và định hướng tương lai, mình cần hiểu rõ bạn một chút trước đã.",
     target: "#menu-vireya",
   },
   {
-    title: "Chăm sóc cảm xúc khi học",
-    text: "Học tập không phải lúc nào cũng dễ. Khi mệt hoặc căng thẳng, bạn có thể dừng lại và trò chuyện với Lumora.",
+    title: "Bắt đầu từ chính bạn",
+    text: "Hãy bấm nút 'Cập nhật' ở trang chủ hoặc vào mục 'Kết quả học tập' trong VIREYA để nhập điểm số. Càng đầy đủ, mình càng gợi ý chính xác.",
+    target: "#menu-vireya",
+  },
+  {
+    title: "Vẽ ra con đường của riêng bạn",
+    text: "Giỏi gì, thích gì, phù hợp ngành nào? Vào NEOVANA, cập nhật hồ sơ năng lực để mình gợi ý lộ trình nghề nghiệp sát với bạn nhất.",
+    target: "#menu-neovana",
+  },
+  {
+    title: "Lắng nghe chính mình",
+    text: "Nếu thấy mệt mỏi hay nặng lòng, hãy ghé ZENORA. Viết vài dòng ở Void Zone hoặc Cloudwhisper để cảm xúc được giải tỏa nhẹ nhàng.",
     target: "#menu-zenora",
   },
   {
-    title: "Luôn có người đồng hành",
-    text: "Khi bạn cần hỏi, cần nhắc lại, hoặc cần một lời động viên – Roboki luôn ở đây.",
+    title: "Và bạn không học một mình",
+    text: "Vào ROBOKI khi cần giải bài, luyện thi hay tìm ý tưởng. Trợ giảng AI này sẽ hỗ trợ bạn 24/7, luôn kiên nhẫn và không bao giờ cáu.",
     target: "#menu-roboki",
   },
 ];
+
+
 
 interface Props {
   open: boolean;

@@ -24,14 +24,14 @@ import {
 
 const loginSchema = Yup.object().shape({
   email: Yup.string()
-    .email("Wrong email format")
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("Email is required"),
+    .email("Email không hợp lệ")
+    .min(3, "Tối thiểu 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập email"),
   password: Yup.string()
-    .min(3, "Minimum 3 symbols")
-    .max(50, "Maximum 50 symbols")
-    .required("Password is required"),
+    .min(3, "Tối thiểu 3 ký tự")
+    .max(50, "Tối đa 50 ký tự")
+    .required("Vui lòng nhập mật khẩu"),
 });
 
 const initialValues = {
@@ -49,7 +49,6 @@ async function ensureUserInFirestore(user: {
   const ref = doc(db, "users", user.uid);
   const snap = await getDoc(ref);
 
-  // payload cơ bản cho user
   const baseProfile = {
     uid: user.uid,
     email: user.email ?? "",
@@ -64,19 +63,16 @@ async function ensureUserInFirestore(user: {
       ...baseProfile,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
-      // bạn có thể thêm các trường mặc định ở đây (role, status, v.v.)
       role: "user",
       status: "active",
     });
   } else {
-    // cập nhật mốc đăng nhập
     await updateDoc(ref, {
       ...baseProfile,
       lastLoginAt: serverTimestamp(),
     });
   }
 
-  // trả về dữ liệu tối thiểu (để lưu vào redux nếu muốn)
   return { ...baseProfile };
 }
 
@@ -92,16 +88,13 @@ export function Login() {
       setLoading(true);
 
       try {
-        // 1) Đăng nhập Firebase (email/password)
         const cred = await signInWithEmailAndPassword(
           authFb,
           values.email,
           values.password
         );
-
         const user = cred.user;
 
-        // 2) Đảm bảo user có trong Firestore (tạo mới nếu chưa tồn tại)
         await ensureUserInFirestore({
           uid: user.uid,
           email: user.email,
@@ -110,20 +103,15 @@ export function Login() {
           providerId: user.providerData?.[0]?.providerId ?? "password",
         });
 
-        // 3) Lấy ID token để dùng cho Redux/Auth (giữ tương thích action cũ nhận token)
         const idToken = await getIdToken(user, true);
 
         setLoading(false);
-        // Tuỳ action login của bạn; nếu chỉ nhận token thì như sau:
         dispatch(auth.actions.login(idToken));
-        // Nếu bạn có action lưu profile, có thể dispatch thêm (tùy Redux setup):
-        // dispatch(auth.actions.setUser({ uid: user.uid, email: user.email, ... }))
-
       } catch (err) {
         console.error(err);
         setLoading(false);
         setSubmitting(false);
-        setStatus("The login detail is incorrect");
+        setStatus("Thông tin đăng nhập không chính xác");
       }
     },
   });
@@ -146,11 +134,10 @@ export function Login() {
 
       setLoading(false);
       dispatch(auth.actions.login(idToken));
-      // dispatch(auth.actions.setUser({...})) // nếu có
     } catch (err) {
       console.error(err);
       setLoading(false);
-      formik.setStatus("Google sign-in failed");
+      formik.setStatus("Không thể đăng nhập bằng Google");
     }
   };
 
@@ -161,33 +148,31 @@ export function Login() {
       noValidate
       id="kt_login_signin_form"
     >
-      {/* begin::Title */}
+      {/* Tiêu đề */}
       <div className="pb-lg-15">
         <h3 className="fw-bolder text-dark display-6">
           Chào mừng bạn đến với Lumora
         </h3>
         <div className="text-muted fw-bold fs-3">
-          New Here?{" "}
+          Chưa có tài khoản?{" "}
           <Link
             to="/auth/registration"
             className="text-primary fw-bolder"
             id="kt_login_signin_form_singup_button"
           >
-            Create Account
+            Tạo tài khoản
           </Link>
         </div>
       </div>
-      {/* end::Title */}
 
+      {/* Thông báo */}
       {formik.status ? (
         <div className="mb-lg-15 alert alert-danger">
           <div className="alert-text font-weight-bold">{formik.status}</div>
         </div>
       ) : (
         <div className="mb-lg-15 alert alert-info">
-          <div className="alert-text ">
-            Đăng nhập bằng email/password hoặc Google.
-          </div>
+          <div className="alert-text">Bạn có thể đăng nhập bằng Email/Mật khẩu hoặc Google.</div>
         </div>
       )}
 
@@ -195,7 +180,7 @@ export function Login() {
       <div className="v-row mb-10 fv-plugins-icon-container">
         <label className="form-label fs-6 fw-bolder text-dark">Email</label>
         <input
-          placeholder="Email"
+          placeholder="Nhập email của bạn"
           {...formik.getFieldProps("email")}
           className={clsx(
             "form-control form-control-lg form-control-solid",
@@ -213,19 +198,18 @@ export function Login() {
         )}
       </div>
 
-      {/* Password */}
+      {/* Mật khẩu */}
       <div className="fv-row mb-10 fv-plugins-icon-container">
         <div className="d-flex justify-content-between mt-n5">
           <label className="form-label fs-6 fw-bolder text-dark pt-5">
-            Password
+            Mật khẩu
           </label>
-
           <Link
             to="/auth/forgot-password"
             className="text-primary fs-6 fw-bolder text-hover-primary pt-5"
             id="kt_login_signin_form_password_reset_button"
           >
-            Forgot Password ?
+            Quên mật khẩu?
           </Link>
         </div>
         <input
@@ -235,8 +219,7 @@ export function Login() {
           className={clsx(
             "form-control form-control-lg form-control-solid",
             {
-              "is-invalid":
-                formik.touched.password && formik.errors.password,
+              "is-invalid": formik.touched.password && formik.errors.password,
             },
             { "is-valid": formik.touched.password && !formik.errors.password }
           )}
@@ -248,7 +231,7 @@ export function Login() {
         )}
       </div>
 
-      {/* Actions */}
+      {/* Nút hành động */}
       <div className="pb-lg-0 pb-5">
         <button
           type="submit"
@@ -256,10 +239,10 @@ export function Login() {
           className="btn btn-primary fw-bolder fs-6 px-8 py-4 my-3 me-3"
           disabled={formik.isSubmitting || !formik.isValid || loading}
         >
-          {!loading && <span className="indicator-label">Sign In</span>}
+          {!loading && <span className="indicator-label">Đăng nhập</span>}
           {loading && (
             <span className="indicator-progress" style={{ display: "block" }}>
-              Please wait...
+              Vui lòng chờ...
               <span className="spinner-border spinner-border-sm align-middle ms-2"></span>
             </span>
           )}
@@ -276,7 +259,7 @@ export function Login() {
             className="w-20px h-20px me-3"
             alt=""
           />
-          Sign in with Google
+          Đăng nhập với Google
         </button>
       </div>
     </form>
