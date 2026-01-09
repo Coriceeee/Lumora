@@ -63,28 +63,53 @@ interface BtnProps { close?: boolean; }
 const Btn = styled.button.withConfig({
   shouldForwardProp: (prop) => prop !== "close"
 })<BtnProps>`
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:16px 40px;
-  border-radius:40px;
-  font-weight:700;
-  font-size:1.2rem;
-  cursor:pointer;
-  user-select:none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 36px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  cursor: pointer;
+  user-select: none;
 
-  border:none;
-  color:white;
-  box-shadow:0 6px 20px rgba(0, 0, 0, 0.1);
+  border: 2px solid transparent;
+  color: ${(p) => (p.close ? "#7c2d12" : "#ffffff")};
 
-  background:${(p)=>p.close ? "#999" : "linear-gradient(270deg,#a855f7,#ec4899)"};
-  background-size:400% 400%;
-  animation:${(p)=>p.close ? "none" : gradientAnimation} 8s ease infinite;
+  background: ${(p) =>
+    p.close
+      ? "linear-gradient(135deg, #fde68a, #fecaca)"
+      : "linear-gradient(135deg, #7c3aed, #ec4899)"};
 
-  transition:0.35s;
+  box-shadow: ${(p) =>
+    p.close
+      ? "0 6px 20px rgba(251, 191, 36, 0.35)"
+      : "0 10px 30px rgba(124, 58, 237, 0.45)"};
 
-  &:hover { transform:scale(1.07); }
+  transition: 
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    filter 0.25s ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.03);
+    filter: brightness(1.05);
+    box-shadow: ${(p) =>
+      p.close
+        ? "0 10px 28px rgba(251, 191, 36, 0.45)"
+        : "0 16px 45px rgba(236, 72, 153, 0.55)"};
+  }
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+  }
+
+  svg {
+    stroke-width: 2.4;
+  }
 `;
+
 
 const FormWrapper = styled.div.withConfig({
   shouldForwardProp: (prop) => prop !== "purple"

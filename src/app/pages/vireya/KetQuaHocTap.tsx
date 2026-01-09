@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "../../../utils/fakeMotion";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -11,12 +11,11 @@ import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
 import { getAuth } from "firebase/auth";
 
-
 interface FormData {
   classLevel: 10 | 11 | 12;
   subjectId: string;
   scoreTypeId: string;
-  scores: (number | undefined)[];
+  scores: (string | undefined)[];
   date: string;
   semester: 1 | 2;
   note?: string;
@@ -26,18 +25,19 @@ export default function KetQuaHocTapForm() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(true); // 👈 control hiển thị form
 
- const userId = getAuth().currentUser?.uid || "";
   const maxScoreCount = 5;
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
     watch,
-    formState: { errors },
+    setValue,
+    getValues,
   } = useForm<FormData>({
+    shouldUnregister: false,
     defaultValues: {
       classLevel: 10,
       semester: 1,
@@ -49,43 +49,67 @@ export default function KetQuaHocTapForm() {
     },
   });
 
+  /* ================= LOAD DATA ================= */
   useEffect(() => {
-    getAllSubjects()
-      .then(setSubjects)
-      .catch(() => toast.error("Không thể tải môn học."));
-    getAllScoreTypes()
-      .then(setScoreTypes)
-      .catch(() => toast.error("Không thể tải loại điểm."));
+    Promise.all([getAllSubjects(), getAllScoreTypes()])
+      .then(([subs, types]) => {
+        setSubjects(subs);
+        setScoreTypes(types);
+      })
+      .catch(() => toast.error("Không thể tải dữ liệu."));
   }, []);
 
+  const isReady = subjects.length > 0 && scoreTypes.length > 0;
+
+  /* ================= LOGIC ĐIỂM ================= */
   const selectedScoreTypeId = watch("scoreTypeId");
-  const selectedScoreType = scoreTypes.find((st) => st.id === selectedScoreTypeId);
 
-  let inputCount = 1;
-  if (selectedScoreType?.weight === 1) {
-    inputCount = maxScoreCount;
-  }
+  const selectedScoreType = useMemo(
+    () => scoreTypes.find((st) => st.id === selectedScoreTypeId),
+    [scoreTypes, selectedScoreTypeId]
+  );
 
-  const validateScore = (v: number | undefined) => {
-    if (v === undefined || v === null || isNaN(v)) return true;
-    if (v >= 0 && v <= 10) return true;
-    return "Điểm phải từ 0 đến 10";
+  const inputCount = selectedScoreType?.weight === 1 ? maxScoreCount : 1;
+
+  // ✅ Chỉ reset điểm khi đổi loại điểm (không đụng môn)
+  useEffect(() => {
+    const current = getValues("scores") ?? [];
+    // nếu đang có nhiều điểm mà đổi về loại chỉ 1 điểm → cắt bớt
+    if (current.length > inputCount) {
+      setValue("scores", current.slice(0, inputCount), { shouldDirty: true });
+    }
+    // nếu đang có 1 điểm mà đổi sang loại cần nhiều điểm → giữ điểm cũ ở ô 1, các ô còn lại undefined
+    if (current.length < inputCount) {
+      setValue(
+        "scores",
+        [...current, ...Array.from({ length: inputCount - current.length }).map(() => undefined)],
+        { shouldDirty: true }
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputCount]);
+
+  const validateScore = (v?: string) => {
+    if (!v) return true;
+    const n = Number(v);
+    if (Number.isNaN(n)) return "Điểm không hợp lệ";
+    if (n < 0 || n > 10) return "Điểm phải từ 0 đến 10";
+    return true;
   };
 
+  /* ================= SUBMIT ================= */
   const onSubmit = async (data: FormData) => {
     setLoading(true);
     try {
       const userId = getAuth().currentUser?.uid || "";
+
       const validScores = (data.scores ?? [])
         .slice(0, inputCount)
-        .filter(
-          (score): score is number =>
-            typeof score === "number" && !isNaN(score) && score >= 0 && score <= 10
-        );
+        .map(Number)
+        .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
 
       if (validScores.length === 0) {
         toast.info("Bạn chưa nhập điểm nào hợp lệ.");
-        setLoading(false);
         return;
       }
 
@@ -95,7 +119,8 @@ export default function KetQuaHocTapForm() {
           classLevel: data.classLevel,
           semester: data.semester,
           subjectId: data.subjectId,
-          subjectName: subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn",
+          subjectName:
+            subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn",
           scoreTypeId: data.scoreTypeId,
           score,
           date: data.date,
@@ -104,122 +129,159 @@ export default function KetQuaHocTapForm() {
         });
       }
 
-      toast.success(`🎉 Đã lưu ${validScores.length} điểm thành công!`);
+      toast.success(`🎉 Đã lưu ${validScores.length} điểm thành công`);
       reset();
-    } catch (error) {
-      toast.error("❌ Có lỗi xảy ra khi lưu.");
-      console.error(error);
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ Có lỗi xảy ra khi lưu");
     } finally {
       setLoading(false);
     }
   };
 
+  /* ================= UI ================= */
   return (
-    <div className="form-wrapper">
+    <div className="kqht-page">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      <div className="form-header">
-        <h2 className="form-title">
-          <i className="bi bi-bar-chart-line-fill icon" />
-          Nhập Kết Quả Học Tập
-        </h2>
+      {/* ===== HEADER (icon không bị tím) ===== */}
+      <div className="kqht-header">
+        <h1 className="kqht-title">
+          <span className="kqht-icon">📊</span>
+          <span className="kqht-text">Nhập Kết Quả Học Tập</span>
+        </h1>
+        <p>Theo dõi điểm số gọn gàng • Phân tích tốt hơn khi nhập đủ dữ liệu</p>
       </div>
 
-      {/* AnimatePresence cho form */}
-      <AnimatePresence>
-        {isOpen && (
+      {!isReady ? (
+        <div className="skeleton-wrap">
+          <div className="skeleton-card" />
+          <div className="skeleton-card small" />
+        </div>
+      ) : (
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
           >
             <div className="form-card">
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                {/* Học kỳ */}
+                {/* Học kỳ (controlled) */}
                 <div className="form-group">
                   <label>Học kỳ</label>
-                  <select {...register("semester", { required: "Vui lòng chọn học kỳ." })}>
-                    <option value="">-- Chọn học kỳ --</option>
-                    <option value={1}>Học kỳ 1</option>
-                    <option value={2}>Học kỳ 2</option>
-                  </select>
-                  {errors.semester && <small className="error">{errors.semester.message}</small>}
+                  <Controller
+                    control={control}
+                    name="semester"
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <select
+                        value={String(field.value ?? "")}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      >
+                        <option value="">-- Chọn học kỳ --</option>
+                        <option value="1">Học kỳ 1</option>
+                        <option value="2">Học kỳ 2</option>
+                      </select>
+                    )}
+                  />
                 </div>
 
-                {/* Lớp */}
+                {/* Lớp (controlled) */}
                 <div className="form-group">
-                  <label>Lớp học</label>
-                  <select {...register("classLevel", { required: "Vui lòng chọn lớp học." })}>
-                    <option value="">-- Chọn lớp học --</option>
-                    {[10, 11, 12].map((level) => (
-                      <option key={level} value={level}>
-                        Lớp {level}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.classLevel && <small className="error">{errors.classLevel.message}</small>}
+                  <label>Lớp</label>
+                  <Controller
+                    control={control}
+                    name="classLevel"
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <select
+                        value={String(field.value ?? "")}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      >
+                        <option value="">-- Chọn lớp --</option>
+                        <option value="10">Lớp 10</option>
+                        <option value="11">Lớp 11</option>
+                        <option value="12">Lớp 12</option>
+                      </select>
+                    )}
+                  />
                 </div>
 
-                {/* Môn */}
+                {/* Môn (controlled - FIX mất môn) */}
                 <div className="form-group">
                   <label>Môn học</label>
-                  <select {...register("subjectId", { required: "Vui lòng chọn môn học." })}>
-                    <option value="">-- Chọn môn học --</option>
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.subjectId && <small className="error">{errors.subjectId.message}</small>}
+                  <Controller
+                    control={control}
+                    name="subjectId"
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <select value={field.value ?? ""} onChange={field.onChange}>
+                        <option value="">-- Chọn môn --</option>
+                        {subjects.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
                 </div>
 
-                {/* Loại điểm */}
+                {/* Loại điểm (controlled - không làm mất môn nữa) */}
                 <div className="form-group">
                   <label>Loại điểm</label>
-                  <select {...register("scoreTypeId", { required: "Vui lòng chọn loại điểm." })}>
-                    <option value="">-- Chọn loại điểm --</option>
-                    {scoreTypes.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.scoreTypeId && <small className="error">{errors.scoreTypeId.message}</small>}
+                  <Controller
+                    control={control}
+                    name="scoreTypeId"
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <select value={field.value ?? ""} onChange={field.onChange}>
+                        <option value="">-- Chọn loại điểm --</option>
+                        {scoreTypes.map((st) => (
+                          <option key={st.id} value={st.id}>
+                            {st.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  />
                 </div>
 
                 {/* Điểm */}
                 <div className="form-group">
-                  <label>Nhập điểm (tối đa {inputCount} điểm, không bắt buộc)</label>
-                  {Array.from({ length: inputCount }).map((_, i) => (
-                    <input
-                      key={i}
-                      type="number"
-                      placeholder={`Điểm ${i + 1}`}
-                      {...register(`scores.${i}` as const, {
-                        valueAsNumber: true,
-                        validate: validateScore,
-                      })}
-                    />
-                  ))}
-                  {errors.scores && <small className="error">Điểm không hợp lệ</small>}
+                  <label>Nhập điểm (tối đa {inputCount})</label>
+                  <div className="score-grid">
+                    {Array.from({ length: inputCount }).map((_, i) => (
+                      <div className="score-item" key={`score-${i}`}>
+  <input
+    type="number"
+    step="0.1"
+    placeholder={`Điểm ${i + 1}`}
+    {...register(`scores.${i}` as const, {
+      validate: validateScore,
+    })}
+  />
+</div>
+
+                    ))}
+                  </div>
                 </div>
 
                 {/* Ngày */}
                 <div className="form-group">
                   <label>Ngày kiểm tra</label>
-                  <input type="date" {...register("date", { required: "Vui lòng chọn ngày kiểm tra." })} />
-                  {errors.date && <small className="error">{errors.date.message}</small>}
+                  <input type="date" {...register("date", { required: true })} />
                 </div>
 
-                {/* Note */}
+                {/* Ghi chú */}
                 <div className="form-group">
                   <label>Ghi chú</label>
                   <textarea rows={3} {...register("note")} placeholder="Ghi chú thêm nếu có..." />
                 </div>
 
-                {/* Buttons */}
+                {/* Actions */}
                 <div className="form-actions">
                   <button
                     type="button"
@@ -229,122 +291,205 @@ export default function KetQuaHocTapForm() {
                   >
                     Đặt lại
                   </button>
-      <button type="submit" disabled={loading} className="btn-gradient">
-        {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
-      </button>
-    </div>
-  </form>
-</div>
+                  <button type="submit" className="btn-gradient" disabled={loading}>
+                    {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      )}
 
-      {/* CSS giữ nguyên */}
+      {/* ===== CSS HOÀNH TRÁNG ===== */}
       <style>{`
-        .form-wrapper {
-          max-width: 800px;
-          margin: 40px auto;
-          padding: 20px;
+        .kqht-page{
+          min-height:100vh;
+          padding:40px 18px;
+          background:
+            radial-gradient(1200px 600px at 20% 10%, rgba(99,102,241,.18), transparent 60%),
+            radial-gradient(900px 500px at 80% 20%, rgba(236,72,153,.16), transparent 60%),
+            linear-gradient(135deg, #f7f8ff, #fff7fb);
         }
-        .form-header {
-          margin-bottom: 20px;
-          text-align: center;
+        .kqht-header{
+          max-width: 920px;
+          margin: 0 auto 18px;
+          text-align:center;
         }
-        .form-title {
-          font-size: 2.4rem;
-          font-weight: 900;
-          background: linear-gradient(90deg, #6366f1, #ec4899);
+        .kqht-badge{
+          display:inline-block;
+          padding:8px 12px;
+          border-radius:999px;
+          font-weight:800;
+          font-size:.85rem;
+          color:#4338ca;
+          background: rgba(99,102,241,.12);
+          border: 1px solid rgba(99,102,241,.18);
+          backdrop-filter: blur(8px);
+          margin-bottom: 10px;
+        }
+        .kqht-title{
+          display:flex;
+          justify-content:center;
+          align-items:center;
+          gap:14px;
+          margin: 0;
+        }
+        .kqht-icon{
+          font-size:2.6rem;
+          color:#6366f1;
+          -webkit-text-fill-color: initial;
+        }
+        .kqht-text{
+          font-size:2.7rem;
+          font-weight: 950;
+          letter-spacing: -0.5px;
+          background: linear-gradient(90deg, #4f46e5, #ec4899);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          gap: 12px;
         }
-        .form-title .icon {
-          font-size: 2.4rem;
-          color: #6366f1;
+        .kqht-header p{
+          margin: 10px 0 0;
+          color:#6b7280;
         }
-        .form-card {
-          background: #ffffff;
-          border-radius: 18px;
-          padding: 30px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-          transition: all 0.3s ease;
+
+        .skeleton-wrap{
+          max-width: 920px;
+          margin: 22px auto 0;
+          display:grid;
+          gap: 14px;
+          justify-items:center;
         }
-        .form-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 14px 40px rgba(0,0,0,0.15);
+        .skeleton-card{
+          width: min(900px, 95vw);
+          height: 220px;
+          border-radius: 22px;
+          background: linear-gradient(90deg, rgba(255,255,255,.7), rgba(255,255,255,.35), rgba(255,255,255,.7));
+          border: 1px solid rgba(0,0,0,.06);
+          box-shadow: 0 18px 45px rgba(0,0,0,.10);
+          animation: shimmer 1.2s infinite linear;
+          background-size: 200% 100%;
         }
-        .form-group {
-          margin-bottom: 18px;
-          display: flex;
-          flex-direction: column;
+        .skeleton-card.small{ height: 120px; opacity:.9 }
+        @keyframes shimmer{
+          0%{ background-position: 200% 0; }
+          100%{ background-position: -200% 0; }
         }
-        .form-group label {
-          font-weight: 600;
-          margin-bottom: 6px;
-          color: #374151;
+
+        .form-card{
+          width: min(900px, 95vw);
+          margin: 20px auto 0;
+          background: rgba(255,255,255,.78);
+          border: 1px solid rgba(0,0,0,.06);
+          border-radius: 24px;
+          padding: 28px;
+          backdrop-filter: blur(14px);
+          box-shadow:
+            0 30px 70px rgba(0,0,0,.12),
+            0 8px 22px rgba(99,102,241,.10);
         }
+
+        .form-group{
+          margin-bottom: 16px;
+          display:flex;
+          flex-direction:column;
+          gap: 6px;
+        }
+        .form-group label{
+          font-weight: 800;
+          color:#374151;
+        }
+
         .form-group input,
         .form-group select,
-        .form-group textarea {
-          border: 1px solid #d1d5db;
-          border-radius: 10px;
+        .form-group textarea{
+          border: 1px solid rgba(0,0,0,.12);
+          border-radius: 14px;
           padding: 12px 14px;
           font-size: 1rem;
-          transition: border 0.2s, box-shadow 0.2s;
+          background: rgba(255,255,255,.9);
+          transition: transform .2s, box-shadow .2s, border-color .2s;
           outline: none;
         }
         .form-group input:focus,
         .form-group select:focus,
-        .form-group textarea:focus {
-          border-color: #6366f1;
-          box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        .form-group textarea:focus{
+          border-color: rgba(99,102,241,.75);
+          box-shadow: 0 0 0 4px rgba(99,102,241,.18);
+          transform: translateY(-1px);
         }
-        .form-group textarea {
-          resize: none;
-        }
-        .error {
-          color: #dc2626;
-          font-size: 0.85rem;
-          margin-top: 4px;
-          font-style: italic;
-        }
-        .form-actions {
-          display: flex;
-          justify-content: space-between;
+
+        .score-grid{
+          display:grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 10px;
-          margin-top: 20px;
         }
-        .btn-outline {
+        @media (max-width: 700px){
+          .score-grid{ grid-template-columns: 1fr; }
+          .kqht-text{ font-size: 2.1rem; }
+          .kqht-icon{ font-size: 2.2rem; }
+        }
+        .score-item{
+          position:relative;
+        }
+        .score-pill{
+          position:absolute;
+          top: -10px;
+          left: 10px;
+          font-size: .75rem;
+          font-weight: 900;
+          padding: 4px 10px;
+          border-radius: 999px;
+          background: rgba(236,72,153,.12);
+          border: 1px solid rgba(236,72,153,.18);
+          color:#9d174d;
+        }
+
+        .form-actions{
+          display:flex;
+          gap: 12px;
+          margin-top: 18px;
+        }
+        .btn-outline{
           flex: 1;
-          padding: 12px;
-          border-radius: 12px;
-          border: 2px solid #9ca3af;
-          background: white;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s;
+          padding: 13px 14px;
+          border-radius: 14px;
+          border: 2px solid rgba(107,114,128,.45);
+          background: rgba(255,255,255,.9);
+          font-weight: 900;
+          cursor:pointer;
+          transition: transform .2s, box-shadow .2s, border-color .2s, color .2s;
         }
-        .btn-outline:hover {
-          border-color: #6366f1;
-          color: #6366f1;
+        .btn-outline:hover{
+          border-color: rgba(79,70,229,.8);
+          color:#4f46e5;
+          box-shadow: 0 10px 24px rgba(79,70,229,.15);
+          transform: translateY(-1px);
         }
-        .btn-gradient {
+
+        .btn-gradient{
           flex: 2;
-          padding: 12px;
-          border-radius: 12px;
+          padding: 13px 14px;
+          border-radius: 14px;
           border: none;
-          background: linear-gradient(45deg, #6366f1, #ec4899);
-          color: white;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.3s;
+          color: #fff;
+          font-weight: 950;
+          cursor:pointer;
+          background: linear-gradient(45deg, #4f46e5, #ec4899);
+          box-shadow: 0 14px 30px rgba(79,70,229,.25);
+          transition: transform .2s, box-shadow .2s, filter .2s;
         }
-        .btn-gradient:hover {
-          opacity: 0.9;
+        .btn-gradient:hover{
           transform: translateY(-2px);
+          box-shadow: 0 18px 40px rgba(79,70,229,.30);
+          filter: brightness(1.02);
+        }
+        .btn-gradient:disabled,
+        .btn-outline:disabled{
+          opacity: .65;
+          cursor:not-allowed;
+          transform:none;
+          box-shadow:none;
         }
       `}</style>
     </div>
