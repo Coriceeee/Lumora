@@ -11,6 +11,7 @@ import { Subject } from "../../../types/Subject";
 import { ScoreType } from "../../../types/ScoreType";
 import { getAuth } from "firebase/auth";
 
+/* ================= TYPES ================= */
 interface FormData {
   classLevel: 10 | 11 | 12;
   subjectId: string;
@@ -20,6 +21,16 @@ interface FormData {
   semester: 1 | 2;
   note?: string;
 }
+
+const DEFAULT_VALUES: FormData = {
+  classLevel: 10,
+  semester: 1,
+  subjectId: "",
+  scoreTypeId: "",
+  scores: [],
+  date: "",
+  note: "",
+};
 
 export default function KetQuaHocTapForm() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -38,23 +49,15 @@ export default function KetQuaHocTapForm() {
     getValues,
   } = useForm<FormData>({
     shouldUnregister: false,
-    defaultValues: {
-      classLevel: 10,
-      semester: 1,
-      subjectId: "",
-      scoreTypeId: "",
-      scores: [],
-      date: "",
-      note: "",
-    },
+    defaultValues: DEFAULT_VALUES,
   });
 
   /* ================= LOAD DATA ================= */
   useEffect(() => {
     Promise.all([getAllSubjects(), getAllScoreTypes()])
       .then(([subs, types]) => {
-        setSubjects(subs);
-        setScoreTypes(types);
+        setSubjects(subs || []);
+        setScoreTypes(types || []);
       })
       .catch(() => toast.error("Không thể tải dữ liệu."));
   }, []);
@@ -71,18 +74,17 @@ export default function KetQuaHocTapForm() {
 
   const inputCount = selectedScoreType?.weight === 1 ? maxScoreCount : 1;
 
-  // ✅ Chỉ reset điểm khi đổi loại điểm (không đụng môn)
   useEffect(() => {
     const current = getValues("scores") ?? [];
-    // nếu đang có nhiều điểm mà đổi về loại chỉ 1 điểm → cắt bớt
+
     if (current.length > inputCount) {
       setValue("scores", current.slice(0, inputCount), { shouldDirty: true });
     }
-    // nếu đang có 1 điểm mà đổi sang loại cần nhiều điểm → giữ điểm cũ ở ô 1, các ô còn lại undefined
+
     if (current.length < inputCount) {
       setValue(
         "scores",
-        [...current, ...Array.from({ length: inputCount - current.length }).map(() => undefined)],
+        [...current, ...Array(inputCount - current.length).fill(undefined)],
         { shouldDirty: true }
       );
     }
@@ -98,53 +100,74 @@ export default function KetQuaHocTapForm() {
   };
 
   /* ================= SUBMIT ================= */
-  const onSubmit = async (data: FormData) => {
-    setLoading(true);
-    try {
-      const userId = getAuth().currentUser?.uid || "";
+const onSubmit = async (data: FormData) => {
+  const userId = getAuth().currentUser?.uid;
 
-      const validScores = (data.scores ?? [])
-        .slice(0, inputCount)
-        .map(Number)
-        .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
+  if (!userId) {
+    toast.error("Bạn chưa đăng nhập.");
+    return;
+  }
 
-      if (validScores.length === 0) {
-        toast.info("Bạn chưa nhập điểm nào hợp lệ.");
-        return;
-      }
+  if (!data.subjectId || !data.scoreTypeId) {
+    toast.error("Vui lòng chọn đầy đủ môn và loại điểm.");
+    return;
+  }
 
-      for (const score of validScores) {
-        await addLearningResult({
+  if (!data.date) {
+    toast.error("Vui lòng chọn ngày kiểm tra.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const validScores = (data.scores ?? [])
+      .slice(0, inputCount)
+      .map(Number)
+      .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
+
+    if (validScores.length === 0) {
+      toast.info("Bạn chưa nhập điểm nào hợp lệ.");
+      return;
+    }
+
+    const subjectName =
+      subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn";
+
+    // 🔥 FIX: chờ TẤT CẢ promise hoàn thành
+    await Promise.all(
+      validScores.map((score) =>
+        addLearningResult({
           userId,
           classLevel: data.classLevel,
           semester: data.semester,
           subjectId: data.subjectId,
-          subjectName:
-            subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn",
+          subjectName,
           scoreTypeId: data.scoreTypeId,
           score,
           date: data.date,
-          note: data.note,
+          note: data.note?.trim() || "",
           termLabel: "",
-        });
-      }
+        })
+      )
+    );
 
-      toast.success(`🎉 Đã lưu ${validScores.length} điểm thành công`);
-      reset();
-    } catch (err) {
-      console.error(err);
-      toast.error("❌ Có lỗi xảy ra khi lưu");
-    } finally {
-      setLoading(false);
-    }
-  };
+    toast.success(`🎉 Đã lưu ${validScores.length} điểm thành công`);
+    reset(DEFAULT_VALUES);
+  } catch (err) {
+    console.error(err);
+    toast.error("❌ Có lỗi xảy ra khi lưu");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   /* ================= UI ================= */
   return (
     <div className="kqht-page">
       <ToastContainer position="top-right" autoClose={3000} />
 
-      {/* ===== HEADER (icon không bị tím) ===== */}
       <div className="kqht-header">
         <h1 className="kqht-title">
           <span className="kqht-icon">📊</span>
@@ -168,19 +191,17 @@ export default function KetQuaHocTapForm() {
           >
             <div className="form-card">
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
-                {/* Học kỳ (controlled) */}
+                {/* Học kỳ */}
                 <div className="form-group">
                   <label>Học kỳ</label>
                   <Controller
                     control={control}
                     name="semester"
-                    rules={{ required: true }}
                     render={({ field }) => (
                       <select
-                        value={String(field.value ?? "")}
+                        value={String(field.value)}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       >
-                        <option value="">-- Chọn học kỳ --</option>
                         <option value="1">Học kỳ 1</option>
                         <option value="2">Học kỳ 2</option>
                       </select>
@@ -188,19 +209,17 @@ export default function KetQuaHocTapForm() {
                   />
                 </div>
 
-                {/* Lớp (controlled) */}
+                {/* Lớp */}
                 <div className="form-group">
                   <label>Lớp</label>
                   <Controller
                     control={control}
                     name="classLevel"
-                    rules={{ required: true }}
                     render={({ field }) => (
                       <select
-                        value={String(field.value ?? "")}
+                        value={String(field.value)}
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       >
-                        <option value="">-- Chọn lớp --</option>
                         <option value="10">Lớp 10</option>
                         <option value="11">Lớp 11</option>
                         <option value="12">Lớp 12</option>
@@ -209,15 +228,14 @@ export default function KetQuaHocTapForm() {
                   />
                 </div>
 
-                {/* Môn (controlled - FIX mất môn) */}
+                {/* Môn */}
                 <div className="form-group">
                   <label>Môn học</label>
                   <Controller
                     control={control}
                     name="subjectId"
-                    rules={{ required: true }}
                     render={({ field }) => (
-                      <select value={field.value ?? ""} onChange={field.onChange}>
+                      <select value={field.value} onChange={field.onChange}>
                         <option value="">-- Chọn môn --</option>
                         {subjects.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -229,15 +247,14 @@ export default function KetQuaHocTapForm() {
                   />
                 </div>
 
-                {/* Loại điểm (controlled - không làm mất môn nữa) */}
+                {/* Loại điểm */}
                 <div className="form-group">
                   <label>Loại điểm</label>
                   <Controller
                     control={control}
                     name="scoreTypeId"
-                    rules={{ required: true }}
                     render={({ field }) => (
-                      <select value={field.value ?? ""} onChange={field.onChange}>
+                      <select value={field.value} onChange={field.onChange}>
                         <option value="">-- Chọn loại điểm --</option>
                         {scoreTypes.map((st) => (
                           <option key={st.id} value={st.id}>
@@ -254,17 +271,15 @@ export default function KetQuaHocTapForm() {
                   <label>Nhập điểm (tối đa {inputCount})</label>
                   <div className="score-grid">
                     {Array.from({ length: inputCount }).map((_, i) => (
-                      <div className="score-item" key={`score-${i}`}>
-  <input
-    type="number"
-    step="0.1"
-    placeholder={`Điểm ${i + 1}`}
-    {...register(`scores.${i}` as const, {
-      validate: validateScore,
-    })}
-  />
-</div>
-
+                      <input
+                        key={i}
+                        type="number"
+                        step="0.1"
+                        placeholder={`Điểm ${i + 1}`}
+                        {...register(`scores.${i}` as const, {
+                          validate: validateScore,
+                        })}
+                      />
                     ))}
                   </div>
                 </div>
@@ -278,15 +293,14 @@ export default function KetQuaHocTapForm() {
                 {/* Ghi chú */}
                 <div className="form-group">
                   <label>Ghi chú</label>
-                  <textarea rows={3} {...register("note")} placeholder="Ghi chú thêm nếu có..." />
+                  <textarea rows={3} {...register("note")} />
                 </div>
 
-                {/* Actions */}
                 <div className="form-actions">
                   <button
                     type="button"
                     className="btn-outline"
-                    onClick={() => reset()}
+                    onClick={() => reset(DEFAULT_VALUES)}
                     disabled={loading}
                   >
                     Đặt lại
@@ -300,6 +314,7 @@ export default function KetQuaHocTapForm() {
           </motion.div>
         </AnimatePresence>
       )}
+
 
       {/* ===== CSS HOÀNH TRÁNG ===== */}
       <style>{`

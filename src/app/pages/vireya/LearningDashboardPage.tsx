@@ -295,8 +295,12 @@ const LearningDashboardPage: React.FC = () => {
   const loadLearningResults = async () => {
      if (!userId) return;
     try {
-      const results = await getLearningResultsByUser(userId);
-      const final = Array.isArray(results) && results.length > 0 ? results : (await getAllLearningResults());
+      const fetchedResults = await getAllLearningResults(userId);
+      const final =
+  Array.isArray(fetchedResults) && fetchedResults.length > 0
+    ? fetchedResults
+    : [];
+
       setLearningResults(final || []);
     } catch (err) {
       console.error("Lỗi load learning results", err);

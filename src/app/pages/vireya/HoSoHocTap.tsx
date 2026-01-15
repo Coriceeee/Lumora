@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import { motion } from "../../../utils/fakeMotion";
 import "react-toastify/dist/ReactToastify.css";
@@ -40,18 +40,19 @@ type SemesterRow = {
 type GroupedRow = {
   subjectId: string;
   classLevel: number;
+  semester: number;
   semesters: SemesterRow[];
 };
+ 
 
 /* ---------- styles ---------- */
 const styles = {
   container: { maxWidth: 1200, margin: "0 auto", padding: "1rem" },
 
-  // ✅ ĐÃ CHỈNH FONT Ở ĐÂY
   heading: {
     fontSize: "2.4rem",
     fontWeight: 700,
-    fontFamily: "inherit", // 🔥 đồng bộ font toàn Lumora
+    fontFamily: "inherit",
     letterSpacing: "-0.02em",
     color: "#1e293b",
     textAlign: "center" as const,
@@ -161,6 +162,10 @@ const styles = {
     padding: "0.5rem 1.25rem",
     borderRadius: 12,
     border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
   },
   cancelBtn: {
     backgroundColor: "#d1d5db",
@@ -172,16 +177,23 @@ const styles = {
   },
 };
 
-
 /* ---------- helper ---------- */
 const getSubjectIcon = (subjectName: string) => {
   const name = (subjectName ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  if (name.includes("toan") || name.includes("math")) return <BookOpen style={{ color: "#4338ca", fontSize: 36 }} />;
+  if (name.includes("toan") || name.includes("math"))
+    return <BookOpen style={{ color: "#4338ca", fontSize: 36 }} />;
   if (name.includes("anh")) return <Languages style={{ color: "#2563eb", fontSize: 36 }} />;
   if (name.includes("ly")) return <Lightbulb style={{ color: "#eab308", fontSize: 36 }} />;
   if (name.includes("sinh")) return <TestTube2 style={{ color: "#15803d", fontSize: 36 }} />;
   if (name.includes("tin")) return <Computer style={{ color: "#0ea5e9", fontSize: 36 }} />;
   return <BookOpen style={{ color: "#6b7280", fontSize: 36 }} />;
+};
+
+const getScoreColor = (score: number) => {
+  if (score < 5) return "#f8d7da"; // Weak
+  if (score < 7) return "#fef2c0"; // Average
+  if (score < 9) return "#cce4f7"; // Good
+  return "#c9f7d5"; // High
 };
 
 /* ---------- main component ---------- */
@@ -191,16 +203,26 @@ export default function HoSoHocTapPage() {
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [editingSubjectId, setEditingSubjectId] = useState<string | null>(null);
-  const [editedScores, setEditedScores] = useState<Record<string, number>>({});
-  const [deleteQueue, setDeleteQueue] = useState<Set<string>>(new Set());
 
-  const { userId, loading: authLoading } = useFirebaseUser(); // ✅ đổi tên để tránh trùng
+  // ✅ edit theo key (subjectId + classLevel)
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+
+  // editedScores: map resultId -> score
+  const [editedScores, setEditedScores] = useState<Record<string, number>>({});
+
+  // ✅ NEW: giữ điểm gốc để chỉ update cái nào thay đổi thật
+  const [originalScores, setOriginalScores] = useState<Record<string, number>>({});
+
+  // deleteQueue
+  const [deleteQueue, setDeleteQueue] = useState<Record<string, true>>({});
+
+  const { userId, loading: authLoading } = useFirebaseUser();
 
   useEffect(() => {
-    if (authLoading) return; // ⏳ chờ Firebase Auth
+    if (authLoading) return;
     if (!userId) {
       console.warn("❌ Không có user đăng nhập, bỏ qua tải dữ liệu.");
+      setLoading(false);
       return;
     }
 
@@ -211,9 +233,9 @@ export default function HoSoHocTapPage() {
           getAllSubjects(),
           getAllScoreTypes(),
         ]);
-        setLearningResults(results);
-        setSubjects(subs);
-        setScoreTypes(types);
+        setLearningResults(results || []);
+        setSubjects(subs || []);
+        setScoreTypes(types || []);
       } catch (error) {
         console.error(error);
         toast.error("Lỗi khi tải dữ liệu.");
@@ -234,93 +256,185 @@ export default function HoSoHocTapPage() {
   };
 
   const onScoreChange = (resultId: string, value: string) => {
+    if (!resultId) return;
+
+    // cho phép xóa trống input
+    if (value === "") {
+      setEditedScores((prev) => {
+        const clone = { ...prev };
+        delete clone[resultId];
+        return clone;
+      });
+      return;
+    }
+
     const num = parseFloat(value);
-    if (isNaN(num)) return;
+    if (Number.isNaN(num)) return;
+
+    // ✅ chặn ngoài range
+    if (num < 0 || num > 10) return;
+
     setEditedScores((prev) => ({ ...prev, [resultId]: num }));
   };
 
-  const handleSaveEditedScores = async () => {
-    if (!editingSubjectId) return;
-    try {
-      for (const [resultId, score] of Object.entries(editedScores)) {
-        if (deleteQueue.has(resultId)) await deleteLearningResult(resultId);
-        else await updateLearningResult(resultId, { score });
-      }
-      toast.success("Cập nhật/xóa điểm thành công!");
-      const updated = await getAllLearningResults();
-      setLearningResults(updated);
-      setEditingSubjectId(null);
-      setEditedScores({});
-      setDeleteQueue(new Set());
-    } catch {
-      toast.error("Lỗi khi cập nhật hoặc xóa điểm.");
-    }
-  };
-
-  const toggleEditSubject = (subjectId: string) => {
-    if (editingSubjectId === subjectId) {
-      setEditingSubjectId(null);
-      setEditedScores({});
-      setDeleteQueue(new Set());
-    } else {
-      const subjectResults = learningResults.filter((r) => r.subjectId === subjectId);
-      const scoresMap: Record<string, number> = {};
-      subjectResults.forEach((r) => {
-        if (r.id) scoresMap[r.id] = r.score;
-      });
-      setEditingSubjectId(subjectId);
-      setEditedScores(scoresMap);
-      setDeleteQueue(new Set());
-    }
-  };
-
   const toggleDeleteScore = (resultId: string) => {
+    if (!resultId) return;
     setDeleteQueue((prev) => {
-      const newSet = new Set(prev);
-      newSet.has(resultId) ? newSet.delete(resultId) : newSet.add(resultId);
-      return newSet;
+      const next = { ...prev };
+      if (next[resultId]) delete next[resultId];
+      else next[resultId] = true;
+      return next;
     });
   };
 
-  const getScoreColor = (score: number) => {
-    if (score < 5) return '#f8d7da'; // Weak (pastel red)
-    if (score < 7) return '#fef2c0'; // Average (pastel yellow)
-    if (score < 9) return '#cce4f7'; // Good (pastel blue)
-    return '#c9f7d5'; // High (pastel green)
+  const toggleEditRow = (
+  rowKey: string,
+  subjectId: string,
+  classLevel: number,
+  semester: number
+) => {
+
+    if (editingKey === rowKey) {
+      setEditingKey(null);
+      setEditedScores({});
+      setOriginalScores({});
+      setDeleteQueue({});
+      return;
+    }
+
+    const rowResults = learningResults.filter(
+  (r) =>
+    r.subjectId === subjectId &&
+    r.classLevel === classLevel &&
+    r.semester === semester
+);
+
+
+
+    const scoresMap: Record<string, number> = {};
+    rowResults.forEach((r) => {
+      if (r.id) scoresMap[r.id] = r.score;
+    });
+
+    setEditingKey(rowKey);
+    setEditedScores(scoresMap);
+    setOriginalScores(scoresMap); // ✅ NEW: lưu điểm gốc
+    setDeleteQueue({});
   };
 
-  const filteredResults = learningResults.filter((r) => {
-    const subjectName = getSubjectName(r.subjectId ?? "");
-    return subjectName.toLowerCase().includes(search.toLowerCase());
-  });
+const handleSave = async () => {
+  if (!userId || !editingKey) return;
 
-  const groupMap = new Map<string, GroupedRow>();
-  filteredResults.forEach((r) => {
-    const subjectId = r.subjectId ?? "";
-    const key = `${subjectId}-${r.classLevel}`;
-    const existing = groupMap.get(key);
-    if (!existing) {
-      const semRow: SemesterRow = {
-        semester: r.semester,
-        notes: r.note ? [r.note] : [],
-        scoresByType: { [r.scoreTypeId ?? ""]: [r] },
-      };
-      groupMap.set(key, { subjectId, classLevel: r.classLevel, semesters: [semRow] });
-    } else {
-      let sem = existing.semesters.find((s) => s.semester === r.semester);
-      if (!sem) {
-        sem = { semester: r.semester, notes: r.note ? [r.note] : [], scoresByType: { [r.scoreTypeId ?? ""]: [r] } };
-        existing.semesters.push(sem);
+  try {
+    // ✅ FIX: tách key AN TOÀN
+    const [subjectId, classLevelStr, semesterStr] = editingKey.split("-");
+const classLevel = Number(classLevelStr);
+const semester = Number(semesterStr);
+
+
+    const rowsToSave = learningResults.filter(
+  (r) =>
+    r.subjectId === subjectId &&
+    r.classLevel === classLevel &&
+    r.semester === semester &&
+    r.id
+);
+
+
+    if (rowsToSave.length === 0) {
+      toast.error("Không có dữ liệu hợp lệ để lưu.");
+      return;
+    }
+
+    for (const r of rowsToSave) {
+      const resultId = r.id!;
+      if (deleteQueue[resultId]) {
+        await deleteLearningResult(resultId);
       } else {
-        if (!sem.scoresByType[r.scoreTypeId ?? ""]) sem.scoresByType[r.scoreTypeId ?? ""] = [];
-        sem.scoresByType[r.scoreTypeId ?? ""].push(r);
-        if (r.note) sem.notes.push(r.note);
+        const newScore =
+          editedScores[resultId] !== undefined
+            ? editedScores[resultId]
+            : r.score;
+
+        const original = originalScores[resultId];
+
+if (newScore !== original) {
+  await updateLearningResult(resultId, { score: newScore });
+}
+
       }
     }
-  });
 
-  const groupedRows = Array.from(groupMap.values());
-  const sortedScoreTypes = [...scoreTypes].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0));
+    const updated = await getAllLearningResults(userId);
+    setLearningResults(updated || []);
+
+    setEditingKey(null);
+    setEditedScores({});
+    setDeleteQueue({});
+
+    toast.success(`Đã lưu kết quả lớp ${classLevel}`);
+  } catch (e) {
+    console.error(e);
+    toast.error("Lỗi khi lưu kết quả.");
+  }
+};
+
+
+
+  const filteredResults = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return learningResults;
+
+    return learningResults.filter((r) => {
+      const subjectName = getSubjectName(r.subjectId ?? "");
+      return subjectName.toLowerCase().includes(q);
+    });
+  }, [learningResults, search, subjects]);
+
+  const groupedRows = useMemo(() => {
+    const groupMap = new Map<string, GroupedRow>();
+
+    filteredResults.forEach((r) => {
+      const subjectId = r.subjectId ?? "";
+      const classLevel = r.classLevel ?? 0;
+      const key = `${subjectId}-${classLevel}-${r.semester}`;
+
+
+      const existing = groupMap.get(key);
+
+      if (!existing) {
+        const semRow: SemesterRow = {
+          semester: r.semester,
+          notes: r.note ? [r.note] : [],
+          scoresByType: { [r.scoreTypeId ?? ""]: [r] },
+        };
+        groupMap.set(key, { subjectId, classLevel, semester: r.semester, semesters: [semRow] });
+        return;
+      }
+
+      let sem = existing.semesters.find((s) => s.semester === r.semester);
+      if (!sem) {
+        sem = {
+          semester: r.semester,
+          notes: r.note ? [r.note] : [],
+          scoresByType: { [r.scoreTypeId ?? ""]: [r] },
+        };
+        existing.semesters.push(sem);
+      } else {
+        const typeKey = r.scoreTypeId ?? "";
+        if (!sem.scoresByType[typeKey]) sem.scoresByType[typeKey] = [];
+        sem.scoresByType[typeKey].push(r);
+        if (r.note) sem.notes.push(r.note);
+      }
+    });
+
+    return Array.from(groupMap.values());
+  }, [filteredResults]);
+
+  const sortedScoreTypes = useMemo(
+    () => [...scoreTypes].sort((a, b) => (a.weight ?? 0) - (b.weight ?? 0)),
+    [scoreTypes]
+  );
 
   if (authLoading)
     return <p style={{ textAlign: "center", color: "#555" }}>🔄 Đang xác thực người dùng...</p>;
@@ -331,42 +445,22 @@ export default function HoSoHocTapPage() {
         <BookOpen style={{ fontSize: 32, color: "#4338ca" }} /> Hồ Sơ Học Tập
       </h2>
 
-      {/* Score Legend Section */}
+      {/* Score Legend */}
       <div style={styles.scoreLegend}>
         <div style={styles.legendItem}>
-          <div
-            style={{
-              ...styles.legendBox,
-              backgroundColor: '#f8d7da', // Weak
-            }}
-          ></div>
+          <div style={{ ...styles.legendBox, backgroundColor: "#f8d7da" }} />
           <span>0 - 5: Yếu</span>
         </div>
         <div style={styles.legendItem}>
-          <div
-            style={{
-              ...styles.legendBox,
-              backgroundColor: '#fef2c0', // Average
-            }}
-          ></div>
+          <div style={{ ...styles.legendBox, backgroundColor: "#fef2c0" }} />
           <span>5.1 - 7: Trung bình</span>
         </div>
         <div style={styles.legendItem}>
-          <div
-            style={{
-              ...styles.legendBox,
-              backgroundColor: '#cce4f7', // Good
-            }}
-          ></div>
+          <div style={{ ...styles.legendBox, backgroundColor: "#cce4f7" }} />
           <span>7.1 - 8.9: Tốt</span>
         </div>
         <div style={styles.legendItem}>
-          <div
-            style={{
-              ...styles.legendBox,
-              backgroundColor: '#c9f7d5', // High
-            }}
-          ></div>
+          <div style={{ ...styles.legendBox, backgroundColor: "#c9f7d5" }} />
           <span>9 - 10: Cao</span>
         </div>
       </div>
@@ -389,19 +483,29 @@ export default function HoSoHocTapPage() {
         groupedRows.map((row) => {
           const subjectName = getSubjectName(row.subjectId);
           const subjectIcon = getSubjectIcon(subjectName);
-          const isEditing = editingSubjectId === row.subjectId;
+
+          const rowKey = `${row.subjectId}-${row.classLevel}-${row.semester}`;
+
+
+          const isEditing = editingKey === rowKey;
+
           const semestersSorted = [...row.semesters].sort((a, b) => a.semester - b.semester);
 
-            
+          function handleSaveEditedScores(): void {
+            handleSave();
+          }
 
           return (
-            <section key={`${row.subjectId}-${row.classLevel}`} style={styles.section}>
+            <section key={rowKey} style={styles.section}>
               <header style={styles.headerFlex}>
                 <div style={styles.headerLeft}>
                   {subjectIcon}
-                  <h3 style={styles.subjectName}>{subjectName}</h3>
+                  <h3 style={styles.subjectName}>
+                    {subjectName} <span style={{ color: "#64748b", fontWeight: 600 }}>• Lớp {row.classLevel}</span>
+                  </h3>
                 </div>
-                <button onClick={() => toggleEditSubject(row.subjectId)} style={styles.editButton}>
+
+                <button onClick={() => toggleEditRow(rowKey, row.subjectId, row.classLevel, row.semester)} style={styles.editButton}>
                   <Edit size={20} />
                   <span>{isEditing ? "Hủy" : "Sửa điểm"}</span>
                 </button>
@@ -422,59 +526,88 @@ export default function HoSoHocTapPage() {
                       ))}
                     </tr>
                   </thead>
+
                   <tbody>
-                    {semestersSorted.map((sem) => (
-                      <tr key={`${row.subjectId}-${sem.semester}`} style={styles.tbodyRow}>
-                        <td style={styles.td}>{row.classLevel}</td>
-                        <td style={styles.td}>{sem.semester}</td>
-                        <td style={styles.td}>
-                          {sem.scoresByType && Object.values(sem.scoresByType).flat()[0]?.date
-                            ? new Date(Object.values(sem.scoresByType).flat()[0].date).toLocaleDateString("vi-VN")
-                            : "—"}
-                        </td>
-                        <td style={styles.td}>{sem.notes.join("; ") || "—"}</td>
-                        {sortedScoreTypes.map((type) => {
-                             const results = sem.scoresByType[type.id ?? ""] || [];
-                          return (
-                            <td key={type.id} style={styles.td}>
-                              {results.length > 0 ? (
-                                results.map((res) => {
-                                  const score = editedScores[res.id ?? ""] ?? res.score;
-                                  const isDeleted = deleteQueue.has(res.id ?? "");
-                                  return (
-                                    <div key={res.id} style={{ ...styles.scoreBox, backgroundColor: getScoreColor(score), opacity: isDeleted ? 0.5 : 1 }}>
-                                      {isEditing ? (
-                                        <>
-                                          <input
-                                            type="number"
-                                            min={0}
-                                            max={10}
-                                            step={0.1}
-                                            style={styles.scoreInput}
-                                            value={score}
-                                            onChange={(e) => onScoreChange(res.id ?? "", e.target.value)}
-                                          />
-                                          <button
-                                            onClick={() => toggleDeleteScore(res.id ?? "")}
-                                            style={isDeleted ? styles.scoreUndoBtn : styles.scoreDeleteBtn}
-                                          >
-                                            {isDeleted ? "↩️" : <Trash2 size={16} />}
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <span>{score}</span>
-                                      )}
-                                    </div>
-                                  );
-                                })
-                              ) : (
-                                <div>—</div>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                    {semestersSorted.map((sem) => {
+                      const firstDate = sem.scoresByType ? Object.values(sem.scoresByType).flat()[0]?.date : undefined;
+
+                      return (
+                        <tr key={`${rowKey}-${sem.semester}`} style={styles.tbodyRow}>
+                          <td style={styles.td}>{row.classLevel}</td>
+                          <td style={styles.td}>{sem.semester}</td>
+                          <td style={styles.td}>
+                            {firstDate ? new Date(firstDate).toLocaleDateString("vi-VN") : "—"}
+                          </td>
+                          <td style={styles.td}>{sem.notes.join("; ") || "—"}</td>
+
+                          {sortedScoreTypes.map((type) => {
+                            const typeKey = type.id ?? "";
+                            const results = sem.scoresByType?.[typeKey] || [];
+
+                            return (
+                              <td key={`${rowKey}-${sem.semester}-${typeKey}`} style={styles.td}>
+                                {results.length > 0 ? (
+                                  results.map((res, idx) => {
+                                    const resId = res.id ?? "";
+                                    const score =
+                                      resId && editedScores[resId] !== undefined ? editedScores[resId] : res.score;
+                                    const isDeleted = !!(resId && deleteQueue[resId]);
+
+                                  const boxKey = resId
+  ? `${resId}-${typeKey}-${row.classLevel}-${sem.semester}-${idx}`
+  : `${typeKey}-${row.classLevel}-${sem.semester}-${res.score}-${res.date ?? ""}-${idx}`;
+
+                                    return (
+                                      <div
+                                        key={boxKey}
+                                        style={{
+                                          ...styles.scoreBox,
+                                          backgroundColor: getScoreColor(score),
+                                          opacity: isDeleted ? 0.5 : 1,
+                                        }}
+                                      >
+                                        {isEditing ? (
+                                          <>
+                                            <input
+                                              type="number"
+                                              min={0}
+                                              max={10}
+                                              step={0.1}
+                                              style={styles.scoreInput}
+                                              value={
+                                                resId && editedScores[resId] !== undefined ? editedScores[resId] : score
+                                              }
+                                              onChange={(e) => onScoreChange(resId, e.target.value)}
+                                              disabled={!resId}
+                                              title={!resId ? "Thiếu id nên không sửa/xóa được mục này" : undefined}
+                                            />
+                                            <button
+                                              onClick={() =>
+                                                toggleEditRow(rowKey, row.subjectId, row.classLevel, row.semester)
+                                              }
+
+                                              style={isDeleted ? styles.scoreUndoBtn : styles.scoreDeleteBtn}
+                                              disabled={!resId}
+                                              title={!resId ? "Thiếu id nên không sửa/xóa được mục này" : undefined}
+                                            >
+                                              {isDeleted ? "↩️" : <Trash2 size={16} />}
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span>{score}</span>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <div>—</div>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -484,7 +617,7 @@ export default function HoSoHocTapPage() {
                   <button onClick={handleSaveEditedScores} style={styles.saveBtn}>
                     <Save size={18} /> Lưu thay đổi
                   </button>
-                  <button onClick={() => toggleEditSubject(row.subjectId)} style={styles.cancelBtn}>
+                  <button onClick={() => toggleEditRow(rowKey, row.subjectId, row.classLevel, row.semester)} style={styles.cancelBtn}>
                     Hủy
                   </button>
                 </div>
