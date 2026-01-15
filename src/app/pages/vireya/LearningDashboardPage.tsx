@@ -107,38 +107,28 @@ function extractScoresForSubject(
  * - try updateLearningDashboard()
  * - if update fails with "not found" or HTTP 4xx, try addLearningDashboard()
  */
-async function safeUpdateOrCreateDashboard(id: string | undefined, payload: any) {
+async function safeUpdateOrCreateDashboard(
+  id: string | undefined,
+  payload: any
+) {
   const docId = id || `unique_${Date.now()}`;
-  try {
-    if (typeof updateLearningDashboard === "function") {
-      await updateLearningDashboard(docId, payload);
-      return { updated: true, created: false };
-    } else {
-      await addLearningDashboard({ id: docId, ...payload } as any);
-      return { updated: false, created: true };
-    }
-  } catch (err: any) {
-    const msg = String(err?.message || err || "");
-    const code = err?.code ?? err?.status ?? null;
-    const shouldTryAdd =
-      msg.toLowerCase().includes("no document") ||
-      msg.toLowerCase().includes("not-found") ||
-      msg.toLowerCase().includes("not found") ||
-      (typeof code === "number" && code >= 400 && code < 500) ||
-      msg.includes("404") ||
-      msg.includes("400");
 
-    if (shouldTryAdd) {
-      try {
-        await addLearningDashboard({ id: docId, ...payload } as any);
-        return { updated: false, created: true };
-      } catch (addErr) {
-        throw addErr;
-      }
-    }
-    throw err;
+  // Nếu chưa có id → CREATE LUÔN
+  if (!id) {
+    await addLearningDashboard({ id: docId, ...payload } as any);
+    return { created: true, updated: false };
+  }
+
+  try {
+    await updateLearningDashboard(id, payload);
+    return { updated: true, created: false };
+  } catch (err) {
+    // fallback cuối cùng
+    await addLearningDashboard({ id: docId, ...payload } as any);
+    return { created: true, updated: false };
   }
 }
+
 
 /* ---------- Small UI component: SubjectTrendCard ---------- */
 type SubjectTrendCardProps = {
@@ -272,6 +262,9 @@ const LearningDashboardPage: React.FC = () => {
 
   const [learningResults, setLearningResults] = useState<any[]>([]);
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<string | null>(null);
+// Popup chọn 3 môn chủ chốt
+  const [showSelectSubjects, setShowSelectSubjects] = useState(false);
+  const [selectedImportantSubjects, setSelectedImportantSubjects] = useState<string[]>([]);
 
   // CONFIG: choose how suggestion priority should be represented
   // "percent" => 0..100
@@ -316,6 +309,22 @@ const LearningDashboardPage: React.FC = () => {
     loadLearningResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
+
+  const dashboardToShow = selectedDashboard || dashboards[0];
+
+  useEffect(() => {
+  if (!dashboardToShow) return;
+
+  const subjects =
+    dashboardToShow?.importantSubjects?.subjects || {};
+
+  if (Object.keys(subjects).length !== 3) {
+    setShowSelectSubjects(true);
+  } else {
+    setShowSelectSubjects(false);
+  }
+}, [dashboardToShow]);
+
  useEffect(() => {
   if (!user) return;
 
@@ -326,10 +335,6 @@ const LearningDashboardPage: React.FC = () => {
     { merge: true }
   );
 }, [user]);
-
-
-
-  const dashboardToShow = selectedDashboard || dashboards[0];
 
   // compute suggestion priority for a subject (0..100 fallback) — prefer explicit field from AI if present
   function computeSuggestionPriorityForSubject(subjectName: string) {
@@ -367,12 +372,18 @@ const LearningDashboardPage: React.FC = () => {
     (subjectNames || []).forEach((name) => {
       const { tx, gk, ck, fromInsight } = extractScoresForSubject(dashboardToShow, name);
       const suggestionPriority = computeSuggestionPriorityForSubject(name); // 0..100
-      const predicted = predictScore(tx, gk, ck); // Calculate predicted score here
+const rawPredicted = predictScore(
+  Number(tx) || 0,
+  Number(gk) || 0,
+  Number(ck) || 0
+);
+
+const predicted = Number.isFinite(rawPredicted) ? rawPredicted : 0;
       data.push({ subject: name, "Thường xuyên": Number(tx) || 0, "Giữa kỳ": Number(gk) || 0, "Cuối kỳ": Number(ck) || 0, suggestionPriority, predictedScore: predicted });
       fb.set(name, fromInsight);
     });
     return { subjectsData: data, anyFallback: Array.from(fb.values()).some((v) => v) };
-  }, [dashboardToShow, learningResults]);
+}, [dashboardToShow?.id, learningResults]);
 
 
   // Build a list of ALL subjects to show in the separate Suggestion Priority card
@@ -529,6 +540,38 @@ const handleSelectSubjectDetail = (subject: string) => {
   );
 };
 
+const toggleImportantSubject = (subject: string) => {
+  setSelectedImportantSubjects((prev) => {
+    if (prev.includes(subject)) {
+      return prev.filter((s) => s !== subject);
+    }
+    if (prev.length >= 3) return prev;
+    return [...prev, subject];
+  });
+};
+const saveImportantSubjects = async () => {
+  if (!dashboardToShow || selectedImportantSubjects.length !== 3) return;
+
+  const subjectsObj: any = {};
+  selectedImportantSubjects.forEach((s) => {
+    subjectsObj[s] = {};
+  });
+
+  try {
+    await safeUpdateOrCreateDashboard(dashboardToShow.id, {
+      importantSubjects: {
+        subjects: subjectsObj,
+      },
+    });
+
+    toast.success("Đã lưu 3 môn chủ chốt");
+    await loadDashboards();
+    setShowSelectSubjects(false);
+  } catch (err) {
+    console.error(err);
+    toast.error("Không thể lưu môn chủ chốt");
+  }
+};
 
   // Filter subjectInsights to avoid showing AI-only subjects unless they appear in real results or importantSubjects
   const filteredSubjectInsights = useMemo(() => {
@@ -548,8 +591,43 @@ const handleSelectSubjectDetail = (subject: string) => {
       });
   }, [dashboardToShow, subjectsFromResultsSet, learningResults]);
 
+  
+
   return (
     <div className="ld-container">
+      {showSelectSubjects && (
+  <div className="ld-popup-overlay">
+    <div className="ld-popup">
+      <h3 style={{ marginBottom: 12 }}>🎯 Chọn 3 môn chủ chốt</h3>
+
+      <p style={{ fontSize: 14, color: "#64748b" }}>
+        Chọn đúng <b>3 môn</b> để hệ thống phân tích chính xác hơn.
+      </p>
+
+      <div className="ld-subject-grid">
+        {subjectsFromResults.map((s) => (
+          <div
+            key={s}
+            className={classNames("ld-subject-item", {
+              selected: selectedImportantSubjects.includes(s),
+            })}
+            onClick={() => toggleImportantSubject(s)}
+          >
+            {s}
+          </div>
+        ))}
+      </div>
+
+      <button
+        className="ld-save-btn"
+        disabled={selectedImportantSubjects.length !== 3}
+        onClick={saveImportantSubjects}
+      >
+        Lưu 3 môn đã chọn
+      </button>
+    </div>
+  </div>
+)}
       <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="ld-grid">
@@ -600,10 +678,6 @@ const handleSelectSubjectDetail = (subject: string) => {
                   data-kt-menu-placement="bottom-end"
                   data-kt-menu-flip="top-end"
                 >
-                  <KTSVG
-                    path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
-                    className="svg-icon-1"
-                  />
                 </button>
                 <Dropdown1 />
               </div>

@@ -162,10 +162,7 @@ export function SidebarUser() {
                 data-kt-menu-placement="bottom-end"
                 data-kt-menu-flip="top-end"
               >
-                <KTSVG
-                  path="/media/icons/duotone/Layout/Layout-4-blocks-2.svg"
-                  className="svg-icon-1"
-                />
+
               </button>
               <Dropdown1 />
               {/* end::Dropdown */}
