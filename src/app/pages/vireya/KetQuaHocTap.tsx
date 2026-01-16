@@ -1,6 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "../../../utils/fakeMotion";
-import { Controller, useForm } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  useFieldArray,
+} from "react-hook-form";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -12,13 +16,17 @@ import { ScoreType } from "../../../types/ScoreType";
 import { getAuth } from "firebase/auth";
 
 /* ================= TYPES ================= */
+interface ScoreItem {
+  value: string;
+}
+
 interface FormData {
   classLevel: 10 | 11 | 12;
+  semester: 1 | 2;
   subjectId: string;
   scoreTypeId: string;
-  scores: (string | undefined)[];
+  scores: ScoreItem[];
   date: string;
-  semester: 1 | 2;
   note?: string;
 }
 
@@ -36,20 +44,24 @@ export default function KetQuaHocTapForm() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [scoreTypes, setScoreTypes] = useState<ScoreType[]>([]);
   const [loading, setLoading] = useState(false);
-
   const maxScoreCount = 5;
 
+  /* ================= FORM ================= */
   const {
     control,
     register,
     handleSubmit,
     reset,
     watch,
-    setValue,
     getValues,
   } = useForm<FormData>({
-    shouldUnregister: false,
     defaultValues: DEFAULT_VALUES,
+    shouldUnregister: false, // 🔥 FIX mất date / animation
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "scores",
   });
 
   /* ================= LOAD DATA ================= */
@@ -64,7 +76,7 @@ export default function KetQuaHocTapForm() {
 
   const isReady = subjects.length > 0 && scoreTypes.length > 0;
 
-  /* ================= LOGIC ĐIỂM ================= */
+  /* ================= SCORE LOGIC ================= */
   const selectedScoreTypeId = watch("scoreTypeId");
 
   const selectedScoreType = useMemo(
@@ -74,23 +86,34 @@ export default function KetQuaHocTapForm() {
 
   const inputCount = selectedScoreType?.weight === 1 ? maxScoreCount : 1;
 
+  /**
+   * 🔥 FIX CHÍNH
+   * Chỉ thay đổi số ô khi ĐỔI scoreTypeId
+   * KHÔNG chạy khi user đang nhập
+   */
+  const prevScoreTypeRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const current = getValues("scores") ?? [];
+    if (!selectedScoreTypeId) return;
+    if (prevScoreTypeRef.current === selectedScoreTypeId) return;
 
-    if (current.length > inputCount) {
-      setValue("scores", current.slice(0, inputCount), { shouldDirty: true });
-    }
+    prevScoreTypeRef.current = selectedScoreTypeId;
 
-    if (current.length < inputCount) {
-      setValue(
-        "scores",
-        [...current, ...Array(inputCount - current.length).fill(undefined)],
-        { shouldDirty: true }
-      );
+    // Reset mảng scores theo inputCount
+    // (làm 1 lần, có chủ đích)
+    if (inputCount > fields.length) {
+      for (let i = fields.length; i < inputCount; i++) {
+        append({ value: "" });
+      }
+    } else if (inputCount < fields.length) {
+      for (let i = fields.length - 1; i >= inputCount; i--) {
+        remove(i);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputCount]);
+  }, [selectedScoreTypeId, inputCount]);
 
+  /* ================= VALIDATION ================= */
   const validateScore = (v?: string) => {
     if (!v) return true;
     const n = Number(v);
@@ -100,81 +123,69 @@ export default function KetQuaHocTapForm() {
   };
 
   /* ================= SUBMIT ================= */
-const onSubmit = async (data: FormData) => {
-  const userId = getAuth().currentUser?.uid;
-
-  if (!userId) {
-    toast.error("Bạn chưa đăng nhập.");
-    return;
-  }
-
-  if (!data.subjectId || !data.scoreTypeId) {
-    toast.error("Vui lòng chọn đầy đủ môn và loại điểm.");
-    return;
-  }
-
-  if (!data.date) {
-    toast.error("Vui lòng chọn ngày kiểm tra.");
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const validScores = (data.scores ?? [])
-      .slice(0, inputCount)
-      .map(Number)
-      .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
-
-    if (validScores.length === 0) {
-      toast.info("Bạn chưa nhập điểm nào hợp lệ.");
+  const onSubmit = async (data: FormData) => {
+    const userId = getAuth().currentUser?.uid;
+    if (!userId) {
+      toast.error("Bạn chưa đăng nhập.");
       return;
     }
 
-    const subjectName =
-      subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn";
+    if (!data.subjectId || !data.scoreTypeId) {
+      toast.error("Vui lòng chọn môn và loại điểm.");
+      return;
+    }
 
-    // 🔥 FIX: chờ TẤT CẢ promise hoàn thành
-    await Promise.all(
-      validScores.map((score) =>
-        addLearningResult({
-          userId,
-          classLevel: data.classLevel,
-          semester: data.semester,
-          subjectId: data.subjectId,
-          subjectName,
-          scoreTypeId: data.scoreTypeId,
-          score,
-          date: data.date,
-          note: data.note?.trim() || "",
-          termLabel: "",
-        })
-      )
-    );
+    if (!data.date) {
+      toast.error("Vui lòng chọn ngày kiểm tra.");
+      return;
+    }
 
-    toast.success(`🎉 Đã lưu ${validScores.length} điểm thành công`);
-    reset(DEFAULT_VALUES);
-  } catch (err) {
-    console.error(err);
-    toast.error("❌ Có lỗi xảy ra khi lưu");
-  } finally {
-    setLoading(false);
-  }
-};
+    const validScores = data.scores
+      .map((s) => Number(s.value))
+      .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
 
+    if (validScores.length === 0) {
+      toast.info("Bạn chưa nhập điểm hợp lệ.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const subjectName =
+        subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn";
+
+      await Promise.all(
+        validScores.map((score) =>
+          addLearningResult({
+            userId,
+            classLevel: data.classLevel,
+            semester: data.semester,
+            subjectId: data.subjectId,
+            subjectName,
+            scoreTypeId: data.scoreTypeId,
+            score,
+            date: data.date,
+            note: data.note?.trim() || "",
+            termLabel: "",
+          })
+        )
+      );
+
+      toast.success(`🎉 Đã lưu ${validScores.length} điểm`);
+      reset(DEFAULT_VALUES);
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ Có lỗi xảy ra khi lưu");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   /* ================= UI ================= */
   return (
     <div className="kqht-page">
       <ToastContainer position="top-right" autoClose={3000} />
-
-      <div className="kqht-header">
-        <h1 className="kqht-title">
-          <span className="kqht-icon">📊</span>
-          <span className="kqht-text">Nhập Kết Quả Học Tập</span>
-        </h1>
-        <p>Theo dõi điểm số gọn gàng • Phân tích tốt hơn khi nhập đủ dữ liệu</p>
-      </div>
 
       {!isReady ? (
         <div className="skeleton-wrap">
@@ -187,7 +198,7 @@ const onSubmit = async (data: FormData) => {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 40 }}
-            transition={{ duration: 0.45, ease: "easeOut" }}
+            transition={{ duration: 0.4 }}
           >
             <div className="form-card">
               <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -198,12 +209,9 @@ const onSubmit = async (data: FormData) => {
                     control={control}
                     name="semester"
                     render={({ field }) => (
-                      <select
-                        value={String(field.value)}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      >
-                        <option value="1">Học kỳ 1</option>
-                        <option value="2">Học kỳ 2</option>
+                      <select {...field}>
+                        <option value={1}>Học kỳ 1</option>
+                        <option value={2}>Học kỳ 2</option>
                       </select>
                     )}
                   />
@@ -216,13 +224,10 @@ const onSubmit = async (data: FormData) => {
                     control={control}
                     name="classLevel"
                     render={({ field }) => (
-                      <select
-                        value={String(field.value)}
-                        onChange={(e) => field.onChange(Number(e.target.value))}
-                      >
-                        <option value="10">Lớp 10</option>
-                        <option value="11">Lớp 11</option>
-                        <option value="12">Lớp 12</option>
+                      <select {...field}>
+                        <option value={10}>Lớp 10</option>
+                        <option value={11}>Lớp 11</option>
+                        <option value={12}>Lớp 12</option>
                       </select>
                     )}
                   />
@@ -235,7 +240,7 @@ const onSubmit = async (data: FormData) => {
                     control={control}
                     name="subjectId"
                     render={({ field }) => (
-                      <select value={field.value} onChange={field.onChange}>
+                      <select {...field}>
                         <option value="">-- Chọn môn --</option>
                         {subjects.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -254,7 +259,7 @@ const onSubmit = async (data: FormData) => {
                     control={control}
                     name="scoreTypeId"
                     render={({ field }) => (
-                      <select value={field.value} onChange={field.onChange}>
+                      <select {...field}>
                         <option value="">-- Chọn loại điểm --</option>
                         {scoreTypes.map((st) => (
                           <option key={st.id} value={st.id}>
@@ -268,15 +273,15 @@ const onSubmit = async (data: FormData) => {
 
                 {/* Điểm */}
                 <div className="form-group">
-                  <label>Nhập điểm (tối đa {inputCount})</label>
+                  <label>Nhập điểm</label>
                   <div className="score-grid">
-                    {Array.from({ length: inputCount }).map((_, i) => (
+                    {fields.map((field, i) => (
                       <input
-                        key={i}
-                        type="number"
-                        step="0.1"
+                        key={field.id}
+                        type="text"
+                        inputMode="decimal"
                         placeholder={`Điểm ${i + 1}`}
-                        {...register(`scores.${i}` as const, {
+                        {...register(`scores.${i}.value`, {
                           validate: validateScore,
                         })}
                       />
@@ -287,7 +292,14 @@ const onSubmit = async (data: FormData) => {
                 {/* Ngày */}
                 <div className="form-group">
                   <label>Ngày kiểm tra</label>
-                  <input type="date" {...register("date", { required: true })} />
+                  <Controller
+                    control={control}
+                    name="date"
+                    rules={{ required: true }}
+                    render={({ field }) => (
+                      <input type="date" {...field} />
+                    )}
+                  />
                 </div>
 
                 {/* Ghi chú */}
@@ -305,7 +317,11 @@ const onSubmit = async (data: FormData) => {
                   >
                     Đặt lại
                   </button>
-                  <button type="submit" className="btn-gradient" disabled={loading}>
+                  <button
+                    type="submit"
+                    className="btn-gradient"
+                    disabled={loading}
+                  >
                     {loading ? "Đang lưu..." : "💾 Lưu kết quả"}
                   </button>
                 </div>
@@ -316,6 +332,7 @@ const onSubmit = async (data: FormData) => {
       )}
 
 
+      {/* ================= CSS GIỮ NGUYÊN ================= */}
       {/* ===== CSS HOÀNH TRÁNG ===== */}
       <style>{`
         .kqht-page{
