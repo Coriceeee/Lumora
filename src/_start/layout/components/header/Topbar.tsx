@@ -15,7 +15,7 @@ import { useHistory } from "react-router-dom";
  */
 const mockUser = {
   isLoggedIn: true, // false = chưa đăng nhập
-  displayName: "Đăng nhập",
+  displayName: "Người dùng",
 };
 
 export function Topbar() {
