@@ -1,6 +1,6 @@
 "use client";
+
 import React from "react";
-import ReactApexChart from "react-apexcharts";
 import {
   Card,
   CardContent,
@@ -8,101 +8,148 @@ import {
   Chip,
   Stack,
   Box,
-  useTheme,
 } from "@mui/material";
 import { CertificateToAdd } from "@/types/CareerDashboard";
 
-/* ================== UTILS (ĐẶT TRƯỚC COMPONENT) ================== */
-
-const normalizePercent = (value: string | number): number => {
-  const num = Number(value);
-  if (!Number.isFinite(num)) return 0;
-
-  // 0–1 → %
-  if (num > 0 && num <= 1) return num * 100;
-
-  return num;
-};
-
-const clamp01_100 = (value: number): number => {
-  return Math.max(0, Math.min(100, Math.round(value)));
-};
-
-const getPriorityColor = (v: number, dark: boolean) => {
-  if (v >= 80) return dark ? "#16a34a" : "#22c55e";
-  if (v >= 60) return dark ? "#2563eb" : "#3b82f6";
-  if (v >= 40) return dark ? "#ca8a04" : "#f59e0b";
-  return dark ? "#ef4444" : "#f87171";
-};
-
-/* ================== COMPONENT ================== */
+/* ================== TYPES ================== */
 
 interface Props {
   certificates: CertificateToAdd[];
 }
 
-export default function CertificatesCard({ certificates }: Props) {
-  const theme = useTheme();
-  const isDark = theme.palette.mode === "dark";
+/* ================== UTILS ================== */
 
-  if (!certificates || certificates.length === 0) {
+/**
+ * Normalize priority về 1–3
+ * - undefined / null / NaN → 2 (mặc định: nên bổ sung)
+ */
+const normalizePriority = (v: any): number => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 2;
+  return Math.max(1, Math.min(3, Math.round(n)));
+};
+
+/**
+ * Chứng chỉ KHÔNG dùng %
+ * → dùng mức độ cần thiết
+ */
+const getCertLevel = (
+  priority: number,
+  relevance?: string
+): { text: string; color: string } => {
+  if (relevance === "Cao" || priority === 1) {
+    return { text: "Rất cần thiết", color: "#dc2626" };
+  }
+  if (priority === 2) {
+    return { text: "Nên bổ sung", color: "#f59e0b" };
+  }
+  return { text: "Tham khảo", color: "#3b82f6" };
+};
+
+/* ================== COMPONENT ================== */
+
+export default function CertificatesCard({ certificates }: Props) {
+  // DEBUG khi cần
+  // console.log("[CertificatesCard] certificates =", certificates);
+
+  /**
+   * ❗ FIX QUAN TRỌNG
+   * Chỉ cần có name là hiển thị
+   * Không filter gắt theo reason / relevance
+   */
+  const validCertificates = (certificates || []).filter(
+    (c) => !!c?.name
+  );
+
+  /* ---------- EMPTY STATE ---------- */
+  if (!validCertificates || validCertificates.length === 0) {
     return (
-      <Card sx={{ p: 2, borderRadius: 3 }}>
+      <Card sx={{ borderRadius: 3, boxShadow: 2 }}>
         <CardContent>
-          <Typography variant="h6">Chứng chỉ cần thiết</Typography>
-          <Typography color="text.secondary">Chưa có dữ liệu.</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+            Chứng chỉ cần bổ sung
+          </Typography>
+          <Typography color="text.secondary" fontStyle="italic">
+            🤖 AI chưa đề xuất chứng chỉ cụ thể cho ngành này.
+          </Typography>
         </CardContent>
       </Card>
     );
   }
 
-  const labels = certificates.map((c) => c.name);
-
-  const chartSeries = certificates.map((c) =>
-    clamp01_100(normalizePercent(c.priorityRatio ?? 0))
-  );
-
-  const chartOptions: ApexCharts.ApexOptions = {
-    chart: { type: "donut" },
-    labels,
-    legend: { position: "bottom" },
-  };
-
+  /* ---------- MAIN RENDER ---------- */
   return (
-    <Card sx={{ borderRadius: 3, boxShadow: 4, p: 2 }}>
-      <CardContent sx={{ p: 0 }}>
+    <Card sx={{ borderRadius: 3, boxShadow: 4 }}>
+      <CardContent>
         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
           Chứng chỉ cần bổ sung
         </Typography>
 
-        <ReactApexChart
-          options={chartOptions}
-          series={chartSeries}
-          type="donut"
-          width="100%"
-        />
-
-        <Stack spacing={2} mt={2}>
-          {certificates.map((c, i) => {
-            const ratio = clamp01_100(
-              normalizePercent(c.priorityRatio ?? 0)
+        <Stack spacing={2}>
+          {validCertificates.map((c, i) => {
+            // ✅ FIX: normalize priority
+            const normalizedPriority = normalizePriority(c.priority);
+            const level = getCertLevel(
+              normalizedPriority,
+              typeof c.relevance === "string" ? c.relevance : undefined
             );
-            const color = getPriorityColor(ratio, isDark);
 
             return (
               <Box
                 key={i}
                 sx={{
-                  p: 1.5,
+                  p: 2,
                   borderRadius: 2,
-                  border: "1px solid #eee",
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
                 }}
               >
-                <Typography fontWeight={600}>{c.name}</Typography>
+                {/* ---------- TITLE ---------- */}
+                <Typography fontWeight={600}>
+                  {c.name || "Chứng chỉ"}
+                </Typography>
+
+                {/* ---------- LEVEL ---------- */}
                 <Chip
-                  label={`${ratio}% ưu tiên`}
-                  sx={{ mt: 1, background: color, color: "#fff" }}
+                  label={level.text}
+                  size="small"
+                  sx={{
+                    mt: 1,
+                    backgroundColor: level.color,
+                    color: "#fff",
+                    fontWeight: 600,
+                  }}
                 />
+
+                {/* Hint khi AI chưa trả priority */}
+                {(c.priority === undefined || c.priority === null) && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", mt: 0.5, color: "#9ca3af" }}
+                  >
+                    (AI đang ước lượng mức độ cần thiết)
+                  </Typography>
+                )}
+
+                {/* ---------- REASON ---------- */}
+                {c.reason && (
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1, color: "#374151" }}
+                  >
+                    <strong>Lý do:</strong> {c.reason}
+                  </Typography>
+                )}
+
+                {/* ---------- SOURCE ---------- */}
+                {c.source && (
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", mt: 0.5, color: "#6b7280" }}
+                  >
+                    Nguồn: {c.source}
+                  </Typography>
+                )}
               </Box>
             );
           })}
@@ -111,3 +158,4 @@ export default function CertificatesCard({ certificates }: Props) {
     </Card>
   );
 }
+;

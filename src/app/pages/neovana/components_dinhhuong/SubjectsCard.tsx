@@ -1,144 +1,138 @@
-// FILE: src/app/pages/vireya/components/SubjectsCard.tsx
 "use client";
 
 import React from "react";
 import { useTrail, animated } from "@react-spring/web";
 import { BookOpen } from "lucide-react";
-import { Typography } from "@mui/material"; // ✅ FIX LỖI Ở ĐÂY
+import { Box, Typography } from "@mui/material";
 import { SubjectToFocus } from "@/types/CareerDashboard";
 
+/* ===================== UTILS ===================== */
 
-/* ------------------------- Mini Sparkline chart -------------------------- */
-const Sparkline: React.FC<{ values?: number[] }> = ({ values = [] }) => {
-  if (!values || values.length === 0) return null;
-
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const width = 100;
-  const height = 28;
-  const step = values.length > 1 ? width / (values.length - 1) : width;
-
-  const points = values
-    .map((v, i) => {
-      const x = i * step;
-      const y = height - ((v - min) / (max - min || 1)) * height;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return (
-    <svg width={width} height={height} className="overflow-visible">
-      <polyline
-        fill="none"
-        stroke="url(#subj-gradient)"
-        strokeWidth="2"
-        points={points}
-      />
-      <defs>
-        <linearGradient id="subj-gradient" x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#0ea5e9" />
-        </linearGradient>
-      </defs>
-    </svg>
-  );
+/** Ép số an toàn (string | number | undefined → number) */
+const toNumber = (v: any, fallback = 0): number => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 };
 
-/* -------------------------- Subjects Card list --------------------------- */
-export interface SubjectsCardProps {
+/** % cần tập trung từ priorityRatio (0–1 → 0–100) */
+const getFocusPercent = (priorityRatio?: any): number => {
+  const ratio = toNumber(priorityRatio, 0);
+  return Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+};
+
+/** Nhãn mức độ ưu tiên */
+const getPriorityLabel = (priority?: any) => {
+  const p = toNumber(priority, 1);
+
+  if (p >= 3) return { text: "Rất ưu tiên", color: "#dc2626" };
+  if (p === 2) return { text: "Ưu tiên", color: "#f59e0b" };
+  return { text: "Nền tảng", color: "#3b82f6" };
+};
+
+/* ===================== COMPONENT ===================== */
+
+interface Props {
   subjects: SubjectToFocus[];
 }
 
-const SubjectsCard: React.FC<SubjectsCardProps> = ({ subjects }) => {
-  // Spring trail animation
+const SubjectsCard: React.FC<Props> = ({ subjects }) => {
   const trail = useTrail(subjects?.length || 0, {
-    from: { opacity: 0, y: 18 },
+    from: { opacity: 0, y: 14 },
     to: { opacity: 1, y: 0 },
-    config: { tension: 220, friction: 20 },
+    config: { tension: 240, friction: 22 },
   });
 
+  /* ---------- EMPTY STATE ---------- */
   if (!subjects || subjects.length === 0) {
     return (
-      <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50 to-white shadow text-center text-gray-500">
-        <Typography sx={{ color: "text.secondary", fontStyle: "italic" }}>
-  🤖 AI đang tổng hợp dữ liệu môn học phù hợp.
-  <br />
-  Bạn có thể bắt đầu từ các môn cốt lõi liên quan đến ngành đã chọn.
-</Typography>
-      </div>
+      <Box
+        sx={{
+          p: 4,
+          borderRadius: 3,
+          background: "#f8f9ff",
+          textAlign: "center",
+        }}
+      >
+        <Typography color="text.secondary" fontStyle="italic">
+          🤖 AI đang tổng hợp dữ liệu môn học phù hợp.
+        </Typography>
+      </Box>
     );
   }
-const normalizePercent = (v: any): number => {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return 0;
 
-  // Nếu backend trả 0–1 → đổi sang %
-  if (n > 0 && n <= 1) return Math.round(n * 100);
-
-  // Nếu đã là 0–100 → giữ nguyên
-  return Math.round(n);
-};
-
+  /* ---------- MAIN RENDER ---------- */
   return (
-    <div className="grid gap-4 md:grid-cols-2 p-5 rounded-3xl bg-gradient-to-br from-indigo-50 to-white shadow-lg hover:shadow-xl transition-all duration-300">
-      {trail.map((style, idx) => {
-        const s = subjects[idx];
-        const ratio = normalizePercent(s.priorityRatio);
-        const ratioColor =
-          ratio >= 80
-            ? "#22c55e"
-            : ratio >= 60
-            ? "#3b82f6"
-            : ratio >= 40
-            ? "#f59e0b"
-            : "#ef4444";
+    <Box
+      sx={{
+        p: 4,
+        borderRadius: 4,
+        background: "#fff",
+        boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
+      }}
+    >
+      <Typography variant="h6" fontWeight={800} mb={3}>
+        📚 Môn học cần tập trung
+      </Typography>
 
-        return (
-          <animated.div
-            key={idx}
-            style={{
-              opacity: style.opacity,
-              transform: style.y.to((y) => `translateY(${y}px)`),
-            }}
-            className="p-4 rounded-2xl bg-white/70 shadow-md hover:shadow-lg border border-indigo-100 transition cursor-pointer"
-          >
-            {/* Title */}
-            <div className="flex items-center gap-2 mb-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-semibold text-gray-800">{s.name}</h3>
-            </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {trail.map((style, idx) => {
+          const s = subjects[idx];
 
-            {/* Priority + Sparkline */}
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-sm text-gray-600">
-                Ưu tiên: {s.priority}{" "}
-                <span className="font-semibold" style={{ color: ratioColor }}>
-                  ({ratio}%)
-                </span>
-              </span>
+          // ===== FIX CHUẨN 100% =====
+          const percent = getFocusPercent(s.priorityRatio);
+          const label = getPriorityLabel(s.priority);
 
-              <Sparkline values={[ratio]} />
-            </div>
+          return (
+            <animated.div
+              key={`${s.name ?? "subject"}-${idx}`}
+              style={{
+                opacity: style.opacity,
+                transform: style.y.to((y) => `translateY(${y}px)`),
+              }}
+            >
+              <Box
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  border: "1px solid #e5e7eb",
+                  background: "#fafafa",
+                }}
+              >
+                {/* ===== TÊN MÔN HỌC ===== */}
+                <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <BookOpen size={18} color="#4f46e5" />
+                  <Typography fontWeight={700}>
+                    {s.name || "Môn học"}
+                  </Typography>
+                </Box>
 
-            {/* Reasons + Recommendations */}
-            <ul className="text-sm text-gray-700 space-y-1">
-              {s.reason && (
-                <li>
-                  <span className="font-medium text-red-500">⚠ Lý do:</span>{" "}
-                  {s.reason}
-                </li>
-              )}
-              {s.recommendation && (
-                <li>
-                  <span className="font-medium text-indigo-600">💡 Gợi ý:</span>{" "}
-                  {s.recommendation}
-                </li>
-              )}
-            </ul>
-          </animated.div>
-        );
-      })}
-    </div>
+                {/* ===== % CẦN TẬP TRUNG ===== */}
+                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                  Ưu tiên:{" "}
+                  <strong style={{ color: label.color }}>
+                    {label.text} ({percent}%)
+                  </strong>
+                </Typography>
+
+                {/* ===== LÝ DO ===== */}
+                {s.reason && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    ⚠ <strong>Lý do:</strong> {s.reason}
+                  </Typography>
+                )}
+
+                {/* ===== GỢI Ý ===== */}
+                {s.recommendation && (
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    💡 <strong>Gợi ý:</strong> {s.recommendation}
+                  </Typography>
+                )}
+              </Box>
+            </animated.div>
+          );
+        })}
+      </div>
+    </Box>
   );
 };
 

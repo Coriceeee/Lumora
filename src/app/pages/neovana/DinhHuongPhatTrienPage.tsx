@@ -65,18 +65,22 @@ function pct(n: number) {
 }
 
 function buildUserSkills(selected?: CareerDashboard | null) {
-  // Ưu tiên data backend nếu có
+  // 1️⃣ Ưu tiên backend nếu có userSkills (đúng)
   const fromBackend = (selected as any)?.userSkills as Record<string, number> | undefined;
   if (fromBackend && typeof fromBackend === "object") return fromBackend;
 
-  // Fallback: lấy từ skillsToImprove.priorityRatio (%)
+  // 2️⃣ Fallback: suy ngược từ priorityRatio
   const arr = selected?.skillsToImprove || [];
   const map: Record<string, number> = {};
-  arr.forEach((s) => {
-    map[s.name] = pct(Number((s as any).priorityRatio) || 0);
+
+  arr.forEach(s => {
+    const ratio = Math.max(0, Math.min(1, Number(s.priorityRatio) || 0));
+    map[s.name] = Math.round((1 - ratio) * 100);
   });
+
   return map;
 }
+
 
 function getAllSkillsUnion(a: SkillGapItem[], b: SkillGapItem[]) {
   const set = new Set<string>();
@@ -195,17 +199,6 @@ const SkillGapRadar: React.FC<SkillGapRadarProps> = ({
 const DinhHuongPhatTrienPage: React.FC = () => {
   // import ...
 
-// ====== UTILS / HELPERS (ĐẶT Ở ĐÂY) ======
-function getMatchedSkillCount(
-  userSkills: Record<string, number>,
-  industrySkills: Record<string, number>
-) {
-  return Object.keys(industrySkills).filter(
-    (s) => userSkills[s] !== undefined
-  ).length;
-}
-
-// (các helper khác nếu có: pct, normalizePercent, calculateReadiness...)
 
 // ====== COMPONENT ======
 
@@ -273,12 +266,25 @@ function getMatchedSkillCount(
 
   // MAP SKILLS FIX %
   const mapSkills = (skills: SkillToImprove[]): Skill[] =>
-    skills.map((s) => ({
-      name: s.name,
+  skills.map((s) => ({
+    name: s.name,
+    priority: Number((s as any).priority) || 0,
+    priorityRatio: Math.max(
+  0,
+  Math.min(1, Number((s as any).priorityRatio) || 0)
+),
+
+    reason: (s as any).reason || "",
+  }));
+
+  // MAP SUBJECTS FIX %
+  const mapSubjects = (subjects: any[]): any[] =>
+    subjects.map((s) => ({
+      name: (s as any).name,
       priority: Number((s as any).priority) || 0,
-      priorityRatio: (Number((s as any).priorityRatio) || 0) * 100,
       reason: (s as any).reason || "",
     }));
+
 
   const sortedCareers = useMemo(() => {
     return [...(selected?.careers || [])].sort(
@@ -332,20 +338,7 @@ const readinessB =
 
   const industry = (industrySkillProfiles[selectedCareer] as IndustryProfile | undefined) || undefined;
   const matchReasons = explainMatch(topCareer, selected) || [];
-  // ================== UTILS: NORMALIZE % ==================
-const normalizePercent = (raw: any): number => {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return 0;
 
-  // 0..1 → %
-  if (n > 0 && n <= 1) return Math.round(n * 100);
-
-  // 0..10 → %
-  if (n > 1 && n <= 10) return Math.round(n * 10);
-
-  // 0..100
-  return Math.round(n);
-};
 
 const clamp01_100 = (v: number): number =>
   Math.max(0, Math.min(100, v));
@@ -697,14 +690,12 @@ function calculateReadiness(
 
 
               <Box sx={{ mt: 6 }}>
-     <CareersCard
+   <CareersCard
   careers={sortedCareers.map((c) => ({
     ...c,
-    percent: clamp01_100(normalizePercent(c.fitScore ?? c.percent)),
+    percent: clamp01_100(Number((c as any).fitScore)),
   }))}
 />
-
-
 
             </Box>
 
@@ -737,7 +728,11 @@ function calculateReadiness(
         <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
           <div className="col-xxl-12 p-4">
             {selected ? (
-              <SubjectsCard subjects={selected.subjectsToFocus || []} />
+              <SubjectsCard subjects={mapSubjects(selected.subjectsToFocus || [])} />
+
+
+
+
             ) : (
               <Typography>Chưa có dữ liệu.</Typography>
             )}
@@ -756,6 +751,8 @@ function calculateReadiness(
 };
 
 export default DinhHuongPhatTrienPage;
+
+
 function getMatchedSkillCount(
   userSkills: Record<string, number>,
   industrySkills: Record<string, number>
@@ -764,7 +761,8 @@ function getMatchedSkillCount(
   for (const skill in industrySkills) {
     if (
       Object.prototype.hasOwnProperty.call(industrySkills, skill) &&
-      (userSkills[skill] ?? 0) > 0
+      userSkills[skill] &&
+      userSkills[skill] > 0
     ) {
       count++;
     }
