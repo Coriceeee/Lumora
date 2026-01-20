@@ -282,6 +282,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     subjects.map((s) => ({
       name: (s as any).name,
       priority: Number((s as any).priority) || 0,
+      priorityRatio: (Number((s as any).priorityRatio) || 0) * 100,
       reason: (s as any).reason || "",
     }));
 

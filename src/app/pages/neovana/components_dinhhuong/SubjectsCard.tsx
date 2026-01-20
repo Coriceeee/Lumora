@@ -17,7 +17,7 @@ const toNumber = (v: any, fallback = 0): number => {
 /** % cần tập trung từ priorityRatio (0–1 → 0–100) */
 const getFocusPercent = (priorityRatio?: any): number => {
   const ratio = toNumber(priorityRatio, 0);
-  return Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+  return ratio;//Math.round(Math.max(0, Math.min(1, ratio)) * 100);
 };
 
 /** Nhãn mức độ ưu tiên */

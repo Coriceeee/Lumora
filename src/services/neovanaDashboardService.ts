@@ -4,6 +4,7 @@ import { getDocs, collection, query, where } from "firebase/firestore";
 import { db } from "../firebase/firebase";
 import { CareerDashboard } from "../types/CareerDashboard";
 import { callGeminiServer } from "./gemini";
+import { debug } from "console";
 
 export { callGeminiServer as getGeminiResponse };
 
@@ -65,25 +66,18 @@ Phân tích dữ liệu sau:
 - Thế mạnh: ${formData?.strengths || ""}
 - Sở thích: ${formData?.interests || ""}
 - Tính cách: ${formData?.personality || ""}
-- Nghề mơ ước: ${formData?.dreamJob || ""}
-- Kỹ năng: ${JSON.stringify(skills)}
-- Chứng chỉ: ${JSON.stringify(certificates)}
+- Công việc mong muốn: ${formData?.dreamJob || ""}
+- Kỹ năng hiện có: ${JSON.stringify(skills)}
+- Chứng chỉ đã có: ${JSON.stringify(certificates)}}
 - Kết quả học tập: ${JSON.stringify(results)}
 
-YÊU CẦU BẮT BUỘC:
-- fitScore là MỨC ĐỘ PHÙ HỢP TUYỆT ĐỐI (0–100)
-- Mỗi nghề đánh giá độc lập
-- KHÔNG chia theo tổng
-- KHÔNG dùng % tương đối
-
-Trả JSON CareerDashboard gồm:
-- careers: name, fitScore, reason, preparationSteps
-- skillsToImprove
-- certificatesToAdd
-- subjectsToFocus
-- title, summary, createdAt (ISO)
-
-Chỉ trả JSON hợp lệ.
+Hãy phân tích và trả về JSON theo cấu trúc CareerDashboard với:
+- 5 nghề nghiệp (careers) kèm name, fitScore, percent, reason, preparationSteps.
+- skillsToImprove (name, priority, priorityRatio, reason).
+- certificatesToAdd (name, priority, priorityRatio, relevance, source, reason).
+- subjectsToFocus (nếu học sinh chưa hoàn thành 12, name, score, priority, priorityRatio, reason, recommendation).
+- title, summary, createdAt (ISO string).
+- mặc định tiếng việt, và thời gian là thời gian thật.
 `;
 
   /* ===== 3. CALL GEMINI ===== */
@@ -92,6 +86,7 @@ Chỉ trả JSON hợp lệ.
 
   try {
     const dashboard: CareerDashboard = JSON.parse(cleanedText);
+    debugger;
 
     /* ===== 4. CLEAN CAREERS ===== */
     dashboard.careers = (dashboard.careers || [])
