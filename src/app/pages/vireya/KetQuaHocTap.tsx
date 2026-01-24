@@ -86,11 +86,7 @@
 
     const inputCount = selectedScoreType?.weight === 1 ? maxScoreCount : 1;
 
-    /**
-     * 🔥 FIX CHÍNH
-     * Chỉ thay đổi số ô khi ĐỔI scoreTypeId
-     * KHÔNG chạy khi user đang nhập
-     */
+    
     const prevScoreTypeRef = useRef<string | null>(null);
 
     useEffect(() => {
@@ -110,7 +106,7 @@
           remove(i);
         }
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+
     }, [selectedScoreTypeId, inputCount]);
 
     /* ================= VALIDATION ================= */
@@ -140,47 +136,76 @@
         toast.error("Vui lòng chọn ngày kiểm tra.");
         return;
       }
+      const subjectName =
+  subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn";
 
-      const validScores = data.scores
-        .map((s) => Number(s.value))
-        .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
+      const rawScores = data.scores.map((s) => s.value?.trim());
 
-      if (validScores.length === 0) {
-        toast.info("Bạn chưa nhập điểm hợp lệ.");
-        return;
-      }
+// 🔹 Điểm thường xuyên (weight = 1) → bỏ ô trống
+if (selectedScoreType?.weight === 1) {
+  const validScores = rawScores
+    .filter((v) => v !== "" && v !== undefined)
+    .map((v) => Number(v))
+    .filter((n) => !Number.isNaN(n) && n >= 0 && n <= 10);
 
-      setLoading(true);
+  if (validScores.length === 0) {
+    toast.info("Bạn chưa nhập điểm hợp lệ.");
+    return;
+  }
 
-      try {
-        const subjectName =
-          subjects.find((s) => s.id === data.subjectId)?.name || "Không rõ môn";
+  await Promise.all(
+    validScores.map((score) =>
+      addLearningResult({
+        userId,
+        classLevel: data.classLevel,
+        semester: data.semester,
+        subjectId: data.subjectId,
+        subjectName,
+        scoreTypeId: data.scoreTypeId,
+        score,
+        date: data.date,
+        note: data.note?.trim() || "",
+        termLabel: "",
+      })
+    )
+  );
 
-        await Promise.all(
-          validScores.map((score) =>
-            addLearningResult({
-              userId,
-              classLevel: data.classLevel,
-              semester: data.semester,
-              subjectId: data.subjectId,
-              subjectName,
-              scoreTypeId: data.scoreTypeId,
-              score,
-              date: data.date,
-              note: data.note?.trim() || "",
-              termLabel: "",
-            })
-          )
-        );
+  toast.success(`🎉 Đã lưu ${validScores.length} điểm`);
+  reset(DEFAULT_VALUES);
+  return;
+}
 
-        toast.success(`🎉 Đã lưu ${validScores.length} điểm`);
-        reset(DEFAULT_VALUES);
-      } catch (err) {
-        console.error(err);
-        toast.error("❌ Có lỗi xảy ra khi lưu");
-      } finally {
-        setLoading(false);
-      }
+// 🔹 Điểm khác → BẮT BUỘC 1 ô
+if (selectedScoreType?.weight !== 1) {
+  if (!rawScores[0]) {
+    toast.error("Loại điểm này bắt buộc phải nhập điểm.");
+    return;
+  }
+
+  const n = Number(rawScores[0]);
+  if (Number.isNaN(n) || n < 0 || n > 10) {
+    toast.error("Điểm không hợp lệ (0–10).");
+    return;
+  }
+
+  await addLearningResult({
+    userId,
+    classLevel: data.classLevel,
+    semester: data.semester,
+    subjectId: data.subjectId,
+    subjectName,
+    scoreTypeId: data.scoreTypeId,
+    score: n,
+    date: data.date,
+    note: data.note?.trim() || "",
+    termLabel: "",
+  });
+
+  toast.success("🎉 Đã lưu điểm");
+  reset(DEFAULT_VALUES);
+  return;
+}
+     
     };
 
     /* ================= UI ================= */
@@ -350,9 +375,6 @@
           </AnimatePresence>
         )}
 
-
-        {/* ================= CSS GIỮ NGUYÊN ================= */}
-        {/* ===== CSS HOÀNH TRÁNG ===== */}
         <style>{`
           .kqht-page{
             min-height:100vh;
