@@ -2,81 +2,111 @@
 // Header
 //
 
-// Desktop Mode
+// Desktop
 @include media-breakpoint-up(lg) {
 	.header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		position: relative;
-		z-index: 2;
+		z-index: 9999; // 🔥 FIX CLICK
+		pointer-events: auto;
+
 		height: get($header-config, desktop, default, height);				
 
-		// Fixed and Scroll Header Modes
 		.header-fixed[data-kt-sticky-header="on"] & {
 			position: fixed;
 			top: 0;
 			right: 0;
 			left: 0;
 			padding: 0;
-			z-index: get($header-config, desktop, fixed, z-index);
+			z-index: 9999; // 🔥 FIX CLICK
 			background-color: get($header-config, desktop, fixed, bg-color);
 			box-shadow: get($header-config, desktop, fixed, box-shadow);
 			height: get($header-config, desktop, fixed, height);			
 			transition: left get($aside-config, base, transition-speed) ease;
+			pointer-events: auto;
 		}
 
-		// Fixed Aside & Scroll Header Modes
 		.aside-fixed[data-kt-sticky-header="on"] & {
 			left: get($aside-config, base, primary-width);
 		}
 
-		// Fixed Aside, Aside Secondary Enabled & Scroll Header Modes
 		.aside-fixed.aside-secondary-enabled[data-kt-sticky-header="on"] & {
-			left: get($aside-config, base, primary-width) +  get($aside-config, base, secondary-width);
+			left: get($aside-config, base, primary-width) + get($aside-config, base, secondary-width);
 		}
 
-		// Aside primary disabled and aside secondary enabled modes
 		.aside-primary-disabled.aside-secondary-enabled[data-kt-sticky-header="on"] & {
 			left: get($aside-config, base, secondary-width);
 		}
 
-		// Aside fixed, aside minimized, header fixed & header minimized modes
 		.aside-fixed.header-fixed[data-kt-aside-minimize="on"][data-kt-sticky-header="on"] & {
 			left: get($aside-config, base, primary-width);
 			transition: left get($aside-config, base, transition-speed) ease;
 		}
 
-		// Fixed, Scroll & Sidebar Enabled Modes
 		.header-fixed[data-kt-sticky-header="on"][data-sidebar="on"] & {
 			right: get($sidebar-config, desktop, width);
 		}
-		
 	}
 }
 
-// Tablet & Mobile Modes
+// 🔥 MOBILE (QUAN TRỌNG NHẤT)
 @include media-breakpoint-down(lg) {
 	.header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		//padding: 0 get($page-spacing, tablet-and-mobile);
 		height: get($header-config, tablet-and-mobile, default, height);
 		position: relative;
-		z-index: 3;
+		z-index: 9999; // 🔥 FIX CLICK
+		pointer-events: auto;
 
-		// Fixed Mobile Header Mode
 		.header-tablet-and-mobile-fixed[data-kt-sticky-header="on"] & {
 			position: fixed;
 			top: 0;
 			right: 0;
 			left: 0;
-			z-index: get($header-config, tablet-and-mobile, fixed, z-index);
+			z-index: 9999; // 🔥 FIX CLICK
 			height: get($header-config, tablet-and-mobile, fixed, height);
 			min-height: get($header-config, tablet-and-mobile, fixed, height);
 			background-color: get($header-config, tablet-and-mobile, fixed, bg-color);
 			box-shadow: get($header-config, tablet-and-mobile, fixed, box-shadow);
+			pointer-events: auto;
 		}
+	}
+
+	// ❌ XOÁ NÚT 3 GẠCH
+	.header-menu-toggle,
+	.header-mobile-toggle,
+	.btn-icon-header-menu-mobile,
+	#kt_header_menu_mobile_toggle,
+	#kt_aside_mobile_toggle,
+	#kt_sidebar_mobile_toggle,
+	.burger-icon,
+	.hamburger,
+	.menu-toggle,
+	.mobile-menu-toggle,
+	.mobile-nav-toggle,
+	[aria-label="menu"],
+	[aria-label="Menu"] {
+		display: none !important;
+		visibility: hidden !important;
+		opacity: 0 !important;
+		pointer-events: none !important;
+	}
+
+	// ❌ XOÁ MỌI THANH CHẶN CLICK
+	.gutter,
+	.resizer,
+	.resize-handle,
+	.split-pane-divider,
+	[role="separator"],
+	[class*="resizer"],
+	[class*="resize"],
+	[class*="splitter"],
+	[class*="divider"] {
+		display: none !important;
+		pointer-events: none !important;
 	}
 }

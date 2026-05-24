@@ -1,5 +1,4 @@
-
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Box,
   Container,
@@ -26,7 +25,7 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import RocketLaunchIcon from "@mui/icons-material/RocketLaunch";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 
-type ModuleKey = "VIREYA" | "NEOVANA" | "ZENORA" | "ROBOKI";
+type ModuleKey = "COREMIND" | "PATHFINDER";
 
 /* ====================== HOOK: reveal theo scroll ====================== */
 function useInViewOnce(threshold = 0.18) {
@@ -101,38 +100,30 @@ export default function AboutLumoraPage() {
 
   return (
     <Box
-  sx={{
-    bgcolor: "#f7f7ff",
-  }}
->
-
-      {/* HERO */}
+      sx={{
+        bgcolor: "#f7f7ff",
+      }}
+    >
       <Fade in timeout={600}>
         <div>
           <HeroSection onScrollToFlow={scrollToFlow} />
         </div>
       </Fade>
 
-      {/* BENEFITS */}
       <BenefitsSection />
 
-      {/* FLOW – BẮT BUỘC BỌC ref */}
       <div ref={flowRef}>
         <FlowSection />
       </div>
 
-      {/* MODULES */}
       <ModulesSection />
 
-      {/* CTA */}
       <QuoteCTASection />
 
-      {/* FOOTER */}
       <FooterMini />
     </Box>
   );
 }
-
 
 /* ----------------------------- 1) HERO ----------------------------- */
 
@@ -154,7 +145,6 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
         color: "white",
       }}
     >
-      {/* decorative blobs */}
       <Box
         sx={{
           position: "absolute",
@@ -175,7 +165,7 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
               <Stack direction="row" spacing={1} alignItems="center">
                 <Chip
                   icon={<StarRoundedIcon />}
-                  label="Vũ trụ AI giáo dục toàn diện"
+                  label="La bàn định vị tiềm năng & tương lai cá nhân"
                   sx={{
                     bgcolor: "rgba(255,255,255,0.12)",
                     color: "white",
@@ -189,7 +179,7 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
                 variant={isMdUp ? "h2" : "h3"}
                 sx={{ fontWeight: 800, letterSpacing: -0.5, lineHeight: 1.05 }}
               >
-                Lumora
+                EduCompass
               </Typography>
 
               <Typography
@@ -203,8 +193,9 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
               <Typography
                 sx={{ color: "rgba(255,255,255,0.72)", maxWidth: 640 }}
               >
-                Lumora giúp bạn nhìn rõ hơn về chính mình thông qua dữ liệu học tập và những tương tác hằng ngày —
-                từ đó học chủ động hơn, nhẹ nhàng hơn và tự tin hơn theo cách của riêng bạn.
+                EduCompass giúp bạn nhìn rõ hơn về chính mình thông qua dữ liệu học tập
+                và những tương tác hằng ngày — từ đó học chủ động hơn, nhẹ nhàng hơn
+                và tự tin hơn theo cách của riêng bạn.
               </Typography>
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
@@ -221,7 +212,7 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
                     fontWeight: 700,
                   }}
                 >
-                  Khám phá Lumora
+                  Khám phá EduCompass
                 </Button>
 
                 <Button
@@ -240,7 +231,7 @@ function HeroSection({ onScrollToFlow }: { onScrollToFlow: () => void }) {
                     },
                   }}
                 >
-                  Xem cách Lumora hoạt động
+                  Xem cách EduCompass hoạt động
                 </Button>
               </Stack>
             </Stack>
@@ -286,26 +277,25 @@ function MockupCard() {
         <Divider sx={{ my: 2, borderColor: "rgba(255,255,255,0.16)" }} />
 
         <Box
-  sx={{
-    height: 160,
-    borderRadius: 3,
-    overflow: "hidden",
-    boxShadow: "0 10px 30px rgba(79,70,229,0.35)",
-    border: "1px solid rgba(79,70,229,0.25)",
-  }}
->
-  <Box
-    component="img"
-    src="/media/avatars/lumora.png"
-    alt="Lumora cover"
-    sx={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-    }}
-  />
-</Box>
-
+          sx={{
+            height: 160,
+            borderRadius: 3,
+            overflow: "hidden",
+            boxShadow: "0 10px 30px rgba(79,70,229,0.35)",
+            border: "1px solid rgba(79,70,229,0.25)",
+          }}
+        >
+          <Box
+            component="img"
+            src="/media/avatars/educompass.png"
+            alt="EduCompass cover"
+            sx={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
+        </Box>
       </CardContent>
     </Card>
   );
@@ -328,6 +318,7 @@ function MiniStat({ label, value }: { label: string; value: string }) {
     </Box>
   );
 }
+
 /* -------------------------- 2) BENEFITS --------------------------- */
 
 function BenefitsSection() {
@@ -336,7 +327,7 @@ function BenefitsSection() {
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
         <Stack spacing={1}>
           <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-            Lumora giúp bạn làm được gì?
+            EduCompass giúp bạn làm được gì?
           </Typography>
           <Typography sx={{ color: "text.secondary", maxWidth: 760 }}>
             Mọi gợi ý đều hướng tới sự rõ ràng, cá nhân hóa và dễ thực hiện —
@@ -425,7 +416,6 @@ function BenefitCard({
 }
 
 /* ----------------------------- 3) FLOW ----------------------------- */
-/* LƯU Ý: KHỐI 1 đã bọc <div ref={flowRef}> quanh FlowSection */
 
 function FlowSection() {
   const theme = useTheme();
@@ -463,9 +453,8 @@ function FlowSection() {
         <Container maxWidth="lg">
           <Stack spacing={1}>
             <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-              Hành trình Lumora đồng hành
+              Hành trình EduCompass đồng hành
             </Typography>
-
           </Stack>
 
           <Grid container spacing={2.5} sx={{ mt: 2 }}>
@@ -540,55 +529,35 @@ function FlowSection() {
 /* ------------------------- 4) MODULES ------------------------- */
 
 function ModulesSection() {
-  const [active, setActive] = useState<ModuleKey>("VIREYA");
+  const [active, setActive] = useState<ModuleKey>("COREMIND");
 
   const modules = useMemo(
     () => ({
-      VIREYA: {
-        title: "VIREYA — Phân tích học tập & định hướng học tập",
+      COREMIND: {
+        title: "COREMIND — Phân tích học tập & định hướng học tập",
         summary:
-          "VIREYA giúp bạn theo dõi hồ sơ học tập, nhận ra điểm mạnh, điểm cần cải thiện và gợi ý lộ trình học phù hợp với năng lực của bạn.",
+          "COREMIND giúp bạn theo dõi hồ sơ học tập, nhận ra điểm mạnh, điểm cần cải thiện và gợi ý lộ trình học phù hợp với năng lực của bạn.",
         highlights: [
           "Hồ sơ học tập & nhập điểm",
           "Biểu đồ tiến trình theo thời gian",
           "Gợi ý ưu tiên cải thiện từng môn",
         ],
       },
-      NEOVANA: {
-        title: "NEOVANA — Năng lực & định hướng nghề nghiệp",
+      PATHFINDER: {
+        title: "PATHFINDER — Năng lực & định hướng nghề nghiệp",
         summary:
-          "NEOVANA phân tích năng lực, sở thích và mục tiêu để gợi ý những hướng nghề nghiệp phù hợp, kèm theo lý do và lộ trình rõ ràng.",
+          "PATHFINDER phân tích năng lực, sở thích và mục tiêu để gợi ý những hướng nghề nghiệp phù hợp, kèm theo lý do và lộ trình rõ ràng.",
         highlights: [
           "Hồ sơ năng lực (skills, chứng chỉ, minh chứng)",
           "Gợi ý nghề nghiệp có giải thích",
           "Lộ trình phát triển dài hạn",
         ],
       },
-      ZENORA: {
-        title: "ZENORA — Trợ lý cảm xúc AI",
-        summary:
-          "ZENORA giúp nhận diện cảm xúc và mang đến những không gian nhẹ nhàng để bạn giải tỏa, thư giãn và cân bằng lại tinh thần.",
-        highlights: [
-          "Phản hồi cảm xúc tức thời",
-          "Không gian chữa lành & thư giãn",
-          "Theo dõi xu hướng cảm xúc (tùy chọn)",
-        ],
-      },
-      ROBOKI: {
-        title: "ROBOKI — Trợ giảng học tập thông minh",
-        summary:
-          "Hỗ trợ giải thích bài, gợi ý luyện tập, thiết kế hoạt động/dự án học tập và rèn tư duy phản biện.",
-        highlights: [
-          "Hỏi-đáp học thuật theo ngữ cảnh",
-          "Thiết kế dự án học tập",
-          "Rèn tư duy phản biện & đánh giá năng lực",
-        ],
-      },
     }),
     []
   );
 
-  const chipOrder: ModuleKey[] = ["VIREYA", "NEOVANA", "ZENORA", "ROBOKI"];
+  const chipOrder: ModuleKey[] = ["COREMIND", "PATHFINDER"];
   const activeData = modules[active];
 
   return (
@@ -596,10 +565,10 @@ function ModulesSection() {
       <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
         <Stack spacing={1}>
           <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: -0.3 }}>
-            4 trụ cột của Lumora
+            2 trụ cột của EduCompass
           </Typography>
           <Typography sx={{ color: "text.secondary", maxWidth: 760 }}>
-            Người xem có thể “click” từng mô-đun để hiểu rõ Lumora làm gì, khác gì,
+            Người xem có thể click từng mô-đun để hiểu rõ EduCompass làm gì, khác gì,
             và mạnh ở đâu.
           </Typography>
         </Stack>
@@ -674,12 +643,12 @@ function ModulesSection() {
               </CardContent>
             </Card>
           </Grid>
-
         </Grid>
       </Container>
     </SectionReveal>
   );
 }
+
 /* ------------------------- 5) QUOTE + CTA ------------------------- */
 
 function QuoteCTASection() {
@@ -714,7 +683,8 @@ function QuoteCTASection() {
                 variant="h5"
                 sx={{ fontWeight: 900, lineHeight: 1.25, mb: 1.25 }}
               >
-               "Ở LUMORA, bạn không cần phải giỏi hơn ai – chỉ cần đủ an yên để hiểu mình, đủ tự do để chọn đường đi, và đủ dũng cảm để trở thành chính mình, theo cách chân thật và đẹp nhất mà bạn có thể".
+                EduCompass là la bàn dẫn lối để bạn khám phá tiềm năng cá nhân,
+                định hình tương lai và tự tin xây dựng con đường dành riêng cho mình.
               </Typography>
 
               <Stack
@@ -734,7 +704,7 @@ function QuoteCTASection() {
                     fontWeight: 900,
                   }}
                 >
-                  Trải nghiệm Lumora
+                  Trải nghiệm EduCompass
                 </Button>
               </Stack>
             </Box>
@@ -753,7 +723,7 @@ function FooterMini() {
       <Box sx={{ py: 3, bgcolor: "#f7f7ff" }}>
         <Container maxWidth="lg">
           <Typography variant="body2" sx={{ color: "text.secondary" }}>
-            © {new Date().getFullYear()} Lumora • Vũ trụ AI giáo dục toàn diện
+            © {new Date().getFullYear()} EduCompass • La bàn giáo dục sử dụng trí tuệ nhân tạo
           </Typography>
         </Container>
       </Box>

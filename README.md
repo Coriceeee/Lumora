@@ -1,4 +1,4 @@
-# Chào các bạn đến với Dự Án Lumora
+# Chào các bạn đến với Dự Án EduCompass
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts

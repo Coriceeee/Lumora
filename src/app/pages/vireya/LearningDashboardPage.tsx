@@ -638,7 +638,7 @@ const saveImportantSubjects = async () => {
         {/* LEFT */}
         <div className="ld-left">
           <div className="ld-left-top">
-            <h2 className="ld-title">🧭 Định hướng học tập</h2>
+            <h2 className="ld-title">🧭 La bàn định hướng học tập</h2>
             <button
               onClick={async () => {
                 if (!userId) return;

@@ -16,7 +16,7 @@ export function Footer() {
             {new Date().getFullYear()} &copy;
           </span>
           <a href="#" className="text-gray-800 text-hover-primary">
-            Lumora
+            EduCompass
           </a>
         </div>
         {/* end::Copyright */}

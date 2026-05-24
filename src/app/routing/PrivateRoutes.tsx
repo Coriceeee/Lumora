@@ -6,28 +6,28 @@ import { LightDashboardWrapper } from "../pages/dashboards/light-dashboard/Light
 import { StartDashboardWrapper } from "../pages/dashboards/start-dashboard/StartDashboardWrapper";
 import { MenuTestPage } from "../pages/MenuTestPage";
 
-/* Danh Mục */
+/* Danh mục */
 import DanhMucLoaiDiem from "../pages/DanhMucLoaiDiem";
 import DanhMucMonHoc from "../pages/DanhMucMonHoc";
 import DanhMucKyNang from "../pages/DanhMucKyNang";
 import DanhMucChungChi from "../pages/DanhMucChungChi";
 
-/* Vireya */
+/* VIREYA */
 import KetQuaHocTapForm from "../pages/vireya/KetQuaHocTap";
 import HoSoHocTapPage from "../pages/vireya/HoSoHocTap";
 import PhanTichHoSoHocTapPage from "../pages/vireya/PhanTichHoSoHocTapPage";
 import LearningDashboardPage from "../pages/vireya/LearningDashboardPage";
 
-/* Neovana */
+/* NEOVANA */
 import HoSoCaNhan from "../pages/neovana/HoSoCaNhan";
 import PhanTichNangLucPage from "../pages/neovana/PhanTichNangLucPage";
 import DinhHuongPhatTrien from "../pages/neovana/DinhHuongPhatTrienPage";
 
-/* Zenora */
-import VoidZone from "../pages/zenora/VoidZone";
+/* HEARTCORE */
+import VoidZone from "../pages/zenora/VoidZone"
 import CloudWhisper from "../pages/zenora/CloudWhisper";
 
-/* Ayura */
+/* AYURA */
 import { MindfulGardenComponent } from "../pages/ayura/MindfulGarden";
 import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
 
@@ -35,11 +35,9 @@ import { AyuraCoreProvider } from "../pages/ayura/AyuraCoreProvider";
 import About from "../pages/About";
 import Contact from "../pages/Contact";
 
-
-/* Roboki */
+/* ROBOKI */
 import RobokiLinks from "../pages/RobokiLinks";
 import RobokiEmbedPage from "../pages/RobokiEmbedPage";
-// import { Contact } from "lucide-react"; // Removed as it's not the page component
 
 export function PrivateRoutes() {
   const ProfilePageWrapper = lazy(() =>
@@ -55,7 +53,6 @@ export function PrivateRoutes() {
   return (
     <Suspense fallback={<FallbackView />}>
       <Switch>
-
         {/* Dashboard */}
         <Route path="/dashboard" component={StartDashboardWrapper} />
         <Route path="/light" component={LightDashboardWrapper} />
@@ -68,24 +65,45 @@ export function PrivateRoutes() {
         {/* Menu Test */}
         <Route path="/menu-test" component={MenuTestPage} />
 
-        {/* Danh Mục */}
+        {/* Danh mục */}
         <Route path="/danh-muc/loai-diem" component={DanhMucLoaiDiem} />
         <Route path="/danh-muc/mon-hoc" component={DanhMucMonHoc} />
         <Route path="/danh-muc/chung-chi" component={DanhMucChungChi} />
         <Route path="/danh-muc/ky-nang" component={DanhMucKyNang} />
 
-        {/* Vireya */}
-        <Route path="/vireya/ket-qua-hoc-tap" component={KetQuaHocTapForm} />
-        <Route path="/vireya/ho-so-hoc-tap" component={HoSoHocTapPage} />
-        <Route path="/vireya/danh-gia-trinh-do" component={LearningDashboardPage} />
-        <Route path="/vireya/phan-tich-ho-so-hoc-tap" component={PhanTichHoSoHocTapPage} />
+        {/* VIREYA */}
+        <Route
+          path="/coremind/ket-qua-hoc-tap"
+          component={KetQuaHocTapForm}
+        />
+        <Route
+          path="/coremind/hanh-trinh-hoc-tap"
+          component={HoSoHocTapPage}
+        />
+        <Route
+          path="/coremind/danh-gia-trinh-do"
+          component={LearningDashboardPage}
+        />
+        <Route
+          path="/coremind/phan-tich-nang-luc"
+          component={PhanTichHoSoHocTapPage}
+        />
 
-        {/* Neovana */}
-        <Route path="/neovana/ho-so-ca-nhan" component={HoSoCaNhan} />
-        <Route path="/neovana/phan-tich-nang-luc" component={PhanTichNangLucPage} />
-        <Route path="/neovana/dinh-huong-phat-trien" component={DinhHuongPhatTrien} />
+        {/* NEOVANA */}
+        <Route
+          path="/pathfinder/ban-do-nang-luc"
+          component={HoSoCaNhan}
+        />
+        <Route
+          path="/pathfinder/phan-tich-nang-luc"
+          component={PhanTichNangLucPage}
+        />
+        <Route
+          path="/pathfinder/la-ban-phat-trien"
+          component={DinhHuongPhatTrien}
+        />
 
-        {/* Ayura */}
+        {/* AYURA */}
         <Route
           path="/ayura/vuon-chua-lanh"
           render={() => (
@@ -95,17 +113,18 @@ export function PrivateRoutes() {
           )}
         />
 
-        {/* Zenora */}
-        <Route path="/zenora/void-zone" component={VoidZone} />
-        <Route path="/zenora/cloud-whisper" component={CloudWhisper} />
+        {/* HEARTCORE */}
+        <Route path="/heartcore/void-zone" component={VoidZone} />
+        <Route path="/heartcore/cloud-whisper" component={CloudWhisper} />
 
-        {/* Roboki – 6 ô đánh giá */}
-        <Route path="/roboki/danh-gia-nang-luc" component={RobokiLinks} />
-
-        {/* Roboki – embed chung */}
+        {/* ROBOKI */}
+        <Route
+          path="/roboki/danh-gia-nang-luc"
+          component={RobokiLinks}
+        />
         <Route path="/roboki/embed/:id" component={RobokiEmbedPage} />
 
-        {/* About – Contact */}
+        {/* About / Contact */}
         <Route path="/about" component={About} />
         <Route path="/contact" component={Contact} />
 

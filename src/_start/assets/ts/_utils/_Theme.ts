@@ -83,7 +83,7 @@ export const defaultThemeConfig: ThemeConfig = {
     xxl: 1400,
   },
 
-  // ✅ FONT THUẦN VIỆT – ÁP TOÀN LUMORA
+
   "font-family": "'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif",
 };
 

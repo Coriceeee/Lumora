@@ -4,6 +4,7 @@ import * as Yup from "yup";
 import clsx from "clsx";
 import { Link } from "react-router-dom";
 import { useFormik } from "formik";
+import { FirebaseError } from "firebase/app";
 import * as auth from "../redux/AuthRedux";
 import { toAbsoluteUrl } from "../../../../_start/helpers";
 
@@ -106,9 +107,10 @@ export function Login() {
         const idToken = await getIdToken(user, true);
 
         setLoading(false);
+        setSubmitting(false);
         dispatch(auth.actions.login(idToken));
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error("Email sign-in error:", error);
         setLoading(false);
         setSubmitting(false);
         setStatus("Thông tin đăng nhập không chính xác");
@@ -119,6 +121,8 @@ export function Login() {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
+      formik.setStatus(undefined);
+
       const cred = await signInWithPopup(authFb, googleProvider);
       const user = cred.user;
 
@@ -134,10 +138,55 @@ export function Login() {
 
       setLoading(false);
       dispatch(auth.actions.login(idToken));
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error("Google sign-in error:", error);
       setLoading(false);
-      formik.setStatus("Không thể đăng nhập bằng Google");
+
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case "auth/popup-closed-by-user":
+            formik.setStatus(
+              "Bạn đã đóng cửa sổ đăng nhập Google trước khi hoàn tất."
+            );
+            return;
+
+          case "auth/popup-blocked":
+            formik.setStatus(
+              "Trình duyệt đang chặn popup. Hãy cho phép popup rồi thử lại."
+            );
+            return;
+
+          case "auth/cancelled-popup-request":
+            formik.setStatus(
+              "Yêu cầu đăng nhập trước đã bị huỷ do có popup khác được mở."
+            );
+            return;
+
+          case "auth/unauthorized-domain":
+            formik.setStatus(
+              "Domain hiện tại chưa được thêm vào Authorized domains của Firebase."
+            );
+            return;
+
+          case "auth/operation-not-allowed":
+            formik.setStatus(
+              "Google Sign-In chưa được bật trong Firebase Authentication."
+            );
+            return;
+
+          case "auth/network-request-failed":
+            formik.setStatus(
+              "Lỗi kết nối mạng. Vui lòng kiểm tra Internet rồi thử lại."
+            );
+            return;
+
+          default:
+            formik.setStatus(`Đăng nhập Google thất bại: ${error.message}`);
+            return;
+        }
+      }
+
+      formik.setStatus("Không thể đăng nhập bằng Google. Vui lòng thử lại.");
     }
   };
 
@@ -148,10 +197,9 @@ export function Login() {
       noValidate
       id="kt_login_signin_form"
     >
-      {/* Tiêu đề */}
       <div className="pb-lg-15">
         <h3 className="fw-bolder text-dark display-6">
-          Chào mừng bạn đến với Lumora
+          Chào mừng bạn đến với EduCompass
         </h3>
         <div className="text-muted fw-bold fs-3">
           Chưa có tài khoản?{" "}
@@ -165,19 +213,19 @@ export function Login() {
         </div>
       </div>
 
-      {/* Thông báo */}
       {formik.status ? (
         <div className="mb-lg-15 alert alert-danger">
           <div className="alert-text font-weight-bold">{formik.status}</div>
         </div>
       ) : (
         <div className="mb-lg-15 alert alert-info">
-          <div className="alert-text">Bạn có thể đăng nhập bằng Email/Mật khẩu hoặc Google.</div>
+          <div className="alert-text">
+            Bạn có thể đăng nhập bằng Email/Mật khẩu hoặc Google.
+          </div>
         </div>
       )}
 
-      {/* Email */}
-      <div className="v-row mb-10 fv-plugins-icon-container">
+      <div className="fv-row mb-10 fv-plugins-icon-container">
         <label className="form-label fs-6 fw-bolder text-dark">Email</label>
         <input
           placeholder="Nhập email của bạn"
@@ -198,7 +246,6 @@ export function Login() {
         )}
       </div>
 
-      {/* Mật khẩu */}
       <div className="fv-row mb-10 fv-plugins-icon-container">
         <div className="d-flex justify-content-between mt-n5">
           <label className="form-label fs-6 fw-bolder text-dark pt-5">
@@ -231,7 +278,6 @@ export function Login() {
         )}
       </div>
 
-      {/* Nút hành động */}
       <div className="pb-lg-0 pb-5">
         <button
           type="submit"
@@ -257,7 +303,7 @@ export function Login() {
           <img
             src={toAbsoluteUrl("/media/svg/brand-logos/google-icon.svg")}
             className="w-20px h-20px me-3"
-            alt=""
+            alt="Google"
           />
           Đăng nhập với Google
         </button>

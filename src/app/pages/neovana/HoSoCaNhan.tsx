@@ -247,7 +247,7 @@ export default function HoSoCaNhan() {
 
   return (
     <Container>
-      <Title>Hồ sơ năng lực</Title>
+      <Title>Bản đồ năng lực cá nhân</Title>
 
       {/* BUTTON GROUP */}
       <BtnGroup>

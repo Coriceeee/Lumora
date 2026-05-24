@@ -1,8 +1,18 @@
 {
   "projects": {
-    "default": "lumora-34c02",
-    "prod": "lumora-34c02"
+    "default": "educompass-34c02-e27e8",
+    "prod": "educompass-34c02-e27e8"
   },
-  "targets": {},
-  "etags": {}
+  "targets": {
+    "lumora-34c02": {
+      "hosting": {
+        "main": [
+          "lumora-34c02"
+        ],
+        "edu": [
+          "educompass-34c02-e27e8"
+        ]
+      }
+    }
+  }
 }

@@ -24,7 +24,7 @@ export async function callGeminiServer(prompt: string) {
     const data = await res.json().catch(() => null);
 
     // ❌ HTTP error
-    if (!res.ok) {
+    if (!res.ok) {  
       // Xử lý RIÊNG 429
       if (res.status === 429) {
         throw new Error(

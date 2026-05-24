@@ -43,7 +43,7 @@ export default function Contact() {
       <ToastContainer position="top-right" autoClose={3000} />
 
       <h2>Liên hệ với chúng tôi</h2>
-      <p>Bạn cần hỗ trợ hoặc muốn biết thêm về Lumora? Đừng ngần ngại!</p>
+      <p>Bạn cần hỗ trợ hoặc muốn biết thêm về EduCompass? Đừng ngần ngại!</p>
 
       <form className="contact-form" onSubmit={handleSubmit}>
         <label>Họ và tên</label>
@@ -78,7 +78,7 @@ export default function Contact() {
       </form>
 
       <div className="contact-info">
-        <p><strong>Email:</strong> lumorawebside@gmail.com</p>
+        <p><strong>Email:</strong> educompass@gmail.com</p>
         <p><strong>Hotline:</strong> 0915 917 616</p>
       </div>
     </div>

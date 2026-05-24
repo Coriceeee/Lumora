@@ -93,7 +93,7 @@ export default function RobokiLinks() {
                   {t.name}
                 </h4>
                 <p className="text-muted">
-                  Nhấn để thực hiện bài đánh giá trong Lumora →
+                  Nhấn để thực hiện bài đánh giá trong EduCompass →
                 </p>
               </div>
             </div>

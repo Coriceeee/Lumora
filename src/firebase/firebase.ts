@@ -4,7 +4,7 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCUsBh_d1cwauzYvFFFdkShyHKAF0jUx4Y",
-  authDomain: "lumora-34c02.firebaseapp.com",
+   authDomain: "lumora-34c02.firebaseapp.com",
   projectId: "lumora-34c02",
   storageBucket: "lumora-34c02.firebasestorage.app",
   messagingSenderId: "61501812101",
