@@ -8,25 +8,49 @@ import { SubjectToFocus } from "@/types/CareerDashboard";
 
 /* ===================== UTILS ===================== */
 
-/** Ép số an toàn (string | number | undefined → number) */
-const toNumber = (v: any, fallback = 0): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
+/** Ép số an toàn: string | number | undefined → number */
+const toNumber = (value: unknown, fallback = 0): number => {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
 };
 
-/** % cần tập trung từ priorityRatio (0–1 → 0–100) */
-const getFocusPercent = (priorityRatio?: any): number => {
+/**
+ * Chuẩn hóa mức độ tập trung về thang 0 - 100.
+ * Hỗ trợ cả hai dạng dữ liệu:
+ * - 0.8  → 80
+ * - 80   → 80
+ */
+const getFocusPercent = (priorityRatio?: unknown): number => {
   const ratio = toNumber(priorityRatio, 0);
-  return ratio;//Math.round(Math.max(0, Math.min(1, ratio)) * 100);
+
+  const percent = ratio <= 1 ? ratio * 100 : ratio;
+
+  return Math.round(Math.max(0, Math.min(100, percent)));
 };
 
-/** Nhãn mức độ ưu tiên */
-const getPriorityLabel = (priority?: any) => {
-  const p = toNumber(priority, 1);
+/**
+ * Nhãn mức độ ưu tiên dựa trên phần trăm cần tập trung.
+ * Không dùng s.priority để tránh trường hợp nhãn bị ngược với %.
+ */
+const getPriorityLabel = (percent: number) => {
+  if (percent >= 75) {
+    return {
+      text: "Rất ưu tiên",
+      color: "#dc2626",
+    };
+  }
 
-  if (p >= 3) return { text: "Rất ưu tiên", color: "#dc2626" };
-  if (p === 2) return { text: "Ưu tiên", color: "#f59e0b" };
-  return { text: "Nền tảng", color: "#3b82f6" };
+  if (percent >= 50) {
+    return {
+      text: "Ưu tiên",
+      color: "#f59e0b",
+    };
+  }
+
+  return {
+    text: "Nền tảng",
+    color: "#3b82f6",
+  };
 };
 
 /* ===================== COMPONENT ===================== */
@@ -76,15 +100,14 @@ const SubjectsCard: React.FC<Props> = ({ subjects }) => {
 
       <div className="grid gap-4 md:grid-cols-2">
         {trail.map((style, idx) => {
-          const s = subjects[idx];
+          const subject = subjects[idx];
 
-          // ===== FIX CHUẨN 100% =====
-          const percent = getFocusPercent(s.priorityRatio);
-          const label = getPriorityLabel(s.priority);
+          const percent = getFocusPercent(subject.priorityRatio);
+          const label = getPriorityLabel(percent);
 
           return (
             <animated.div
-              key={`${s.name ?? "subject"}-${idx}`}
+              key={`${subject.name ?? "subject"}-${idx}`}
               style={{
                 opacity: style.opacity,
                 transform: style.y.to((y) => `translateY(${y}px)`),
@@ -101,12 +124,13 @@ const SubjectsCard: React.FC<Props> = ({ subjects }) => {
                 {/* ===== TÊN MÔN HỌC ===== */}
                 <Box display="flex" alignItems="center" gap={1} mb={1}>
                   <BookOpen size={18} color="#4f46e5" />
+
                   <Typography fontWeight={700}>
-                    {s.name || "Môn học"}
+                    {subject.name || "Môn học"}
                   </Typography>
                 </Box>
 
-                {/* ===== % CẦN TẬP TRUNG ===== */}
+                {/* ===== MỨC ĐỘ ƯU TIÊN ===== */}
                 <Typography variant="body2" sx={{ mb: 0.5 }}>
                   Ưu tiên:{" "}
                   <strong style={{ color: label.color }}>
@@ -115,16 +139,16 @@ const SubjectsCard: React.FC<Props> = ({ subjects }) => {
                 </Typography>
 
                 {/* ===== LÝ DO ===== */}
-                {s.reason && (
+                {subject.reason && (
                   <Typography variant="body2" sx={{ mt: 1 }}>
-                    ⚠ <strong>Lý do:</strong> {s.reason}
+                    ⚠ <strong>Lý do:</strong> {subject.reason}
                   </Typography>
                 )}
 
                 {/* ===== GỢI Ý ===== */}
-                {s.recommendation && (
+                {subject.recommendation && (
                   <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    💡 <strong>Gợi ý:</strong> {s.recommendation}
+                    💡 <strong>Gợi ý:</strong> {subject.recommendation}
                   </Typography>
                 )}
               </Box>

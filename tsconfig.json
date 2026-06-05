@@ -5,23 +5,25 @@
     "lib": ["DOM", "ESNext"],
     "jsx": "react-jsx",
     "moduleResolution": "Bundler",
+
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
+
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
 
-    "baseUrl": "src",
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["./src/*"]
     },
 
     "types": ["react", "@react-three/fiber"]
   },
-"include": ["src", "src/types"]
+  "include": ["src", "src/types"]
 }

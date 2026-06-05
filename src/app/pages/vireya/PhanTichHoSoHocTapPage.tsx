@@ -229,10 +229,6 @@ const chosenIds = allSubjects
       setRadarData(getRadarData(ranged, finalSubjects));
       setTrendData(await formatTrendDataByScoreType(ranged, finalSubjects));
 
-      /* -------------------------------------------------- */
-      /*  AI SUMMARY (GIỌNG VOIDZONE – NGẮN, 2–3 CÂU, CÓ EMOJI)  */
-      /* -------------------------------------------------- */
-
       const prompt = `
 Bạn là StudyBot – trợ lý phân tích học tập.
 

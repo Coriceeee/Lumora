@@ -169,8 +169,13 @@ export function AsideMenuMain() {
   });
   const [isListening, setIsListening] = useState(false);
 
-  // NEW: mobile drawer state
+  // Mobile: chỉ render drawer/overlay khi người dùng thật sự mở chat.
+  // Nhờ vậy khi đóng, không có lớp trong suốt nào chặn các nút ở trang phía dưới.
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 768px)").matches;
+  });
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -215,31 +220,40 @@ export function AsideMenuMain() {
     el.style.height = `${Math.min(el.scrollHeight, 150)}px`;
   }, [input]);
 
-  // khóa scroll body khi mở panel trên mobile
+  // Theo dõi đúng breakpoint mobile, để JSX không giữ lại drawer vô hình trên màn hình nhỏ.
   useEffect(() => {
-    const isMobile = window.innerWidth <= 768;
-    if (!isMobile) return;
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
 
-    if (isMobileOpen) {
-      const original = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = original;
-      };
-    }
-  }, [isMobileOpen]);
+    const syncViewport = () => {
+      const mobile = mediaQuery.matches;
+      setIsMobileViewport(mobile);
 
-  // resize thì nếu lên desktop phải mở panel sẵn
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth > 768) {
+      if (!mobile) {
         setIsMobileOpen(false);
       }
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    syncViewport();
+    mediaQuery.addEventListener?.("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener?.("change", syncViewport);
+    };
   }, []);
+
+  // Khi mở drawer trên điện thoại, khóa phần nền để thao tác trong khung chat ổn định.
+  useEffect(() => {
+    if (!isMobileViewport || !isMobileOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMobileOpen, isMobileViewport]);
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -410,6 +424,12 @@ export function AsideMenuMain() {
         .healing-mobile-backdrop.open {
           opacity: 1;
           pointer-events: auto;
+        }
+
+        /* Safety: khi drawer không mở, thành phần chat không được chặn tương tác trang chính. */
+        .healing-mobile-backdrop:not(.open) {
+          display: none;
+          pointer-events: none !important;
         }
 
         .healing-right-panel {
@@ -730,184 +750,126 @@ export function AsideMenuMain() {
         }
 
         @media (max-width: 768px) {
+          /*
+            Mobile giữ dạng drawer:
+            - FAB chỉ hiện khi drawer đóng
+            - drawer mở thì FAB biến mất, dùng nút X ở header
+            - panel nằm trên input, không bị FAB che thao tác
+          */
+          .healing-chat-root {
+            position: relative;
+            width: 100%;
+            min-height: 0;
+          }
+
           .healing-mobile-fab {
-            display: inline-flex;
+            display: flex;
+            right: 14px;
+            bottom: calc(14px + env(safe-area-inset-bottom));
+            z-index: 1301;
+            width: 56px;
+            min-width: 56px;
+            padding: 0;
+            transition: transform .2s ease, opacity .2s ease, visibility .2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .healing-mobile-fab.hidden {
+            transform: scale(.86);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+          }
+
+          .healing-mobile-backdrop {
+            display: block;
+            top: calc(56px + env(safe-area-inset-top));
+            z-index: 1180;
+          }
+
+          .healing-right-panel,
+          .healing-right-panel.open {
+            position: fixed;
+            top: calc(56px + env(safe-area-inset-top));
+            right: 0;
+            bottom: 0;
+            width: min(100vw, 430px);
+            max-width: 100%;
+            min-height: 0;
+            height: auto;
+            z-index: 1200;
+            box-shadow: -10px 0 34px rgba(14, 27, 31, .22);
+            padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+            overflow: hidden;
+            transition: transform .25s ease, visibility .25s ease;
           }
 
           .healing-right-panel {
-            position: fixed;
-            top: 0;
-            right: 0;
-            width: min(100vw, 420px);
-            max-width: 100vw;
-            min-height: 100dvh;
-            height: 100dvh;
-            z-index: 1100;
-            transform: translateX(100%);
-            transition: transform 0.28s ease;
-            box-shadow: -12px 0 30px rgba(20, 38, 42, 0.16);
-            padding: 10px 8px;
+            transform: translateX(calc(100% + 12px));
+            visibility: hidden;
+            pointer-events: none;
           }
 
           .healing-right-panel.open {
             transform: translateX(0);
-          }
-
-          .healing-right-head {
-            padding: 6px 2px 12px;
-            gap: 10px;
-          }
-
-          .healing-right-badge {
-            width: 48px;
-            height: 48px;
-            border-radius: 16px;
-            font-size: 22px;
-          }
-
-          .healing-right-title {
-            font-size: 16px;
-          }
-
-          .healing-right-subtitle {
-            font-size: 11px;
-            line-height: 1.4;
-          }
-
-          .healing-right-icon-btn {
-            width: 38px;
-            height: 38px;
-            border-radius: 12px;
-          }
-
-          .healing-right-card {
-            border-radius: 22px;
-          }
-
-          .healing-right-top {
-            padding: 14px 12px 10px;
-          }
-
-          .healing-right-small-badge {
-            width: 40px;
-            height: 40px;
-            font-size: 18px;
-          }
-
-          .healing-right-card-title {
-            font-size: 15px;
-          }
-
-          .healing-right-card-subtitle {
-            font-size: 11px;
-          }
-
-          .healing-right-notice {
-            padding: 12px;
-            border-radius: 16px;
-            font-size: 11px;
-            line-height: 1.55;
-          }
-
-          .healing-right-moods {
-            gap: 6px;
-          }
-
-          .healing-right-mood-btn {
-            padding: 7px 11px;
-            font-size: 11px;
-            min-height: 34px;
-          }
-
-          .healing-right-messages {
-            min-height: 120px;
-            padding: 12px 12px 8px;
-            gap: 8px;
-          }
-
-          .healing-right-bubble {
-            max-width: 92%;
-            padding: 11px 12px;
-            font-size: 13px;
-            border-radius: 18px;
-          }
-
-          .healing-right-input {
-            padding: 10px 12px 8px;
-          }
-
-          .healing-right-textarea {
-            min-height: 82px;
-            padding: 12px 13px;
-            border-radius: 16px;
-            font-size: 13px;
-            margin-bottom: 8px;
-          }
-
-          .healing-right-actions {
-            gap: 6px;
-          }
-
-          .healing-right-small-btn {
-            min-width: 40px;
-            min-height: 40px;
-            border-radius: 12px;
-            font-size: 11px;
-          }
-
-          .healing-right-send-btn {
-            min-height: 40px;
-            border-radius: 14px;
-            font-size: 13px;
-          }
-
-          .healing-right-footer {
-            padding: 0 12px 12px;
-            font-size: 10px;
-            line-height: 1.5;
+            visibility: visible;
+            pointer-events: auto;
           }
 
           .healing-mobile-close {
             display: inline-flex;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .healing-right-panel {
-            width: 100vw;
-            padding: 8px 6px;
+            align-items: center;
+            justify-content: center;
           }
 
           .healing-right-head {
+            padding: 2px 2px 8px;
             gap: 8px;
+            flex-shrink: 0;
           }
 
           .healing-right-badge {
-            width: 44px;
-            height: 44px;
-            font-size: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            font-size: 19px;
           }
 
           .healing-right-title {
-            font-size: 15px;
+            font-size: 14px;
           }
 
           .healing-right-subtitle {
-            font-size: 10.5px;
+            font-size: 10px;
+            line-height: 1.3;
+          }
+
+          .healing-right-top-actions {
+            gap: 5px;
+          }
+
+          .healing-right-icon-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 11px;
+            touch-action: manipulation;
           }
 
           .healing-right-card {
-            border-radius: 18px;
+            flex: 1;
+            min-height: 0;
+            border-radius: 17px;
           }
 
           .healing-right-top {
-            padding: 12px 10px 8px;
+            padding: 10px 9px 7px;
           }
 
           .healing-right-small-badge {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
+            width: 35px;
+            height: 35px;
+            border-radius: 11px;
             font-size: 16px;
           }
 
@@ -915,40 +877,124 @@ export function AsideMenuMain() {
             font-size: 14px;
           }
 
+          .healing-right-card-subtitle {
+            font-size: 10px;
+          }
+
           .healing-right-notice {
+            margin-top: 8px;
+            padding: 9px;
+            border-radius: 12px;
             font-size: 10.5px;
-            border-radius: 14px;
+            line-height: 1.45;
+          }
+
+          .healing-right-moods {
+            gap: 5px;
+            margin-top: 8px;
           }
 
           .healing-right-mood-btn {
+            padding: 6px 9px;
             font-size: 10px;
-            padding: 6px 10px;
-            min-height: 32px;
+            min-height: 30px;
+            touch-action: manipulation;
           }
 
           .healing-right-messages {
-            min-height: 110px;
-            padding: 10px 10px 6px;
+            flex: 1;
+            min-height: 0;
+            padding: 9px 9px 6px;
+            gap: 7px;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
           }
 
           .healing-right-bubble {
             max-width: 95%;
-            font-size: 12.5px;
-          }
-
-          .healing-right-textarea {
-            min-height: 76px;
-            font-size: 12.5px;
+            padding: 9px 10px;
+            font-size: 12px;
+            line-height: 1.48;
             border-radius: 14px;
           }
 
+          .healing-right-input {
+            position: relative;
+            z-index: 3;
+            flex-shrink: 0;
+            padding: 8px 8px 6px;
+            pointer-events: auto;
+          }
+
+          .healing-right-textarea {
+            min-height: 54px;
+            max-height: 100px;
+            padding: 10px 11px;
+            border-radius: 13px;
+            font-size: 13px;
+            line-height: 1.42;
+            margin-bottom: 6px;
+            pointer-events: auto;
+            touch-action: manipulation;
+          }
+
+          .healing-right-actions {
+            position: relative;
+            z-index: 4;
+            gap: 6px;
+            pointer-events: auto;
+          }
+
           .healing-right-small-btn {
-            width: 40px;
+            width: 39px;
+            min-width: 39px;
+            min-height: 39px;
             padding: 0;
+            border-radius: 11px;
+            font-size: 12px;
+            touch-action: manipulation;
           }
 
           .healing-right-send-btn {
+            min-height: 39px;
+            border-radius: 12px;
             font-size: 12px;
+            touch-action: manipulation;
+          }
+
+          .healing-right-footer {
+            padding: 0 9px 5px;
+            font-size: 9.5px;
+            line-height: 1.35;
+          }
+        }
+
+        @media (max-width: 380px) {
+          .healing-chat-root {
+            padding-top: calc(52px + env(safe-area-inset-top));
+          }
+
+          .healing-right-panel,
+          .healing-right-panel.open {
+            min-height: calc(100dvh - 52px - env(safe-area-inset-top));
+            height: calc(100dvh - 52px - env(safe-area-inset-top));
+          }
+
+          .healing-right-badge {
+            width: 36px;
+            height: 36px;
+          }
+
+          .healing-right-notice {
+            font-size: 10px;
+          }
+
+          .healing-right-mood-btn {
+            padding: 5px 8px;
+          }
+
+          .healing-right-textarea {
+            min-height: 52px;
           }
         }
       `}</style>
@@ -956,7 +1002,8 @@ export function AsideMenuMain() {
       <div className="healing-chat-root">
         {/* Nút nổi chỉ dùng trên mobile */}
         <button
-          className="healing-mobile-fab"
+          type="button"
+          className={`healing-mobile-fab ${isMobileOpen ? "hidden" : ""}`}
           onClick={() => setIsMobileOpen(true)}
           aria-label="Mở góc chữa lành"
           title="Mở góc chữa lành"
@@ -964,14 +1011,18 @@ export function AsideMenuMain() {
           <span>☁️</span>
         </button>
 
-        {/* nền mờ */}
-        <div
-          className={`healing-mobile-backdrop ${isMobileOpen ? "open" : ""}`}
-          onClick={() => setIsMobileOpen(false)}
-        />
+        {/* Mobile đóng drawer: KHÔNG render backdrop, tránh lớp vô hình chặn click trang chính. */}
+        {isMobileViewport && isMobileOpen && (
+          <div
+            className="healing-mobile-backdrop open"
+            onClick={() => setIsMobileOpen(false)}
+            aria-hidden="true"
+          />
+        )}
 
+        {(!isMobileViewport || isMobileOpen) && (
         <div
-          className={`healing-right-panel ${isMobileOpen ? "open" : ""}`}
+          className={`healing-right-panel ${isMobileViewport && isMobileOpen ? "open" : ""}`}
           style={{
             background: isDark
               ? `
@@ -1014,6 +1065,7 @@ export function AsideMenuMain() {
               </button>
 
               <button
+                type="button"
                 className="healing-right-icon-btn healing-mobile-close"
                 onClick={() => setIsMobileOpen(false)}
                 title="Đóng"
@@ -1228,6 +1280,7 @@ export function AsideMenuMain() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </>
   );

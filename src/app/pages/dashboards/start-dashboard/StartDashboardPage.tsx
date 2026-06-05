@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-// import "./start-dashboard-fullscreen.css";
-
+import { useHistory } from "react-router-dom";
 type SceneType = "learning" | "career" | "emotion";
 
 type SubMenuItem = {
@@ -11,12 +10,40 @@ type SubMenuItem = {
   desc: string;
 };
 
-export const StartDashboardPage: React.FC = () => {
-  const [started, setStarted] = useState(false);
-  const [typing, setTyping] = useState("");
-  const [selected, setSelected] = useState<null | SceneType>(null);
+const STARTED_KEY = "educompass_started";
+const SCENE_KEY = "educompass_scene";
+const INTRO_TEXT = "EduCompass đang mở bản đồ định hướng của bạn...";
 
-  const text = "EduCompass đang mở bản đồ định hướng của bạn...";
+const getSavedStarted = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return sessionStorage.getItem(STARTED_KEY) === "true";
+};
+
+const getSavedScene = (): SceneType | null => {
+  if (typeof window === "undefined") return null;
+
+  const savedScene = sessionStorage.getItem(SCENE_KEY);
+
+  if (
+    savedScene === "learning" ||
+    savedScene === "career" ||
+    savedScene === "emotion"
+  ) {
+    return savedScene;
+  }
+
+  return null;
+};
+
+export const StartDashboardPage: React.FC = () => {
+  const history = useHistory();
+  const [started, setStarted] = useState<boolean>(() => getSavedStarted());
+  const [typing, setTyping] = useState("");
+  const [selected, setSelected] = useState<SceneType | null>(() => {
+    if (!getSavedStarted()) return null;
+    return getSavedScene() ?? "learning";
+  });
+
 
   const learningTabs: SubMenuItem[] = [
     {
@@ -50,7 +77,6 @@ export const StartDashboardPage: React.FC = () => {
   ];
 
   const careerTabs: SubMenuItem[] = [
-
     {
       label: "La bàn nghề nghiệp",
       to: "/pathfinder/la-ban-phat-trien",
@@ -78,15 +104,21 @@ export const StartDashboardPage: React.FC = () => {
   ];
 
   useEffect(() => {
+    if (started) return;
+
     let i = 0;
-    const timer = setInterval(() => {
-      setTyping(text.slice(0, i));
-      i++;
-      if (i > text.length) clearInterval(timer);
+
+    const timer = window.setInterval(() => {
+      setTyping(INTRO_TEXT.slice(0, i));
+      i += 1;
+
+      if (i > INTRO_TEXT.length) {
+        window.clearInterval(timer);
+      }
     }, 28);
 
-    return () => clearInterval(timer);
-  }, []);
+    return () => window.clearInterval(timer);
+  }, [started]);
 
   const leaves = useMemo(
     () =>
@@ -157,13 +189,24 @@ export const StartDashboardPage: React.FC = () => {
     []
   );
 
+  const handleStart = () => {
+    setStarted(true);
+    setSelected("learning");
+
+    sessionStorage.setItem(STARTED_KEY, "true");
+    sessionStorage.setItem(SCENE_KEY, "learning");
+  };
+
   const handleEnter = (type: SceneType) => {
+    setStarted(true);
     setSelected(type);
-    localStorage.setItem("educompass_scene", type);
+
+    sessionStorage.setItem(STARTED_KEY, "true");
+    sessionStorage.setItem(SCENE_KEY, type);
   };
 
   const handleNavigate = (to: string) => {
-    window.location.assign(to);
+    history.push(to);
   };
 
   const activeTabs =
@@ -193,7 +236,12 @@ export const StartDashboardPage: React.FC = () => {
         body {
           min-height: 100vh;
           overflow-x: hidden;
-          background: linear-gradient(180deg, #f3fffb 0%, #eefcf8 50%, #edf8ff 100%);
+          background: linear-gradient(
+            180deg,
+            #f3fffb 0%,
+            #eefcf8 50%,
+            #edf8ff 100%
+          );
           font-family: inherit;
           -webkit-tap-highlight-color: transparent;
         }
@@ -205,18 +253,12 @@ export const StartDashboardPage: React.FC = () => {
 
         .edu-dashboard-page {
           position: relative;
+          isolation: isolate;
           width: 100%;
           min-height: 100vh;
           padding: clamp(14px, 2vw, 28px);
           overflow: hidden;
           z-index: 0;
-        }
-
-        .start-btn,
-        .portal,
-        .submenu-btn {
-          touch-action: manipulation;
-          -webkit-tap-highlight-color: transparent;
         }
 
         .forest-bg,
@@ -236,7 +278,11 @@ export const StartDashboardPage: React.FC = () => {
         .grass,
         .falling-leaf,
         .falling-petal,
-        .firefly {
+        .firefly,
+        .portal-glow,
+        .portal-ring,
+        .portal-ring-2,
+        .portal-core {
           pointer-events: none !important;
           user-select: none;
         }
@@ -255,14 +301,25 @@ export const StartDashboardPage: React.FC = () => {
         .submenu-item,
         .start-btn {
           position: relative;
-          z-index: 2;
+          z-index: 10;
           pointer-events: auto;
+        }
+
+        .start-btn,
+        .portal,
+        .submenu-btn {
+          z-index: 20;
+          pointer-events: auto !important;
+          touch-action: manipulation;
+          -webkit-tap-highlight-color: transparent;
         }
 
         .forest-bg {
           position: absolute;
           inset: 0;
+          z-index: 0;
           overflow: hidden;
+          pointer-events: none !important;
         }
 
         .forest-glow-1,
@@ -355,13 +412,35 @@ export const StartDashboardPage: React.FC = () => {
           width: 90px;
           height: 95px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(134,239,172,.65), rgba(74,222,128,.28));
+          background: radial-gradient(
+            circle,
+            rgba(134,239,172,.65),
+            rgba(74,222,128,.28)
+          );
         }
 
-        .tree-1 { left: 4%; bottom: 110px; }
-        .tree-2 { left: 14%; bottom: 95px; transform: scale(0.9); }
-        .tree-3 { right: 12%; bottom: 108px; transform: scale(1.05); }
-        .tree-4 { right: 3%; bottom: 92px; transform: scale(0.88); }
+        .tree-1 {
+          left: 4%;
+          bottom: 110px;
+        }
+
+        .tree-2 {
+          left: 14%;
+          bottom: 95px;
+          transform: scale(0.9);
+        }
+
+        .tree-3 {
+          right: 12%;
+          bottom: 108px;
+          transform: scale(1.05);
+        }
+
+        .tree-4 {
+          right: 3%;
+          bottom: 92px;
+          transform: scale(0.88);
+        }
 
         .grass {
           position: absolute;
@@ -377,19 +456,32 @@ export const StartDashboardPage: React.FC = () => {
           content: "";
           position: absolute;
           inset: 0;
-          background: radial-gradient(circle at 50% 100%, rgba(134,239,172,.7), transparent 70%);
+          background: radial-gradient(
+            circle at 50% 100%,
+            rgba(134,239,172,.7),
+            transparent 70%
+          );
         }
 
-        .grass-1 { left: 4%; }
-        .grass-2 { left: 38%; width: 260px; }
-        .grass-3 { right: 5%; }
+        .grass-1 {
+          left: 4%;
+        }
+
+        .grass-2 {
+          left: 38%;
+          width: 260px;
+        }
+
+        .grass-3 {
+          right: 5%;
+        }
 
         .falling-leaf {
           position: absolute;
           top: -30px;
           width: 16px;
           height: 16px;
-          background: linear-gradient(135deg,#86efac,#22c55e);
+          background: linear-gradient(135deg, #86efac, #22c55e);
           border-radius: 2px 10px 2px 10px;
           opacity: 0.55;
           animation: leafFall linear infinite;
@@ -400,7 +492,7 @@ export const StartDashboardPage: React.FC = () => {
           top: -25px;
           width: 12px;
           height: 12px;
-          background: linear-gradient(135deg,#f9a8d4,#fbcfe8);
+          background: linear-gradient(135deg, #f9a8d4, #fbcfe8);
           border-radius: 50% 50% 50% 0;
           opacity: 0.6;
           animation: petalFall linear infinite;
@@ -418,22 +510,56 @@ export const StartDashboardPage: React.FC = () => {
         }
 
         @keyframes leafFall {
-          0% { transform: translateY(-30px) translateX(0) rotate(0deg); opacity: 0; }
-          15% { opacity: 0.6; }
-          50% { transform: translateY(220px) translateX(30px) rotate(140deg); }
-          100% { transform: translateY(620px) translateX(-40px) rotate(320deg); opacity: 0; }
+          0% {
+            transform: translateY(-30px) translateX(0) rotate(0deg);
+            opacity: 0;
+          }
+
+          15% {
+            opacity: 0.6;
+          }
+
+          50% {
+            transform: translateY(220px) translateX(30px) rotate(140deg);
+          }
+
+          100% {
+            transform: translateY(620px) translateX(-40px) rotate(320deg);
+            opacity: 0;
+          }
         }
 
         @keyframes petalFall {
-          0% { transform: translateY(-20px) translateX(0) rotate(0deg) scale(0.8); opacity: 0; }
-          20% { opacity: 0.7; }
-          50% { transform: translateY(250px) translateX(-20px) rotate(120deg) scale(1); }
-          100% { transform: translateY(620px) translateX(45px) rotate(260deg) scale(0.9); opacity: 0; }
+          0% {
+            transform: translateY(-20px) translateX(0) rotate(0deg) scale(0.8);
+            opacity: 0;
+          }
+
+          20% {
+            opacity: 0.7;
+          }
+
+          50% {
+            transform: translateY(250px) translateX(-20px) rotate(120deg) scale(1);
+          }
+
+          100% {
+            transform: translateY(620px) translateX(45px) rotate(260deg) scale(0.9);
+            opacity: 0;
+          }
         }
 
         @keyframes fireflyFloat {
-          0%,100% { transform: translate(0,0) scale(1); opacity: 0.35; }
-          50% { transform: translate(10px,-18px) scale(1.15); opacity: 0.9; }
+          0%,
+          100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.35;
+          }
+
+          50% {
+            transform: translate(10px, -18px) scale(1.15);
+            opacity: 0.9;
+          }
         }
 
         .hero {
@@ -479,10 +605,10 @@ export const StartDashboardPage: React.FC = () => {
           font-weight: 700;
           font-size: clamp(14px, 2vw, 15px);
           cursor: pointer;
-          background: linear-gradient(135deg,#ffffff,#f8fafc);
+          background: linear-gradient(135deg, #ffffff, #f8fafc);
           color: #1f2937;
           box-shadow: 0 10px 24px rgba(120,145,130,.10);
-          transition: .3s ease;
+          transition: transform .3s ease, box-shadow .3s ease;
           max-width: 100%;
         }
 
@@ -518,7 +644,9 @@ export const StartDashboardPage: React.FC = () => {
         .map-inner {
           position: absolute;
           inset: 0;
-          transition: transform .9s cubic-bezier(.22,1,.36,1), filter .7s ease;
+          transition:
+            transform .9s cubic-bezier(.22,1,.36,1),
+            filter .7s ease;
         }
 
         .map-shell.zoom-learning .map-inner {
@@ -562,21 +690,33 @@ export const StartDashboardPage: React.FC = () => {
         .layer-hill-back {
           bottom: -120px;
           height: 240px;
-          background: linear-gradient(180deg, rgba(190,242,100,.14), rgba(134,239,172,.26));
+          background: linear-gradient(
+            180deg,
+            rgba(190,242,100,.14),
+            rgba(134,239,172,.26)
+          );
           clip-path: ellipse(70% 100% at 50% 100%);
         }
 
         .layer-hill-mid {
           bottom: -80px;
           height: 200px;
-          background: linear-gradient(180deg, rgba(187,247,208,.16), rgba(125,211,252,.18));
+          background: linear-gradient(
+            180deg,
+            rgba(187,247,208,.16),
+            rgba(125,211,252,.18)
+          );
           clip-path: ellipse(60% 100% at 50% 100%);
         }
 
         .layer-hill-front {
           bottom: -50px;
           height: 170px;
-          background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(220,252,231,.30));
+          background: linear-gradient(
+            180deg,
+            rgba(255,255,255,.12),
+            rgba(220,252,231,.30)
+          );
           clip-path: ellipse(58% 100% at 50% 100%);
         }
 
@@ -604,15 +744,20 @@ export const StartDashboardPage: React.FC = () => {
         }
 
         @keyframes pathFlow {
-          from { stroke-dashoffset: 0; }
-          to { stroke-dashoffset: 180; }
+          from {
+            stroke-dashoffset: 0;
+          }
+
+          to {
+            stroke-dashoffset: 180;
+          }
         }
 
         .core {
           position: absolute;
           left: 50%;
           top: 28%;
-          transform: translate(-50%,-50%);
+          transform: translate(-50%, -50%);
           width: clamp(110px, 14vw, 148px);
           height: clamp(110px, 14vw, 148px);
           border-radius: 50%;
@@ -631,21 +776,45 @@ export const StartDashboardPage: React.FC = () => {
           animation: corePulse 4s ease-in-out infinite;
         }
 
-        .core-icon { font-size: clamp(28px, 4vw, 38px); line-height: 1; }
-        .core-label { margin-top: 8px; font-size: clamp(10px, 1.6vw, 12px); font-weight: 700; letter-spacing: 1.2px; }
+        .core-icon {
+          font-size: clamp(28px, 4vw, 38px);
+          line-height: 1;
+        }
+
+        .core-label {
+          margin-top: 8px;
+          font-size: clamp(10px, 1.6vw, 12px);
+          font-weight: 700;
+          letter-spacing: 1.2px;
+        }
 
         @keyframes corePulse {
-          0%,100% { transform: translate(-50%,-50%) scale(1); }
-          50% { transform: translate(-50%,-50%) scale(1.04); }
+          0%,
+          100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+
+          50% {
+            transform: translate(-50%, -50%) scale(1.04);
+          }
         }
 
         .portal {
           position: absolute;
           width: clamp(160px, 20vw, 210px);
           height: clamp(160px, 20vw, 210px);
+          padding: 0;
+          border: none;
+          outline: none;
           border-radius: 50%;
+          background: transparent;
+          appearance: none;
+          -webkit-appearance: none;
           cursor: pointer;
-          transition: transform .35s ease, opacity .35s ease, box-shadow .35s ease;
+          transition:
+            transform .35s ease,
+            opacity .35s ease,
+            box-shadow .35s ease;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -655,15 +824,29 @@ export const StartDashboardPage: React.FC = () => {
           transform: translateY(-4px) scale(1.03);
         }
 
-        .portal.learning { left: 11%; top: 54%; }
-        .portal.career { right: 11%; top: 54%; }
-        .portal.emotion { left: 50%; top: 73%; transform: translateX(-50%); }
+        .portal.learning {
+          left: 11%;
+          top: 54%;
+        }
+
+        .portal.career {
+          right: 11%;
+          top: 54%;
+        }
+
+        .portal.emotion {
+          left: 50%;
+          top: 73%;
+          transform: translateX(-50%);
+        }
 
         .portal.emotion:hover {
           transform: translateX(-50%) translateY(-4px) scale(1.03);
         }
 
-        .portal.fade { opacity: .18; }
+        .portal.fade {
+          opacity: .18;
+        }
 
         .portal-ring,
         .portal-ring-2,
@@ -672,31 +855,58 @@ export const StartDashboardPage: React.FC = () => {
           position: absolute;
           border-radius: 50%;
           inset: 0;
-          pointer-events: none;
         }
 
         .portal.learning .portal-glow {
-          background: radial-gradient(circle, rgba(253,224,71,.24), rgba(251,191,36,.10), transparent 70%);
+          background: radial-gradient(
+            circle,
+            rgba(253,224,71,.24),
+            rgba(251,191,36,.10),
+            transparent 70%
+          );
           filter: blur(24px);
         }
 
         .portal.career .portal-glow {
-          background: radial-gradient(circle, rgba(147,197,253,.24), rgba(96,165,250,.10), transparent 70%);
+          background: radial-gradient(
+            circle,
+            rgba(147,197,253,.24),
+            rgba(96,165,250,.10),
+            transparent 70%
+          );
           filter: blur(24px);
         }
 
         .portal.emotion .portal-glow {
-          background: radial-gradient(circle, rgba(251,113,133,.22), rgba(244,114,182,.12), transparent 72%);
+          background: radial-gradient(
+            circle,
+            rgba(251,113,133,.22),
+            rgba(244,114,182,.12),
+            transparent 72%
+          );
           filter: blur(26px);
         }
 
-        .portal-ring { inset: 8px; border: 2px solid rgba(255,255,255,.42); opacity: .6; animation: spin 9s linear infinite; }
-        .portal-ring-2 { inset: 22px; border: 1px solid rgba(255,255,255,.28); opacity: .45; animation: spinReverse 11s linear infinite; }
+        .portal-ring {
+          inset: 8px;
+          border: 2px solid rgba(255,255,255,.42);
+          opacity: .6;
+          animation: spin 9s linear infinite;
+        }
+
+        .portal-ring-2 {
+          inset: 22px;
+          border: 1px solid rgba(255,255,255,.28);
+          opacity: .45;
+          animation: spinReverse 11s linear infinite;
+        }
 
         .portal-core {
           inset: 30px;
           overflow: hidden;
-          box-shadow: inset 0 10px 25px rgba(255,255,255,.15), 0 10px 30px rgba(120,145,130,.08);
+          box-shadow:
+            inset 0 10px 25px rgba(255,255,255,.15),
+            0 10px 30px rgba(120,145,130,.08);
         }
 
         .portal.learning .portal-core {
@@ -721,13 +931,23 @@ export const StartDashboardPage: React.FC = () => {
         }
 
         @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          from {
+            transform: rotate(0deg);
+          }
+
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         @keyframes spinReverse {
-          from { transform: rotate(360deg); }
-          to { transform: rotate(0deg); }
+          from {
+            transform: rotate(360deg);
+          }
+
+          to {
+            transform: rotate(0deg);
+          }
         }
 
         .portal-content {
@@ -742,9 +962,23 @@ export const StartDashboardPage: React.FC = () => {
           z-index: 2;
         }
 
-        .portal-emoji { font-size: clamp(28px, 4vw, 38px); line-height: 1; }
-        .portal-title { margin-top: 10px; font-size: clamp(14px, 2vw, 16px); font-weight: 800; letter-spacing: .8px; }
-        .portal-sub { margin-top: 4px; font-size: clamp(10px, 1.5vw, 11px); opacity: .95; }
+        .portal-emoji {
+          font-size: clamp(28px, 4vw, 38px);
+          line-height: 1;
+        }
+
+        .portal-title {
+          margin-top: 10px;
+          font-size: clamp(14px, 2vw, 16px);
+          font-weight: 800;
+          letter-spacing: .8px;
+        }
+
+        .portal-sub {
+          margin-top: 4px;
+          font-size: clamp(10px, 1.5vw, 11px);
+          opacity: .95;
+        }
 
         .particle-layer {
           position: absolute;
@@ -762,19 +996,44 @@ export const StartDashboardPage: React.FC = () => {
           animation: rise 7s linear infinite;
         }
 
-        .spark.gold { background: rgba(255,223,120,.78); }
-        .spark.blue { background: rgba(120,200,255,.84); }
-        .spark.rose { background: rgba(255,146,170,.82); }
+        .spark.gold {
+          background: rgba(255,223,120,.78);
+        }
+
+        .spark.blue {
+          background: rgba(120,200,255,.84);
+        }
+
+        .spark.rose {
+          background: rgba(255,146,170,.82);
+        }
 
         @keyframes rise {
-          0% { transform: translateY(24px) scale(.8); opacity: 0; }
-          20% { opacity: .6; }
-          100% { transform: translateY(-150px) scale(1.15); opacity: 0; }
+          0% {
+            transform: translateY(24px) scale(.8);
+            opacity: 0;
+          }
+
+          20% {
+            opacity: .6;
+          }
+
+          100% {
+            transform: translateY(-150px) scale(1.15);
+            opacity: 0;
+          }
         }
 
         @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(24px);
+          }
+
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .submenu-wrap {
@@ -785,7 +1044,11 @@ export const StartDashboardPage: React.FC = () => {
         .submenu-card {
           border-radius: 30px;
           padding: clamp(18px, 2.5vw, 26px);
-          background: linear-gradient(180deg, rgba(255,255,255,.76) 0%, rgba(255,255,255,.56) 100%);
+          background: linear-gradient(
+            180deg,
+            rgba(255,255,255,.76) 0%,
+            rgba(255,255,255,.56) 100%
+          );
           backdrop-filter: blur(16px);
           border: 1px solid rgba(255,255,255,.55);
         }
@@ -843,14 +1106,21 @@ export const StartDashboardPage: React.FC = () => {
           min-height: 104px;
           padding: 16px 18px 16px 16px;
           border-radius: 22px;
-          background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(249,252,255,.84) 100%);
+          background: linear-gradient(
+            180deg,
+            rgba(255,255,255,.95) 0%,
+            rgba(249,252,255,.84) 100%
+          );
           border: 1px solid rgba(222,230,240,.9);
-          transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+          transition:
+            transform .25s ease,
+            box-shadow .25s ease,
+            border-color .25s ease;
         }
 
         .submenu-btn:hover .submenu-item {
           transform: translateY(-2px);
-          box-shadow: 0 14px 28px rgba(130, 146, 168, 0.10);
+          box-shadow: 0 14px 28px rgba(130,146,168,.10);
           border-color: rgba(200,214,230,.95);
         }
 
@@ -872,13 +1142,32 @@ export const StartDashboardPage: React.FC = () => {
           align-items: center;
           justify-content: center;
           font-size: 24px;
-          background: linear-gradient(135deg, rgba(255,255,255,.95), rgba(246,248,252,.78));
+          background: linear-gradient(
+            135deg,
+            rgba(255,255,255,.95),
+            rgba(246,248,252,.78)
+          );
           border: 1px solid rgba(235,240,245,.95);
         }
 
-        .submenu-text { flex: 1; min-width: 0; }
-        .submenu-label { font-size: 15px; font-weight: 800; color: #1f3552; line-height: 1.35; margin-bottom: 5px; }
-        .submenu-desc { font-size: 13px; line-height: 1.5; color: #6c7f92; }
+        .submenu-text {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .submenu-label {
+          font-size: 15px;
+          font-weight: 800;
+          color: #1f3552;
+          line-height: 1.35;
+          margin-bottom: 5px;
+        }
+
+        .submenu-desc {
+          font-size: 13px;
+          line-height: 1.5;
+          color: #6c7f92;
+        }
 
         .submenu-arrow {
           flex-shrink: 0;
@@ -896,40 +1185,41 @@ export const StartDashboardPage: React.FC = () => {
 
         @media (max-width: 980px) {
           .map-shell {
-            min-height: 980px;
-            height: auto;
+            min-height: 660px;
+            height: 660px;
           }
 
           .map-inner {
             position: relative;
-            min-height: 980px;
+            min-height: 660px;
           }
 
           .core {
-            top: 18%;
+            top: 17%;
+          }
+
+          .portal {
+            width: clamp(146px, 21vw, 180px);
+            height: clamp(146px, 21vw, 180px);
           }
 
           .portal.learning {
-            left: 50%;
-            top: 34%;
-            transform: translateX(-50%);
+            left: 11%;
+            top: 43%;
           }
 
           .portal.career {
-            right: auto;
-            left: 50%;
-            top: 56%;
-            transform: translateX(-50%);
+            right: 11%;
+            left: auto;
+            top: 43%;
           }
 
           .portal.emotion {
             left: 50%;
-            top: 78%;
+            top: 69%;
             transform: translateX(-50%);
           }
 
-          .portal.learning:hover,
-          .portal.career:hover,
           .portal.emotion:hover {
             transform: translateX(-50%) translateY(-4px) scale(1.03);
           }
@@ -937,7 +1227,7 @@ export const StartDashboardPage: React.FC = () => {
           .map-shell.zoom-learning .map-inner,
           .map-shell.zoom-career .map-inner,
           .map-shell.zoom-emotion .map-inner {
-            transform: scale(1.02);
+            transform: none;
             filter: none;
           }
 
@@ -947,51 +1237,261 @@ export const StartDashboardPage: React.FC = () => {
         }
 
         @media (max-width: 768px) {
-          .edu-dashboard-page {
-            padding: 12px;
-            min-height: auto;
-            margin-top: 72px;
+          /*
+            FIX MOBILE:
+            Không chỉ màn hình mở đầu, mà cả màn hình bản đồ sau khi bấm
+            "Bắt đầu hành trình" đều phải nằm trên các panel fixed của layout.
+            Nếu chỉ nâng intro-mode, nút Start bấm được nhưng portal/menu nhỏ
+            sẽ tiếp tục bị lớp ngoài che mất thao tác.
+          */
+          .edu-dashboard-page.intro-mode,
+          .edu-dashboard-page.journey-mode {
+            position: fixed !important;
+            left: 0 !important;
+            right: 0 !important;
+            width: 100vw !important;
+            z-index: 2147483000 !important;
+            margin: 0 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            pointer-events: auto !important;
+            -webkit-overflow-scrolling: touch;
+            background: linear-gradient(
+              180deg,
+              #f3fffb 0%,
+              #eefcf8 50%,
+              #edf8ff 100%
+            );
+          }
+
+          .edu-dashboard-page.intro-mode {
+            top: 0 !important;
+            bottom: 0 !important;
+            height: 100svh !important;
+            min-height: 100svh !important;
+            padding: calc(env(safe-area-inset-top, 0px) + 16px) 10px
+              calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+          }
+
+          .edu-dashboard-page.journey-mode {
+            top: 64px !important;
+            bottom: 0 !important;
+            height: calc(100svh - 64px) !important;
+            min-height: calc(100svh - 64px) !important;
+            padding: 10px 10px
+              calc(env(safe-area-inset-bottom, 0px) + 16px) !important;
+          }
+
+          .edu-dashboard-page.intro-mode .hero,
+          .edu-dashboard-page.journey-mode .map-section,
+          .edu-dashboard-page.journey-mode .map-shell,
+          .edu-dashboard-page.journey-mode .map-inner,
+          .edu-dashboard-page.journey-mode .portal,
+          .edu-dashboard-page.journey-mode .submenu-wrap,
+          .edu-dashboard-page.journey-mode .submenu-btn {
+            position: relative !important;
+            z-index: 2147483001 !important;
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
+          }
+
+          .edu-dashboard-page.intro-mode .start-btn {
+            position: relative !important;
+            z-index: 2147483002 !important;
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
+          }
+
+          .edu-dashboard-page.intro-mode .forest-bg,
+          .edu-dashboard-page.intro-mode .forest-bg *,
+          .edu-dashboard-page.journey-mode .forest-bg,
+          .edu-dashboard-page.journey-mode .forest-bg * {
+            pointer-events: none !important;
           }
 
           .hero {
-            border-radius: 24px;
-            margin-bottom: 18px;
+            border-radius: 22px;
+            margin-bottom: 14px;
+            padding: 20px 14px;
+          }
+
+          .hero h1 {
+            font-size: clamp(26px, 9vw, 34px);
+          }
+
+          .typing {
+            font-size: 13px;
+            min-height: 42px;
+            margin: 8px 0 0;
+          }
+
+          .start-btn {
+            margin-top: 14px;
+            width: 100%;
+            min-height: 50px;
+            padding: 12px 20px;
           }
 
           .map-shell {
-            border-radius: 26px;
-            min-height: 900px;
+            border-radius: 22px;
+            min-height: 560px;
+            height: 560px;
           }
 
           .map-inner {
-            min-height: 900px;
+            min-height: 560px;
+          }
+
+          .label-top {
+            top: 12px;
+            font-size: 11px;
+          }
+
+          .map-svg {
+            display: none;
           }
 
           .core {
-            top: 17%;
+            top: 13%;
+            width: 88px;
+            height: 88px;
+          }
+
+          .core-icon {
+            font-size: 25px;
+          }
+
+          .core-label {
+            margin-top: 5px;
+            font-size: 9px;
+          }
+
+          .portal {
+            width: 122px;
+            height: 122px;
+          }
+
+          .portal-ring {
+            inset: 5px;
+          }
+
+          .portal-ring-2 {
+            inset: 15px;
+          }
+
+          .portal-core {
+            inset: 21px;
           }
 
           .portal.learning {
-            top: 33%;
+            left: calc(25% - 61px);
+            top: 34%;
+            transform: none;
           }
 
           .portal.career {
-            top: 55%;
+            right: calc(25% - 61px);
+            left: auto;
+            top: 34%;
+            transform: none;
           }
 
           .portal.emotion {
-            top: 77%;
+            left: 50%;
+            top: 63%;
+            transform: translateX(-50%);
+          }
+
+          .portal.learning:hover,
+          .portal.career:hover {
+            transform: scale(1.02);
+          }
+
+          .portal.emotion:hover {
+            transform: translateX(-50%) scale(1.02);
+          }
+
+          .portal-emoji {
+            font-size: 23px;
+          }
+
+          .portal-title {
+            margin-top: 6px;
+            font-size: 11px;
+            letter-spacing: .4px;
+          }
+
+          .portal-sub {
+            font-size: 9px;
+          }
+
+          .submenu-wrap {
+            position: relative !important;
+            z-index: 1000 !important;
+            pointer-events: auto !important;
+            margin-top: 12px;
+          }
+
+          .submenu-card,
+          .submenu-list,
+          .submenu-btn,
+          .submenu-item {
+            position: relative !important;
+            z-index: 1001 !important;
+            pointer-events: auto !important;
+            touch-action: manipulation !important;
           }
 
           .submenu-card {
-            border-radius: 22px;
-            padding: 16px;
+            border-radius: 20px;
+            padding: 12px;
+          }
+
+          .submenu-head {
+            gap: 8px;
+            margin-bottom: 12px;
+          }
+
+          .submenu-title {
+            font-size: 17px;
+          }
+
+          .submenu-list {
+            gap: 10px;
+          }
+
+          .submenu-btn,
+          .submenu-item {
+            min-height: 82px;
           }
 
           .submenu-item {
-            min-height: 94px;
-            padding: 14px;
-            border-radius: 18px;
+            gap: 10px;
+            padding: 11px 10px 11px 12px;
+            border-radius: 16px;
+          }
+
+          .submenu-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            font-size: 20px;
+          }
+
+          .submenu-label {
+            font-size: 14px;
+            margin-bottom: 3px;
+          }
+
+          .submenu-desc {
+            font-size: 12px;
+            line-height: 1.38;
+          }
+
+          .submenu-arrow {
+            width: 32px;
+            height: 32px;
+            font-size: 15px;
           }
 
           .forest-dots,
@@ -1002,26 +1502,47 @@ export const StartDashboardPage: React.FC = () => {
         }
 
         @media (max-width: 420px) {
-          .start-btn {
-            width: 100%;
+          .edu-dashboard-page.journey-mode {
+            padding-left: 8px !important;
+            padding-right: 8px !important;
           }
 
           .map-shell {
-            min-height: 860px;
+            min-height: 520px;
+            height: 520px;
           }
 
           .map-inner {
-            min-height: 860px;
+            min-height: 520px;
           }
 
           .core {
-            width: 100px;
-            height: 100px;
+            top: 13%;
+            width: 82px;
+            height: 82px;
           }
 
           .portal {
-            width: 148px;
-            height: 148px;
+            width: 112px;
+            height: 112px;
+          }
+
+          .portal-core {
+            inset: 19px;
+          }
+
+          .portal.learning {
+            left: calc(25% - 56px);
+            top: 35%;
+          }
+
+          .portal.career {
+            right: calc(25% - 56px);
+            top: 35%;
+          }
+
+          .portal.emotion {
+            top: 64%;
           }
 
           .submenu-badge {
@@ -1029,10 +1550,33 @@ export const StartDashboardPage: React.FC = () => {
             text-align: center;
           }
         }
+
+        @media (max-width: 345px) {
+          .portal {
+            width: 102px;
+            height: 102px;
+          }
+
+          .portal.learning {
+            left: calc(25% - 51px);
+          }
+
+          .portal.career {
+            right: calc(25% - 51px);
+          }
+
+          .portal-core {
+            inset: 17px;
+          }
+
+          .portal-title {
+            font-size: 10px;
+          }
+        }
       `}</style>
 
-      <div className="edu-dashboard-page">
-        <div className="forest-bg">
+      <div className={`edu-dashboard-page ${!started ? "intro-mode" : "journey-mode"}`}>
+        <div className="forest-bg" aria-hidden="true">
           <div className="forest-glow-1" />
           <div className="forest-glow-2" />
           <div className="forest-glow-3" />
@@ -1083,13 +1627,20 @@ export const StartDashboardPage: React.FC = () => {
           ))}
         </div>
 
-        <div className="hero">
-          <h1>🧭 EduCompass</h1>
-          <p className="typing">{typing}</p>
-          <button className="start-btn" onClick={() => setStarted(true)}>
-            Bắt đầu hành trình
-          </button>
-        </div>
+        {!started && (
+          <div className="hero">
+            <h1>🧭 EduCompass</h1>
+            <p className="typing">{typing}</p>
+
+            <button
+              type="button"
+              className="start-btn"
+              onClick={handleStart}
+            >
+              Bắt đầu hành trình
+            </button>
+          </div>
+        )}
 
         {started && (
           <div className="map-section">
@@ -1112,6 +1663,7 @@ export const StartDashboardPage: React.FC = () => {
                   className="map-svg"
                   viewBox="0 0 1200 620"
                   preserveAspectRatio="none"
+                  aria-hidden="true"
                 >
                   <path className="path-glow" d="M600 170 Q420 245 250 340" />
                   <path className="path-glow" d="M600 170 Q780 245 950 340" />
@@ -1127,7 +1679,9 @@ export const StartDashboardPage: React.FC = () => {
                   <div className="core-label">AI CORE</div>
                 </div>
 
-                <div
+                <button
+                  type="button"
+                  aria-label="Mở khu vực học tập COREMIND"
                   className={`portal learning ${
                     selected && selected !== "learning" ? "fade" : ""
                   }`}
@@ -1158,19 +1712,15 @@ export const StartDashboardPage: React.FC = () => {
                     <div className="portal-title">COREMIND</div>
                     <div className="portal-sub">Học tập</div>
                   </div>
-                </div>
+                </button>
 
-                <div
+                <button
+                  type="button"
+                  aria-label="Mở khu vực định hướng nghề nghiệp PATHFINDER"
                   className={`portal career ${
                     selected && selected !== "career" ? "fade" : ""
                   }`}
-                  onClick={() => {
-                  if (careerTabs.length === 1) {
-                    handleNavigate(careerTabs[0].to); // 👈 đi thẳng luôn
-                  } else {
-                    handleEnter("career");
-                  }
-                }}
+                  onClick={() => handleEnter("career")}
                 >
                   <div className="portal-glow" />
                   <div className="portal-ring" />
@@ -1197,9 +1747,11 @@ export const StartDashboardPage: React.FC = () => {
                     <div className="portal-title">PATHFINDER</div>
                     <div className="portal-sub">Nghề nghiệp</div>
                   </div>
-                </div>
+                </button>
 
-                <div
+                <button
+                  type="button"
+                  aria-label="Mở khu vực cảm xúc HEARTCORE"
                   className={`portal emotion ${
                     selected && selected !== "emotion" ? "fade" : ""
                   }`}
@@ -1230,7 +1782,7 @@ export const StartDashboardPage: React.FC = () => {
                     <div className="portal-title">HEARTCORE</div>
                     <div className="portal-sub">Cảm xúc</div>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
 
@@ -1258,6 +1810,7 @@ export const StartDashboardPage: React.FC = () => {
                   <div className="submenu-list">
                     {activeTabs.map((item) => (
                       <button
+                        type="button"
                         key={item.to}
                         className="submenu-btn"
                         onClick={() => handleNavigate(item.to)}
@@ -1267,11 +1820,14 @@ export const StartDashboardPage: React.FC = () => {
                             className="submenu-accent"
                             style={{ background: item.color }}
                           />
+
                           <div className="submenu-icon">{item.icon}</div>
+
                           <div className="submenu-text">
                             <div className="submenu-label">{item.label}</div>
                             <div className="submenu-desc">{item.desc}</div>
                           </div>
+
                           <div className="submenu-arrow">→</div>
                         </div>
                       </button>

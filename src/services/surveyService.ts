@@ -32,7 +32,7 @@ export const addSurvey = async (survey: Survey) => {
 };
 
 // Xóa khảo sát theo id
-export const deleteSurvey = async (id: string) => {
+export const deleteSurvey = async (id: string) => { 
   await deleteDoc(doc(db, "surveys", id));
 };
 
