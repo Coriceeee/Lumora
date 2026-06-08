@@ -1,5 +1,3 @@
-// src/app/services/learningResultService.ts
-
 import { db } from "../firebase/firebase";
 import {
   collection,

@@ -1,6 +1,6 @@
 // learningResultService.ts
 
-import { db } from "../firebase/firebase"; // Sửa đường dẫn theo dự án bạn
+import { db } from "../firebase/firebase"; 
 import {
   collection,
   addDoc,

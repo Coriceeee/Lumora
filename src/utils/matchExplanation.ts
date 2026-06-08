@@ -1,41 +1,69 @@
-const selected: any = undefined; // Placeholder for selected data
-
-const topCareer = selected?.careers?.[0];
-const selectedCareer = topCareer?.name ?? "Công nghệ thông tin";
-
-const userSkills = selected?.userSkills ?? {};
-const industryProfiles: Record<string, any> = {}; // Placeholder, replace with actual data source or import
-const industry = industryProfiles[selectedCareer];
-const matchReasons = explainMatch(topCareer, selected);
-export function explainMatch(topCareer: any, selected: any): string[] {
-    const reasons: string[] = [];
-
-    if (!topCareer) {
-        reasons.push("Không tìm thấy thông tin sự nghiệp cụ thể để phân tích.");
-        return reasons;
-    }
-
-    reasons.push(`Sự nghiệp "${topCareer.name ?? "được đề xuất"}" phù hợp với hồ sơ của bạn.`);
-
-    const userSkills = selected?.userSkills ?? {};
-    const topCareerSkills = topCareer?.skills ?? [];
-
-    const matchingSkills = Object.keys(userSkills).filter(
-        (skill: string) => userSkills[skill] > 0 && topCareerSkills.includes(skill)
-    );
-
-    if (matchingSkills.length > 0) {
-        reasons.push(`Bạn có các kỹ năng như ${matchingSkills.slice(0, 3).join(', ')}${matchingSkills.length > 3 ? ' và nhiều hơn nữa' : ''} rất phù hợp với yêu cầu của sự nghiệp này.`);
-    } else {
-        reasons.push("Tiềm năng phát triển kỹ năng của bạn rất cao trong lĩnh vực này.");
-    }
-
-    if (topCareer.description) {
-        reasons.push("Mô tả về sự nghiệp này có nhiều điểm chung với sở thích và mục tiêu của bạn.");
-    }
-
-    reasons.push("Đây là một lựa chọn tiềm năng tốt để bạn khám phá và phát triển.");
-
-    return reasons;
+interface MatchExplanationInput {
+  careerName: string;
+  readinessScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  nextFocus?: string[];
 }
 
+export function explainMatch(
+  input: MatchExplanationInput
+): string[] {
+  const {
+    careerName,
+    readinessScore,
+    strengths,
+    weaknesses,
+    nextFocus = [],
+  } = input;
+
+  const reasons: string[] = [];
+
+  reasons.push(
+    `Ngành "${careerName}" hiện có mức độ sẵn sàng khoảng ${Math.round(
+      readinessScore
+    )}%.`
+  );
+
+  if (strengths.length > 0) {
+    reasons.push(
+      `Điểm mạnh nổi bật của bạn là ${strengths.join(", ")}. Đây là những nền tảng quan trọng đối với ngành này.`
+    );
+  }
+
+  if (weaknesses.length > 0) {
+    reasons.push(
+      `Bạn vẫn cần cải thiện ${weaknesses.join(
+        ", "
+      )} để tăng khả năng phát triển trong lĩnh vực này.`
+    );
+  }
+
+  if (nextFocus.length > 0) {
+    reasons.push(
+      `Trong thời gian tới, bạn nên ưu tiên tập trung vào ${nextFocus.join(
+        ", "
+      )}.`
+    );
+  }
+
+  if (readinessScore >= 85) {
+    reasons.push(
+      "Bạn đang có nền tảng rất tốt và hoàn toàn có thể phát triển mạnh trong lĩnh vực này."
+    );
+  } else if (readinessScore >= 70) {
+    reasons.push(
+      "Bạn có tiềm năng tốt, chỉ cần tiếp tục cải thiện một vài yếu tố quan trọng."
+    );
+  } else if (readinessScore >= 50) {
+    reasons.push(
+      "Bạn có nền tảng ban đầu nhưng vẫn còn khoảng cách cần được thu hẹp."
+    );
+  } else {
+    reasons.push(
+      "Đây vẫn là một lựa chọn có thể theo đuổi, tuy nhiên bạn sẽ cần một lộ trình phát triển rõ ràng hơn."
+    );
+  }
+
+  return reasons;
+}

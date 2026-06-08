@@ -1,5 +1,3 @@
-// FILE: src/app/pages/neovana/DinhHuongPhatTrienPage.tsx
-
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Box,
@@ -10,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { collection, getDocs } from "firebase/firestore";
 
 import {
   addCareerDashboard,
@@ -17,6 +16,7 @@ import {
   getCareerDashboardsByUser,
 } from "../../../services/careerDashboardService";
 import { generateCareerDashboard } from "../../../services/neovanaDashboardService";
+import { getLearningResultsByUser } from "../../../services/learningResultService";
 
 import { CareerDashboard, SkillToImprove } from "../../../types/CareerDashboard";
 
@@ -26,13 +26,24 @@ import CertificatesCard from "./components_dinhhuong/CertificatesCard";
 import SubjectsCard from "./components_dinhhuong/SubjectsCard";
 import SummaryCard from "./components_dinhhuong/SummaryCard";
 import SuggestionDialog from "./components_dinhhuong/SuggestionDialog";
+import CareerSimulationCard from "./components_dinhhuong/CareerSimulationCard";
+import CareerPathForecastCard from "./components_dinhhuong/CareerPathForecastCard";
 
 import "./timeline.css";
 import { useFirebaseUser } from "../../hooks/useFirebaseUser";
 import { toast } from "react-toastify";
 import { industrySkillProfiles } from "./data/industrySkills";
-import { explainMatch } from "../../../utils/matchExplanation";
 import { generateRoadmap } from "../../../utils/careerRoadmap";
+import {
+  calculateCareerReadiness,
+  getReadinessLabel,
+  CareerReadinessResult,
+  CareerSimulation,
+  CareerRequirementMatrix,
+} from "./utils/CareerReadinessEngine";
+import { generatePathFinderForecast } from "./utils/PathFinderEngine";
+import { careerRequirements as defaultCareerRequirements } from "./utils/careerRequirements";
+import { db } from "../../../firebase/firebase";
 
 const SKILL_LABELS: Record<string, string> = {
   logic: "Tư duy logic",
@@ -40,6 +51,12 @@ const SKILL_LABELS: Record<string, string> = {
   selfLearning: "Tự học",
   communication: "Giao tiếp",
   teamwork: "Làm việc nhóm",
+  research: "Nghiên cứu",
+  dataAnalysis: "Phân tích dữ liệu",
+  creativity: "Sáng tạo",
+  leadership: "Lãnh đạo",
+  perseverance: "Kiên trì",
+  empathy: "Đồng cảm",
 };
 
 interface IndustryProfile {
@@ -99,6 +116,110 @@ function buildUserSkills(selected?: CareerDashboard | null) {
   });
 
   return map;
+}
+
+
+function toPriorityPercent(value: any): number {
+  const raw = Number(value) || 0;
+  const percent = raw <= 1 ? raw * 100 : raw;
+  return Math.max(0, Math.min(100, Math.round(percent)));
+}
+
+function clampScore(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getCareerPercent(career: any): number {
+  return clampScore(Number(career?.fitScore ?? career?.percent ?? career?.matchPercentage ?? 0));
+}
+
+function getFallbackCareerReadiness(
+  selectedCareer: string,
+  selected?: CareerDashboard | null
+): CareerReadinessResult | null {
+  if (!selectedCareer || !selected) return null;
+
+  const selectedCareerItem =
+    (selected.careers || []).find(
+      (career: any) => String(career?.name || "").trim() === selectedCareer
+    ) || (selected.careers || [])[0];
+
+  const fallbackScore = getCareerPercent(selectedCareerItem);
+  const aiSubjects = ((selected as any)?.subjectsToFocus || []) as any[];
+  const aiSkills = ((selected as any)?.skillsToImprove || []) as any[];
+
+  const subjectDetails = aiSubjects.map((subject, index) => {
+    const priorityPercent = toPriorityPercent(subject?.priorityRatio);
+    const score = clampScore(100 - priorityPercent);
+
+    return {
+      name: String(subject?.name || `Môn học ${index + 1}`),
+      score,
+      weight: Math.max(0.1, priorityPercent / 100 || 0.2),
+      contribution: score * Math.max(0.1, priorityPercent / 100 || 0.2),
+    };
+  });
+
+  const skillDetails = aiSkills.map((skill, index) => {
+    const priorityPercent = toPriorityPercent(skill?.priorityRatio);
+    const score = clampScore(100 - priorityPercent);
+
+    return {
+      name: String(skill?.name || `Kỹ năng ${index + 1}`),
+      score,
+      weight: Math.max(0.1, priorityPercent / 100 || 0.2),
+      contribution: score * Math.max(0.1, priorityPercent / 100 || 0.2),
+    };
+  });
+
+  const strengths = subjectDetails
+    .filter((item) => item.score >= 70)
+    .sort((a, b) => b.score - a.score)
+    .map((item) => item.name)
+    .slice(0, 4);
+
+  const weaknesses = subjectDetails
+    .filter((item) => item.score < 70)
+    .sort((a, b) => a.score - b.score)
+    .map((item) => item.name);
+
+  const nextFocus = weaknesses.length
+    ? weaknesses.slice(0, 3)
+    : subjectDetails
+        .sort((a, b) => a.score - b.score)
+        .map((item) => item.name)
+        .slice(0, 3);
+
+  const baseScore = fallbackScore || 50;
+  const simulations: CareerSimulation[] = nextFocus.map((subject, index) => {
+    const impact = Math.max(1, 4 - index);
+    return {
+      subject,
+      improveBy: 1,
+      oldReadinessScore: baseScore,
+      newReadinessScore: clampScore(baseScore + impact),
+      impact,
+    };
+  });
+
+  const avg = (items: { score: number }[]) =>
+    items.length
+      ? clampScore(items.reduce((sum, item) => sum + item.score, 0) / items.length)
+      : baseScore;
+
+  return {
+    careerName: selectedCareer,
+    readinessScore: baseScore,
+    subjectScore: avg(subjectDetails),
+    skillScore: avg(skillDetails),
+    strengths,
+    weaknesses,
+    nextFocus,
+    subjectDetails,
+    skillDetails,
+    simulations,
+  };
 }
 
 function getAllSkillsUnion(a: SkillGapItem[], b: SkillGapItem[]) {
@@ -241,6 +362,11 @@ const DinhHuongPhatTrienPage: React.FC = () => {
   const [dashboards, setDashboards] = useState<CareerDashboard[]>([]);
   const [selected, setSelected] = useState<CareerDashboard | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [learningResults, setLearningResults] = useState<any[]>([]);
+  const [careerRequirementMatrix, setCareerRequirementMatrix] =
+    useState<CareerRequirementMatrix>(
+      defaultCareerRequirements as CareerRequirementMatrix
+    );
 
   const [aiLoading, setAiLoading] = useState(false);
   const [aiDone, setAiDone] = useState(false);
@@ -283,10 +409,59 @@ const DinhHuongPhatTrienPage: React.FC = () => {
     }
   };
 
+  const loadLearningResults = async () => {
+    if (!userId) return;
+
+    try {
+      const data = await getLearningResultsByUser(userId);
+      setLearningResults(data || []);
+    } catch (error) {
+      console.error("Lỗi tải dữ liệu học tập:", error);
+    }
+  };
+
+  const loadCareerRequirementMatrix = async () => {
+    try {
+      const snap = await getDocs(collection(db, "careerRequirements"));
+      const firestoreMatrix: CareerRequirementMatrix = {};
+
+      snap.forEach((docSnap) => {
+        const data = docSnap.data() as any;
+
+        if (data?.isActive === false) return;
+
+        const name = String(data?.name || docSnap.id || "").trim();
+        if (!name) return;
+
+        firestoreMatrix[name] = {
+          subjects: data?.subjects || {},
+          skills: data?.skills || {},
+          aliases: Array.isArray(data?.aliases) ? data.aliases : [],
+        };
+      });
+
+      setCareerRequirementMatrix({
+        ...(defaultCareerRequirements as CareerRequirementMatrix),
+        ...firestoreMatrix,
+      });
+    } catch (error) {
+      console.error(
+        "Không thể tải Career Requirement Matrix từ Firebase, dùng dữ liệu mặc định:",
+        error
+      );
+
+      setCareerRequirementMatrix(
+        defaultCareerRequirements as CareerRequirementMatrix
+      );
+    }
+  };
+
   useEffect(() => {
     if (!userId) return;
 
     void loadDashboards();
+    void loadLearningResults();
+    void loadCareerRequirementMatrix();
   }, [userId]);
 
   const handleCreate = () => {
@@ -311,6 +486,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
       });
 
       await loadDashboards();
+      await loadLearningResults();
       setSelected(saved);
 
       setAiDone(true);
@@ -477,8 +653,146 @@ const DinhHuongPhatTrienPage: React.FC = () => {
         | undefined) || undefined)
     : undefined;
 
-  const matchReasons = hasCareerData
-    ? explainMatch(topCareer, selected) || []
+  const readinessLearningResults = useMemo(() => learningResults || [], [learningResults]);
+
+  const careersWithReadiness = useMemo(() => {
+    return sortedCareers.map((career) => {
+      const careerName = String(career.name || "").trim();
+
+      const readiness = calculateCareerReadiness({
+        careerName,
+        learningResults: readinessLearningResults,
+        careerRequirementsOverride: careerRequirementMatrix,
+      });
+
+      const fallbackPercent = Number(
+        (career as any).fitScore ?? (career as any).percent ?? 0
+      );
+
+      return {
+        ...career,
+        readinessScore: readiness.readinessScore,
+        percent: readiness.readinessScore || fallbackPercent,
+        fitScore: readiness.readinessScore || fallbackPercent,
+        strengths: readiness.strengths,
+        weaknesses: readiness.weaknesses,
+        nextFocus: readiness.nextFocus,
+      };
+    });
+  }, [sortedCareers, readinessLearningResults, careerRequirementMatrix]);
+
+  const careerReadiness = useMemo(() => {
+    if (!hasCareerData) return null;
+
+    const calculated = calculateCareerReadiness({
+      careerName: selectedCareer,
+      learningResults: readinessLearningResults,
+      careerRequirementsOverride: careerRequirementMatrix,
+    });
+
+    // Nếu ngành do AI sinh ra chưa có trong Career Requirement Matrix
+    // thì dùng dữ liệu AI cũ làm fallback để UI không bị mất dữ liệu.
+    if (
+      calculated.readinessScore > 0 ||
+      calculated.subjectDetails.length > 0 ||
+      calculated.skillDetails.length > 0
+    ) {
+      return calculated;
+    }
+
+    return getFallbackCareerReadiness(selectedCareer, selected);
+  }, [
+    hasCareerData,
+    selectedCareer,
+    readinessLearningResults,
+    selected,
+    careerRequirementMatrix,
+  ]);
+
+  const pathFinderForecast = useMemo(
+    () =>
+      readinessLearningResults.length > 0
+        ? generatePathFinderForecast({
+            learningResults: readinessLearningResults,
+            limit: 5,
+          })
+        : null,
+    [readinessLearningResults]
+  );
+
+  const readinessSubjects = useMemo(() => {
+    if (!careerReadiness || !careerReadiness.subjectDetails.length) return [];
+
+    return careerReadiness.subjectDetails.map((item) => {
+      const focusPercent = Math.max(0, Math.min(100, Math.round(100 - item.score)));
+      const isNextFocus = careerReadiness.nextFocus.includes(item.name);
+
+      return {
+        name: item.name,
+        priority: item.score < 70 ? 3 : item.score < 85 ? 2 : 1,
+        priorityRatio: focusPercent,
+        reason: isNextFocus
+          ? "Đây là môn cần ưu tiên cải thiện để tăng điểm sẵn sàng nghề nghiệp."
+          : "Đây là môn đang có nền tảng tương đối tốt theo dữ liệu học tập thật.",
+        recommendation: isNextFocus
+          ? "Tập trung cải thiện môn này sẽ giúp tăng mức độ sẵn sàng với ngành mục tiêu."
+          : "Duy trì phong độ hiện tại và tiếp tục củng cố kiến thức nền.",
+      };
+    });
+  }, [careerReadiness]);
+
+  const industryFallbackSubjects = useMemo(() => {
+    const keySubjects = industry?.keySubjects || [];
+
+    return keySubjects.map((name: string, index: number) => ({
+      name,
+      priority: index === 0 ? 3 : 2,
+      priorityRatio: index === 0 ? 70 : 50,
+      reason:
+        "Môn học này được lấy từ hồ sơ yêu cầu ngành khi chưa đủ dữ liệu từ ma trận sẵn sàng nghề nghiệp.",
+      recommendation:
+        "Tiếp tục theo dõi điểm số và cập nhật kết quả học tập để hệ thống tính toán chính xác hơn.",
+    }));
+  }, [industry]);
+
+  const subjectsForCard = useMemo(() => {
+    if (readinessSubjects.length) return readinessSubjects;
+
+    const aiSubjects = mapSubjects(selected?.subjectsToFocus || []);
+    if (aiSubjects.length) return aiSubjects;
+
+    return industryFallbackSubjects;
+  }, [readinessSubjects, selected, industryFallbackSubjects]);
+
+  const readinessSkills = useMemo(() => {
+    if (!careerReadiness || !careerReadiness.skillDetails.length) return [];
+
+    return careerReadiness.skillDetails.map((item) => ({
+      name: SKILL_LABELS[item.name] || item.name,
+      priority: item.score < 70 ? 3 : item.score < 85 ? 2 : 1,
+      priorityRatio: Math.max(0, Math.min(1, item.score / 100)),
+      reason:
+        item.score < 70
+          ? "Đây là kỹ năng cần cải thiện theo mô hình sẵn sàng nghề nghiệp."
+          : "Kỹ năng này đang ở mức khá tốt theo mô hình ước lượng từ dữ liệu học tập.",
+    }));
+  }, [careerReadiness]);
+
+  const skillsForCard = useMemo(() => {
+    if (readinessSkills.length) return readinessSkills;
+    return mapSkills(selected?.skillsToImprove || []);
+  }, [readinessSkills, selected]);
+
+  const matchReasons: string[] = careerReadiness
+    ? explainReadinessMatch({
+        careerName: selectedCareer,
+        readinessScore: careerReadiness.readinessScore,
+        strengths: careerReadiness.strengths,
+        weaknesses: careerReadiness.weaknesses,
+        nextFocus: careerReadiness.nextFocus,
+      })
+    : hasCareerData
+    ? []
     : [];
 
   const clamp01_100 = (value: number): number =>
@@ -735,7 +1049,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
       `}</style>
 
       <div className="row g-0 g-xl-5 g-xxl-8">
-        <div className="col-xxl-4">
+        <div className="col-xxl-3">
           <div className="card mb-5">
             <div className="card-body">
               <div className="d-flex bg-light-primary card-rounded flex-grow-1">
@@ -835,30 +1149,132 @@ const DinhHuongPhatTrienPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-xxl-8">
+        <div className="col-xxl-9">
           {selected ? (
             <Box>
               <SummaryCard dashboard={selected} />
 
-              {hasCareerData && matchReasons.length > 0 && (
-                <div className="card p-4" style={softCardStyle}>
-                  <h3
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 20,
-                      marginBottom: 8,
-                    }}
-                  >
-                    📌 Vì sao phù hợp ngành "{selectedCareer}"?
-                  </h3>
+              <div className="row g-0 g-xl-5 g-xxl-8 mt-4 align-items-start">
+                <div className="col-xxl-6 p-4 d-flex align-items-start">
+                  {careerReadiness && (
+                    <div
+                      className="card p-4"
+                      style={{
+                        ...softCardStyle,
+                        width: "100%",
+                        height: "fit-content",
+                        minHeight: "unset",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontWeight: 900,
+                          fontSize: 22,
+                          marginBottom: 10,
+                        }}
+                      >
+                        🧭 Điểm sẵn sàng nghề nghiệp
+                      </h3>
 
-                  <ul>
-                    {matchReasons.map((reason: string, index: number) => (
-                      <li key={index}>{reason}</li>
-                    ))}
-                  </ul>
+                      <Typography sx={{ fontSize: 16, mb: 1 }}>
+                        Ngành mục tiêu: <strong>{selectedCareer}</strong>
+                      </Typography>
+
+                      <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 1 }}>
+                        Mức độ sẵn sàng: {careerReadiness.readinessScore}% —{" "}
+                        {getReadinessLabel(careerReadiness.readinessScore)}
+                      </Typography>
+
+                      <Typography sx={{ color: "#555", mb: 2 }}>
+                        Điểm này được tính từ dữ liệu học tập thật, ma trận yêu cầu
+                        ngành nghề và mô hình sẵn sàng nghề nghiệp. AI chỉ đóng vai
+                        trò diễn giải kết quả.
+                      </Typography>
+
+                      {careerReadiness.strengths.length > 0 && (
+                        <Typography sx={{ mb: 1 }}>
+                          ✅ Điểm mạnh: {careerReadiness.strengths.join(", ")}
+                        </Typography>
+                      )}
+
+                      {careerReadiness.weaknesses.length > 0 && (
+                        <Typography sx={{ mb: 1 }}>
+                          ⚠️ Cần cải thiện: {careerReadiness.weaknesses.join(", ")}
+                        </Typography>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <div className="col-xxl-6 p-4 d-flex align-items-start">
+                  <div style={{ width: "100%", height: "fit-content" }}>
+                  </div>
+                </div>
+              </div>
+
+              <div className="row g-0 g-xl-5 g-xxl-8 mt-2 align-items-start">
+                <div className="col-xxl-12 p-4">
+                  {pathFinderForecast && (
+                    <CareerPathForecastCard
+                      forecasts={pathFinderForecast.topForecasts}
+                      message={pathFinderForecast.message}
+                    />
+                  )}
+                </div>
+
+                <div className="col-xxl-12 p-4">
+                  <CareersCard careers={careersWithReadiness} />
+                </div>
+              </div>
+
+              <div className="row g-0 g-xl-5 g-xxl-8 mt-2 align-items-start">
+                <div
+                  className={
+                    hasCareerData && matchReasons.length > 0
+                      ? "col-xxl-6 p-4"
+                      : "col-xxl-12 p-4"
+                  }
+                >
+                  {careerReadiness && (
+                    <CareerSimulationCard
+                      careerName={selectedCareer}
+                      simulations={careerReadiness.simulations}
+                    />
+                  )}
+                </div>
+
+                {hasCareerData && matchReasons.length > 0 && (
+                  <div className="col-xxl-6 p-4">
+                    <div
+                      className="card p-4"
+                      style={{
+                        ...softCardStyle,
+                        width: "100%",
+                        height: "fit-content",
+                        minHeight: "unset",
+                        alignSelf: "flex-start",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 20,
+                          marginBottom: 8,
+                        }}
+                      >
+                        📌 Vì sao phù hợp ngành "{selectedCareer}"?
+                      </h3>
+
+                      <ul>
+                        {matchReasons.map((reason: string, index: number) => (
+                          <li key={index}>{reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {hasCareerData && roadmap.length > 0 && (
                 <div
@@ -912,21 +1328,6 @@ const DinhHuongPhatTrienPage: React.FC = () => {
                   </Typography>
                 </div>
               )}
-
-              <Box sx={{ mt: 6 }}>
-                <CareersCard
-                  careers={sortedCareers.map((career) => ({
-                    ...career,
-                    percent: clamp01_100(
-                      Number(
-                        (career as any).fitScore ??
-                          (career as any).percent ??
-                          0
-                      )
-                    ),
-                  }))}
-                />
-              </Box>
             </Box>
           ) : (
             <Typography>Chưa có dữ liệu.</Typography>
@@ -937,7 +1338,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
       <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
         <div className="col-xxl-6 p-4">
           {selected ? (
-            <SkillsCard skills={mapSkills(selected.skillsToImprove || [])} />
+            <SkillsCard skills={skillsForCard} />
           ) : (
             <Typography>Không có dữ liệu.</Typography>
           )}
@@ -956,9 +1357,7 @@ const DinhHuongPhatTrienPage: React.FC = () => {
         <div className="row g-0 g-xl-5 g-xxl-8 mt-4">
           <div className="col-xxl-12 p-4">
             {selected ? (
-              <SubjectsCard
-                subjects={mapSubjects(selected.subjectsToFocus || [])}
-              />
+              <SubjectsCard subjects={subjectsForCard} />
             ) : (
               <Typography>Chưa có dữ liệu.</Typography>
             )}
@@ -1016,4 +1415,64 @@ function calculateReadiness(
   if (totalIndustry === 0) return 0;
 
   return Math.round((totalUser / totalIndustry) * 100);
+}
+
+function explainReadinessMatch({
+  careerName,
+  readinessScore,
+  strengths,
+  weaknesses,
+  nextFocus,
+}: {
+  careerName: string;
+  readinessScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  nextFocus: string[];
+}): string[] {
+  const reasons: string[] = [];
+
+  reasons.push(
+    `Mức độ sẵn sàng hiện tại với ngành "${careerName}" là ${readinessScore}%.`
+  );
+
+  if (strengths.length > 0) {
+    reasons.push(
+      `Bạn có nền tảng tốt ở ${strengths.slice(0, 3).join(", ")}.`
+    );
+  }
+
+  if (readinessScore >= 85) {
+    reasons.push("Bạn đang có mức độ phù hợp rất cao với ngành này.");
+  } else if (readinessScore >= 70) {
+    reasons.push(
+      "Bạn có tiềm năng phát triển tốt nếu tiếp tục duy trì và cải thiện."
+    );
+  } else if (readinessScore >= 50) {
+    reasons.push("Bạn đã có nền tảng ban đầu nhưng vẫn cần củng cố thêm.");
+  } else {
+    reasons.push(
+      "Bạn cần xây dựng thêm nền tảng để theo đuổi ngành này hiệu quả hơn."
+    );
+  }
+
+  if (weaknesses.length > 0) {
+    reasons.push(
+      `Những yếu tố cần cải thiện gồm: ${weaknesses.slice(0, 3).join(", ")}.`
+    );
+  }
+
+  if (nextFocus.length > 0) {
+    reasons.push(
+      `Nên ưu tiên tập trung vào ${nextFocus
+        .slice(0, 3)
+        .join(", ")} để nâng cao điểm sẵn sàng nghề nghiệp.`
+    );
+  }
+
+  reasons.push(
+    "Điểm sẵn sàng nghề nghiệp được tính từ dữ liệu học tập thực tế và ma trận yêu cầu ngành nghề của EduCompass."
+  );
+
+  return reasons;
 }
